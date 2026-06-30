@@ -1,0 +1,81 @@
+.dockerignore
+  s_328ad7f5de3f18::t_7140710c816d79 1-30
+.gitattributes
+  s_328ad7f5de3f18::t_671847fd36fbd2 1-14
+.gitignore
+  s_328ad7f5de3f18::t_99fc6ffb13376d 1-75
+.pre-commit-config.yaml
+  s_328ad7f5de3f18::t_5dc1330946c20b 1-71
+.vscode/.gitignore
+  s_328ad7f5de3f18::t_7712a88910bf56 1-10
+.vscode/extensions.json
+  s_328ad7f5de3f18::t_0af124f29ca79b 1-12
+.vscode/tasks.json
+  s_328ad7f5de3f18::t_d05a83b2d900a7 1-23
+.vscode/tools/launch.template.json
+  s_328ad7f5de3f18::t_03105ac227a481 1-65
+.vscode/tools/settings.template.json
+  s_328ad7f5de3f18::t_a5b4ce38d2fc11 1-79
+.vscode/tools/setup_vscode.py
+  s_328ad7f5de3f18::t_6a1043522c2ebf 1-220
+README.md
+  s_328ad7f5de3f18::t_b5fc7d3599f806 1-135
+pyproject.toml
+  s_328ad7f5de3f18::t_d3532450600b7e 1-142
+scripts/list_envs.py
+  s_328ad7f5de3f18::t_5fc4523f21510a 1-72
+scripts/random_agent.py
+  s_328ad7f5de3f18::t_cde1ccc5dfc675 1-72
+scripts/rsl_rl/cli_args.py
+  s_328ad7f5de3f18::t_2f91c41c654e1e 1-93
+scripts/rsl_rl/play.py
+  s_328ad7f5de3f18::t_4cc59e67fa1800 1-234
+scripts/rsl_rl/train.py
+  s_328ad7f5de3f18::t_c8c405b4897965 1-232
+scripts/zero_agent.py
+  s_328ad7f5de3f18::t_e8dee05333df8c 1-72
+source/legs_rl_lab/config/extension.toml
+  s_328ad7f5de3f18::t_ddcb7da5c0c9dc 1-35
+source/legs_rl_lab/docs/CHANGELOG.rst
+  s_328ad7f5de3f18::t_ae4b167add9b02 1-10
+source/legs_rl_lab/legs_rl_lab/__init__.py
+  s_328ad7f5de3f18::t_0c07755900082d 1-14
+source/legs_rl_lab/legs_rl_lab/tasks/__init__.py
+  s_328ad7f5de3f18::t_bfb0ffa65abbf0 1-17
+source/legs_rl_lab/legs_rl_lab/tasks/manager_based/__init__.py
+  s_328ad7f5de3f18::t_d0c302fd15a86e 1-6
+source/legs_rl_lab/legs_rl_lab/tasks/manager_based/legs_rl_lab/__init__.py
+  s_328ad7f5de3f18::t_a1933e1f8d4408 1-23
+source/legs_rl_lab/legs_rl_lab/tasks/manager_based/legs_rl_lab/agents/__init__.py
+  s_328ad7f5de3f18::t_4531b281b7e5f0 1-4
+source/legs_rl_lab/legs_rl_lab/tasks/manager_based/legs_rl_lab/agents/rsl_rl_ppo_cfg.py
+  s_328ad7f5de3f18::t_e1d2b9f36fcabf 1-38
+source/legs_rl_lab/legs_rl_lab/tasks/manager_based/legs_rl_lab/legs_rl_lab_env_cfg.py
+  s_328ad7f5de3f18::t_5ab7266c39a026 1-180
+source/legs_rl_lab/legs_rl_lab/tasks/manager_based/legs_rl_lab/mdp/__init__.py
+  s_328ad7f5de3f18::t_e661763f118141 1-10
+source/legs_rl_lab/legs_rl_lab/tasks/manager_based/legs_rl_lab/mdp/rewards.py
+  s_328ad7f5de3f18::t_484ec4c7efc575 1-27
+source/legs_rl_lab/legs_rl_lab/ui_extension_example.py
+  s_328ad7f5de3f18::t_84cb46d7efda08 1-46
+source/legs_rl_lab/pyproject.toml
+  s_328ad7f5de3f18::t_962955e4b53131 1-3
+source/legs_rl_lab/setup.py
+  s_328ad7f5de3f18::t_68817b60ecae7b 1-47
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.6.4",
+  "base_commit_sha": "455d25cce8f834eadfbe49e1e8be46d5928a40ed",
+  "prompts": {},
+  "sessions": {
+    "s_328ad7f5de3f18": {
+      "agent_id": {
+        "tool": "claude",
+        "id": "bf891d0d-2763-4fa9-82f7-80d358906685",
+        "model": "claude-opus-4-8"
+      },
+      "human_author": "woan <377801872@qq.com>"
+    }
+  }
+}
