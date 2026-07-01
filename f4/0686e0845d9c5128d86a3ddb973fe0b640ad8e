@@ -1,0 +1,20 @@
+scripts/rsl_rl/train.py
+  s_aede2d0005e56c::t_efe82f92c731df 12
+  s_aede2d0005e56c::t_57a1d5d5c7e34a 27
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.6.5",
+  "base_commit_sha": "f40686e0845d9c5128d86a3ddb973fe0b640ad8e",
+  "prompts": {},
+  "sessions": {
+    "s_aede2d0005e56c": {
+      "agent_id": {
+        "tool": "claude",
+        "id": "cdfd5184-d1e6-44c4-8105-792b029609d7",
+        "model": "claude-opus-4-8"
+      },
+      "human_author": "woan <377801872@qq.com>"
+    }
+  }
+}
