@@ -33,6 +33,7 @@ _legs_setup_conda_env() {
 
     # copied from isaaclab/_isaac_sim/setup_conda_env.sh
     # add source legs_rl_lab.sh to conda activate.d
+    mkdir -p "${CONDA_PREFIX}/etc/conda/activate.d"
     printf '%s\n' '#!/usr/bin/env bash' '' \
         '# for Isaac Lab' \
         'export ISAACLAB_PATH='${ISAACLAB_PATH}'' \
