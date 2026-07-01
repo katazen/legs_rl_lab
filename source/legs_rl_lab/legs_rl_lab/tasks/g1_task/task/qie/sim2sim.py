@@ -1,3 +1,4 @@
+import os
 import time
 from collections import deque
 import mujoco
@@ -5,6 +6,20 @@ import mujoco.viewer
 import numpy as np
 import torch
 from pynput import keyboard
+
+
+def _find_repo_root(start: str) -> str:
+    """从本文件上溯找仓库根（含 source/ 与 scripts/），避免任何绝对路径。"""
+    d = os.path.dirname(os.path.abspath(start))
+    while d != os.path.dirname(d):
+        if os.path.isdir(os.path.join(d, "source")) and os.path.isdir(os.path.join(d, "scripts")):
+            return d
+        d = os.path.dirname(d)
+    return d
+
+
+_REPO_ROOT = _find_repo_root(__file__)
+_WORKSPACE_DIR = os.path.dirname(_REPO_ROOT)  # 同级仓库(如 TienKung-Lab)所在目录
 
 
 class N7520_14:
@@ -29,9 +44,9 @@ class N5020_16P:
 
 class SimToSimCfg:
     class path:
-        pos_xml_path = '/home/woan/workspace/TienKung-Lab/legged_lab/assets/g1/g1_23dof_sim2sim.xml'
-        tau_xml_path = '/home/woan/workspace/TienKung-Lab/legged_lab/assets/g1/g1_23dof_rev_1_0.xml'
-        model_path = '/home/woan/workspace/legs_rl_lab/logs/rsl_rl/g1qie/2026-05-25_10-12-39/exported/policy.pt'
+        pos_xml_path = os.path.join(_WORKSPACE_DIR, "TienKung-Lab/legged_lab/assets/g1/g1_23dof_sim2sim.xml")
+        tau_xml_path = os.path.join(_WORKSPACE_DIR, "TienKung-Lab/legged_lab/assets/g1/g1_23dof_rev_1_0.xml")
+        model_path = os.path.join(_REPO_ROOT, "logs/rsl_rl/g1qie/2026-05-25_10-12-39/exported/policy.pt")
 
     class sim:
         sim_duration = 10000.0

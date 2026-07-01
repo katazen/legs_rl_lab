@@ -10,7 +10,19 @@ import xml.etree.ElementTree as ET
 import mujoco
 
 HERE = os.path.dirname(os.path.abspath(__file__))
-SRC_URDF = "/home/woan/workspace/robot_assets/legs_URDF/urdf/legs_URDF.urdf"
+
+
+def _find_repo_root(start):
+    d = os.path.dirname(os.path.abspath(start))
+    while d != os.path.dirname(d):
+        if os.path.isdir(os.path.join(d, "source")) and os.path.isdir(os.path.join(d, "scripts")):
+            return d
+        d = os.path.dirname(d)
+    return d
+
+
+# 源 URDF 在 workspace 同级目录 robot_assets 下（外部资产，相对定位避免绝对路径）
+SRC_URDF = os.path.join(os.path.dirname(_find_repo_root(__file__)), "robot_assets/legs_URDF/urdf/legs_URDF.urdf")
 MESH_DIR = os.path.join(HERE, "..", "meshes")
 TMP_URDF = os.path.join(HERE, "_legs_URDF_mjc.urdf")
 OUT_XML = os.path.join(HERE, "legs_URDF.xml")

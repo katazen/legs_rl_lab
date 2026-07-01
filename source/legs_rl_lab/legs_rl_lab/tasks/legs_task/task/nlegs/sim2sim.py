@@ -10,6 +10,20 @@ import yaml
 from pynput import keyboard
 
 
+def _find_repo_root(start: str) -> str:
+    """从本文件上溯找仓库根（含 source/ 与 scripts/），避免任何绝对路径。"""
+    d = os.path.dirname(os.path.abspath(start))
+    while d != os.path.dirname(d):
+        if os.path.isdir(os.path.join(d, "source")) and os.path.isdir(os.path.join(d, "scripts")):
+            return d
+        d = os.path.dirname(d)
+    return d
+
+
+_REPO_ROOT = _find_repo_root(__file__)
+_ASSETS_DIR = os.path.join(_REPO_ROOT, "source", "legs_rl_lab", "legs_rl_lab", "assets")
+
+
 # ============================================================================
 #  唯一必填变量：训练 run 的日期文件夹名
 #  sim2sim 会据此自动读取
@@ -22,9 +36,9 @@ SAVE_DATA = False
 
 # 与具体 run 无关的仿真侧设置（不是模型参数，故不放进 deploy.yaml）
 EXPERIMENT = "nlegs"
-LOGS_ROOT = "/home/woan/workspace/legs_rl_lab/logs/rsl_rl"
+LOGS_ROOT = os.path.join(_REPO_ROOT, "logs", "rsl_rl")
 # MuJoCo 场景 xml（含 actuator/imu 传感器，与 USD 无关）。TODO: 生成 narrow scene xml。
-SCENE_XML = "/home/woan/workspace/legs_rl_lab/source/legs_rl_lab/legs_rl_lab/assets/legs_URDF/mjcf/A1_legs_V2_narrow_mjcf_scene.xml"
+SCENE_XML = os.path.join(_ASSETS_DIR, "legs_URDF", "mjcf", "A1_legs_V2_narrow_mjcf_scene.xml")
 PHYS_DT = 0.005            # MuJoCo 物理步长（仿真选择）
 CONTROL_MODE = "motor"     # "motor" or "position"
 SIM_DURATION = 10000.0

@@ -5,6 +5,19 @@ from isaaclab.actuators import ImplicitActuatorCfg
 from isaaclab.assets.articulation import ArticulationCfg
 from isaaclab.utils import configclass
 
+
+def _find_repo_root(start: str) -> str:
+    d = os.path.dirname(os.path.abspath(start))
+    while d != os.path.dirname(d):
+        if os.path.isdir(os.path.join(d, "source")) and os.path.isdir(os.path.join(d, "scripts")):
+            return d
+        d = os.path.dirname(d)
+    return d
+
+
+# 外部 g1 资产(TienKung-Lab)相对 workspace 同级目录定位，避免绝对路径
+_WORKSPACE_DIR = os.path.dirname(_find_repo_root(__file__))
+
 @configclass
 class UnitreeArticulationCfg(ArticulationCfg):
     """Configuration for Unitree articulations."""
@@ -51,7 +64,7 @@ UNITREE_G1_23DOF_CFG = UnitreeArticulationCfg(
     #     asset_path=f"{UNITREE_ROS_DIR}/robots/g1_description/g1_29dof_rev_1_0.urdf",
     # ),
     spawn=UnitreeUsdFileCfg(
-        usd_path=f"/home/woan/workspace/TienKung-Lab/legged_lab/assets/g1/g1_23dof_rev_1_0/g1_23dof_rev_1_0.usd",
+        usd_path=os.path.join(_WORKSPACE_DIR, "TienKung-Lab/legged_lab/assets/g1/g1_23dof_rev_1_0/g1_23dof_rev_1_0.usd"),
     ),
     init_state=ArticulationCfg.InitialStateCfg(
         pos=(0.0, 0.0, 0.8),
