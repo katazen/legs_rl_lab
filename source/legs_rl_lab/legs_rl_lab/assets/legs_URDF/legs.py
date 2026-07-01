@@ -1,7 +1,12 @@
+import os
+
 import isaaclab.sim as sim_utils
 from isaaclab.actuators import ImplicitActuatorCfg,DelayedPDActuatorCfg
 from isaaclab.assets.articulation import ArticulationCfg
 from isaaclab.utils import configclass
+
+# 资产相对本文件定位，避免硬编码绝对路径（换机器/换用户名都能用）
+_ASSET_DIR = os.path.dirname(os.path.abspath(__file__))
 
 
 @configclass
@@ -31,7 +36,7 @@ class UnitreeUsdFileCfg(sim_utils.UsdFileCfg):
 
 LEGS_CFG = UnitreeArticulationCfg(
     spawn=UnitreeUsdFileCfg(
-        usd_path="/home/woan/workspace/legs_rl_lab/source/legs_rl_lab/legs_rl_lab/assets/legs_URDF/mjcf/A1_legs_V2_mjcf/A1_legs_V2_mjcf.usd",
+        usd_path=os.path.join(_ASSET_DIR, "mjcf/A1_legs_V2_mjcf/A1_legs_V2_mjcf.usd"),
     ),
     # In A1_legs_V2_mjcf.usd the articulation root (PhysicsArticulationRootAPI) is on the
     # `base` body at /<defaultPrim>/base/base, so relative to the spawned Robot prim it is /base/base.
