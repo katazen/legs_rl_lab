@@ -1,135 +1,139 @@
-# Template for Isaac Lab Projects
+# legs_rl_lab
 
-## Overview
+> 基于 [Isaac Lab](https://isaac-sim.github.io/IsaacLab/) 的双足腿式机器人强化学习工程：用 PPO（rsl_rl）在 GPU 并行仿真中训练腿式本体的速度跟踪 locomotion 策略，内置步态时钟、左右对称数据增强与 MuJoCo sim2sim 部署验证。
 
-This project/repository serves as a template for building projects or extensions based on Isaac Lab.
-It allows you to develop in an isolated environment, outside of the core Isaac Lab repository.
+![Isaac Sim](https://img.shields.io/badge/Isaac%20Sim-4.5%20%7C%205.x-76b900)
+![Python](https://img.shields.io/badge/Python-3.10%20%7C%203.11-blue)
+![RL](https://img.shields.io/badge/RL-rsl__rl%20PPO-orange)
+[![Stars](https://img.shields.io/github/stars/katazen/legs_rl_lab?style=social)](https://github.com/katazen/legs_rl_lab)
 
-**Key Features:**
+**适合谁用**：正在用 Isaac Lab / Isaac Sim 做腿足运动控制（locomotion）RL 的研究者与工程师。你需要一台带 NVIDIA GPU 的机器，并已装好 Isaac Lab。
 
-- `Isolation` Work outside the core Isaac Lab repository, ensuring that your development efforts remain self-contained.
-- `Flexibility` This template is set up to allow your code to be run as an extension in Omniverse.
+---
 
-**Keywords:** extension, template, isaaclab
+## ✨ 项目亮点
 
-## Installation
+- **开箱即用的多任务**：`legs`（A1 双腿原型，脚间距 0.36 m）、`nlegs`（窄本体变体，脚间距 0.2 m）、`g1qie`（G1 相关任务），共用一套 MDP 组件。
+- **参数化步态时钟**：步态周期 / 支撑相占比 / 左右相位偏移收敛到 `GaitCfg`，会随 `env.yaml` 落盘，训练与部署可复现（`nlegs` 已去掉自定义 env，相位随机化改由 reset 事件实现）。
+- **面向真机的奖励设计**：速度跟踪 + 姿态、足部间距 / 离地高度 / 打滑 / 接触力 / 触地相位匹配等成套奖励项。
+- **左右对称增强**：内置矢状面镜像的数据增强（rsl_rl symmetry），提升步态对称性与样本效率。
+- **sim2sim 验证**：提供 MuJoCo 独立回放脚本，训练完可先在 MuJoCo 里检查策略再上真机。
+- **独立扩展结构**：基于 Isaac Lab 扩展模板，在核心仓库之外独立开发。
 
-- Install Isaac Lab by following the [installation guide](https://isaac-sim.github.io/IsaacLab/main/source/setup/installation/index.html).
-  We recommend using the conda or uv installation as it simplifies calling Python scripts from the terminal.
+---
 
-- Clone or copy this project/repository separately from the Isaac Lab installation (i.e. outside the `IsaacLab` directory):
+## 📦 环境与安装
 
-- Using a python interpreter that has Isaac Lab installed, install the library in editable mode using:
+**前置依赖**（本项目不含 Isaac Lab / Isaac Sim 本体）：
 
-    ```bash
-    # use 'PATH_TO_isaaclab.sh|bat -p' instead of 'python' if Isaac Lab is not installed in Python venv or conda
-    python -m pip install -e source/legs_rl_lab
+1. 按官方[安装指南](https://isaac-sim.github.io/IsaacLab/main/source/setup/installation/index.html)装好 Isaac Lab（推荐 conda）。
+2. Python 3.10 / 3.11；训练用到 `rsl_rl`，sim2sim 用到 `mujoco`、`pynput`。
 
-- Verify that the extension is correctly installed by:
+**安装本扩展**（用装有 Isaac Lab 的解释器，以可编辑模式安装）：
 
-    - Listing the available tasks:
+```bash
+git clone git@github.com:katazen/legs_rl_lab.git
+cd legs_rl_lab
 
-        Note: It the task name changes, it may be necessary to update the search pattern `"Template-"`
-        (in the `scripts/list_envs.py` file) so that it can be listed.
+# 若 Isaac Lab 不在 conda/venv 里，把 python 换成 'PATH_TO/isaaclab.sh -p'
+python -m pip install -e source/legs_rl_lab
+```
 
-        ```bash
-        # use 'FULL_PATH_TO_isaaclab.sh|bat -p' instead of 'python' if Isaac Lab is not installed in Python venv or conda
-        python scripts/list_envs.py
-        ```
+> ⚠️ 机器人 USD 不入库（见 `.gitignore`）。`legs` 需要 `A1_legs_V2_mjcf` 的 USD；`nlegs` 需要先把 `source/legs_rl_lab/legs_rl_lab/assets/legs_URDF/mjcf/A1_legs_V2_narrow_mjcf.xml` 转成 USD，并在 `assets/legs_URDF/nlegs.py` 里填好 `NLEGS_USD_PATH`（当前为 `TODO` 占位）。
 
-    - Running a task:
+---
 
-        ```bash
-        # use 'FULL_PATH_TO_isaaclab.sh|bat -p' instead of 'python' if Isaac Lab is not installed in Python venv or conda
-        python scripts/<RL_LIBRARY>/train.py --task=<TASK_NAME>
-        ```
+## 🚀 快速开始
 
-    - Running a task with dummy agents:
+> 下面命令里的 `python` 均指“装有 Isaac Lab 的解释器”。若不在 conda/venv，请替换为 `FULL_PATH_TO/isaaclab.sh -p`。
 
-        These include dummy agents that output zero or random agents. They are useful to ensure that the environments are configured correctly.
+```bash
+# 训练：窄本体变体，4096 环境，无头模式
+python scripts/rsl_rl/train.py --task nlegs --headless --num_envs 4096
 
-        - Zero-action agent
+# 训练：原始双腿任务
+python scripts/rsl_rl/train.py --task legs --headless
 
-            ```bash
-            # use 'FULL_PATH_TO_isaaclab.sh|bat -p' instead of 'python' if Isaac Lab is not installed in Python venv or conda
-            python scripts/zero_agent.py --task=<TASK_NAME>
-            ```
-        - Random-action agent
+# 回放 / 评估已训练策略（少量环境、可实时观看）
+python scripts/rsl_rl/play.py --task nlegs --num_envs 32 --real-time
 
-            ```bash
-            # use 'FULL_PATH_TO_isaaclab.sh|bat -p' instead of 'python' if Isaac Lab is not installed in Python venv or conda
-            python scripts/random_agent.py --task=<TASK_NAME>
-            ```
+# 冒烟测试：确认环境能正常起（零动作 / 随机动作）
+python scripts/zero_agent.py --task nlegs --num_envs 16
+python scripts/random_agent.py --task nlegs --num_envs 16
+```
 
-### Set up IDE (Optional)
+常用训练参数：`--task {legs,nlegs,g1qie}`、`--num_envs`、`--max_iterations`、`--seed`、`--headless`、`--video`（录制训练视频）。
 
-To setup the IDE, please follow these instructions:
+训练产物默认写到 `logs/rsl_rl/<experiment_name>/<时间戳>/`，其中 `params/env.yaml` 会记录完整环境配置（含 `gait` 步态参数），`exported/policy.pt` 为导出的推理模型。
 
-- Run VSCode Tasks, by pressing `Ctrl+Shift+P`, selecting `Tasks: Run Task` and running the `setup_python_env` in the drop down menu.
-  When running this task, you will be prompted to add the absolute path to your Isaac Sim installation.
+### sim2sim（MuJoCo 部署验证）
 
-If everything executes correctly, it should create a file .python.env in the `.vscode` directory.
-The file contains the python paths to all the extensions provided by Isaac Sim and Omniverse.
-This helps in indexing all the python modules for intelligent suggestions while writing code.
+```bash
+# 编辑脚本顶部 SimToSimCfg.path 里的 model_path / xml 路径后运行
+python source/legs_rl_lab/legs_rl_lab/tasks/nlegs_task/task/nlegs/sim2sim.py
+```
 
-### Setup as Omniverse Extension (Optional)
+> `nlegs` 的 sim2sim 需要窄本体的 scene xml 与 nlegs 导出的 `policy.pt`，脚本里已用 `TODO` 标注待填项。
 
-We provide an example UI extension that will load upon enabling your extension defined in `source/legs_rl_lab/legs_rl_lab/ui_extension_example.py`.
+---
 
-To enable your extension, follow these steps:
+## 📁 项目结构
 
-1. **Add the search path of this project/repository** to the extension manager:
-    - Navigate to the extension manager using `Window` -> `Extensions`.
-    - Click on the **Hamburger Icon**, then go to `Settings`.
-    - In the `Extension Search Paths`, enter the absolute path to the `source` directory of this project/repository.
-    - If not already present, in the `Extension Search Paths`, enter the path that leads to Isaac Lab's extension directory directory (`IsaacLab/source`)
-    - Click on the **Hamburger Icon**, then click `Refresh`.
+```
+legs_rl_lab/
+├── scripts/rsl_rl/           # 训练 / 回放 / CLI 参数
+│   ├── train.py  play.py  cli_args.py
+├── scripts/                  # list_envs / zero_agent / random_agent 等工具
+└── source/legs_rl_lab/legs_rl_lab/
+    ├── assets/legs_URDF/     # A1 双腿机器人：MJCF + STL 网格 + 资产配置(legs.py / nlegs.py)
+    └── tasks/
+        ├── legs_task/        # 任务 "legs"：A1 双腿原型
+        ├── nlegs_task/       # 任务 "nlegs"：窄本体变体（脚间距 0.2）
+        │   ├── mdp/          # rewards / observations / gait / symmetry ...
+        │   ├── agents/       # rsl_rl PPO 配置
+        │   └── task/nlegs/   # 环境配置 + sim2sim
+        └── g1_task/          # 任务 "g1qie"
+```
 
-2. **Search and enable your extension**:
-    - Find your extension under the `Third Party` category.
-    - Toggle it to enable your extension.
+每个任务通过 `gym.register` 暴露一个 id：`legs` / `nlegs` / `g1qie`。
 
-## Code formatting
+---
 
-We have a pre-commit template to automatically format your code.
-To install pre-commit:
+## 🧩 任务一览
+
+| Task id  | 机器人 | 说明 |
+|----------|--------|------|
+| `legs`   | A1 双腿原型 | 速度跟踪 locomotion，脚间距 0.36 m，带自定义 env 的相位时钟 |
+| `nlegs`  | A1 窄本体变体 | 复刻 `legs`，本体换窄立方体、脚间距缩到 0.2 m；步态参数进 `GaitCfg`，相位随机化用 reset 事件（无自定义 env） |
+| `g1qie`  | G1 | G1 相关任务 |
+
+`legs` 与 `nlegs` 的差异集中在：机器人资产（USD）、`feet_y_distance` 目标间距（0.36 → 0.2）、以及步态参数的组织方式。
+
+---
+
+## 🛠️ 开发
+
+代码风格用 ruff（配置见根目录 `pyproject.toml`，line-length 120，目标 py310）。可选装 pre-commit 自动格式化：
 
 ```bash
 pip install pre-commit
-```
-
-Then you can run pre-commit with:
-
-```bash
 pre-commit run --all-files
 ```
 
-## Troubleshooting
+**VSCode 索引**：若 Pylance 找不到扩展模块，在 `.vscode/settings.json` 的 `python.analysis.extraPaths` 里加上 `source/legs_rl_lab` 的路径；若 Pylance 因索引过多崩溃，反过来注释掉一些用不到的 `omni.*` 包路径。
 
-### Pylance Missing Indexing of Extensions
+---
 
-In some VsCode versions, the indexing of part of the extensions is missing.
-In this case, add the path to your extension in `.vscode/settings.json` under the key `"python.analysis.extraPaths"`.
+## ❓ 适用场景
 
-```json
-{
-    "python.analysis.extraPaths": [
-        "<path-to-ext-repo>/source/legs_rl_lab"
-    ]
-}
-```
+- 双足 / 腿式机器人 locomotion 策略训练与快速迭代。
+- 在同一套 MDP 组件下对比不同本体几何（如站宽）对步态的影响。
+- 训练后经 MuJoCo sim2sim 做部署前验证。
 
-### Pylance Crash
+---
 
-If you encounter a crash in `pylance`, it is probable that too many files are indexed and you run out of memory.
-A possible solution is to exclude some of omniverse packages that are not used in your project.
-To do so, modify `.vscode/settings.json` and comment out packages under the key `"python.analysis.extraPaths"`
-Some examples of packages that can likely be excluded are:
+## 📝 License / 致谢
 
-```json
-"<path-to-isaac-sim>/extscache/omni.anim.*"         // Animation packages
-"<path-to-isaac-sim>/extscache/omni.kit.*"          // Kit UI tools
-"<path-to-isaac-sim>/extscache/omni.graph.*"        // Graph UI tools
-"<path-to-isaac-sim>/extscache/omni.services.*"     // Services tools
-...
-```
+本项目基于 [Isaac Lab](https://github.com/isaac-sim/IsaacLab) 的扩展模板构建，源码文件头部保留其 SPDX 许可声明，Python 包在 `setup.py` 中声明为 Apache-2.0。使用前请以源码中的实际许可声明为准。
+
+> 说明：本 README 中标 `TODO` / “待填” 的部分（如 `nlegs` 的 USD 路径、sim2sim 的 scene xml 与 policy 路径）需在对应资产准备好后补全。
