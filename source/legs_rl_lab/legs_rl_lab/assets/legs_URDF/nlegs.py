@@ -7,11 +7,10 @@ from legs_rl_lab.assets.legs_URDF.legs import UnitreeArticulationCfg, UnitreeUsd
 
 # 与 legs.py 完全相同的机器人配置，唯一区别是指向 A1_legs_V2_narrow_mjcf.xml 转出的 USD。
 # TODO: USD 还没转好，转好后把下面的 usd_path 填上（narrow 版 USD 的绝对路径）。
-NLEGS_USD_PATH = ""  # e.g. ".../assets/legs_URDF/mjcf/A1_legs_V2_narrow_mjcf/A1_legs_V2_narrow_mjcf.usd"
 
 NLEGS_CFG = UnitreeArticulationCfg(
     spawn=UnitreeUsdFileCfg(
-        usd_path=NLEGS_USD_PATH,
+        usd_path="/home/woan/workspace/legs_rl_lab/source/legs_rl_lab/legs_rl_lab/assets/legs_URDF/mjcf/A1_legs_V2_narrow_mjcf/A1_legs_V2_narrow_mjcf.usd",
     ),
     # narrow USD 与原 USD 结构一致：articulation root 在 base 上，相对 spawn 的 Robot prim 为 /base/base。
     articulation_root_prim_path='/base/base',

@@ -159,9 +159,6 @@ class EventCfg:
         params={"velocity_range": {"x": (-0.5, 0.5), "y": (-0.5, 0.5)}},
     )
 
-    # 每次 reset 给每个 env 随机步态相位偏移（替代原 LegsEnv._reset_idx 的 phase_offsets）
-    randomize_gait_phase = EventTerm(func=mdp.randomize_gait_phase, mode="reset")
-
 
 @configclass
 class CommandsCfg:
@@ -252,15 +249,13 @@ class RewardsCfg:
     # stand_still = RewTerm(func=mdp.stand_still, weight=1.0)
     # -- base
     base_linear_velocity = RewTerm(func=mdp.lin_vel_z_l2, weight=-2.0)
-    # base_angular = RewTerm(func=mdp.ang_vel_xy_l2, weight=-0.05)
-    base_angular = RewTerm(func=mdp.ang_vel_y, weight=-0.05)
+    base_angular = RewTerm(func=mdp.ang_vel_xy_l2, weight=-0.05)
     joint_vel = RewTerm(func=mdp.joint_vel_l2, weight=-0.001)
     joint_acc = RewTerm(func=mdp.joint_acc_l2, weight=-2.5e-7)
     action_rate = RewTerm(func=mdp.action_rate_l2, weight=-0.05)
     dof_pos_limits = RewTerm(func=mdp.joint_pos_limits, weight=-5.0)
     energy = RewTerm(func=mdp.energy, weight=-2e-5)
-    # flat_orientation = RewTerm(func=mdp.flat_orientation_l2, weight=-5.0)
-    flat_orientation = RewTerm(func=mdp.flat_orientation_x, weight=-5.0)
+    flat_orientation = RewTerm(func=mdp.flat_orientation_l2, weight=-5.0)
 
     joint_deviation_legs = RewTerm(
         func=mdp.joint_deviation_l1,
@@ -281,7 +276,7 @@ class RewardsCfg:
 
     feet_y_distance = RewTerm(
         func=mdp.feet_y_distance,
-        weight=-4.0,
+        weight=-2.0,
         params={"threshold": 0.2, "asset_cfg": SceneEntityCfg("robot", body_names=".*6")},
     )
 
