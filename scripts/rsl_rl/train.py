@@ -8,21 +8,8 @@
 """Launch Isaac Sim Simulator first."""
 
 
-import gymnasium as gym
-import pathlib
-import sys
-
-sys.path.insert(0, f"{pathlib.Path(__file__).parent.parent}")
-from list_envs import import_packages  # noqa: F401
-
-sys.path.pop(0)
-
-tasks = []
-for task_spec in gym.registry.values():
-    # if "Unitree" in task_spec.id and "Isaac" not in task_spec.id:
-        tasks.append(task_spec.id)
-
 import argparse
+import sys
 
 import argcomplete
 
@@ -37,7 +24,7 @@ parser.add_argument("--video", action="store_true", default=False, help="Record 
 parser.add_argument("--video_length", type=int, default=200, help="Length of the recorded video (in steps).")
 parser.add_argument("--video_interval", type=int, default=2000, help="Interval between video recordings (in steps).")
 parser.add_argument("--num_envs", type=int, default=None, help="Number of environments to simulate.")
-parser.add_argument("--task", type=str, default=None, choices=tasks, help="Name of the task.")
+parser.add_argument("--task", type=str, default=None, help="Name of the task.")
 parser.add_argument("--seed", type=int, default=None, help="Seed used for the environment")
 parser.add_argument("--max_iterations", type=int, default=None, help="RL Policy training iterations.")
 parser.add_argument(
