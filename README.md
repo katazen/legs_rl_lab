@@ -39,7 +39,7 @@ cd legs_rl_lab
 python -m pip install -e source/legs_rl_lab
 ```
 
-> ⚠️ 机器人 USD 不入库（见 `.gitignore`）。`legs` 需要 `A1_legs_V2_mjcf` 的 USD；`nlegs` 需要先把 `source/legs_rl_lab/legs_rl_lab/assets/legs_URDF/mjcf/A1_legs_V2_narrow_mjcf.xml` 转成 USD，并在 `assets/legs_URDF/nlegs.py` 里填好 `NLEGS_USD_PATH`（当前为 `TODO` 占位）。
+> ⚠️ 机器人 USD 不入库（见 `.gitignore`）。两个任务都需在本地先由 MJCF 生成 USD：`legs` 用 `A1_legs_V2_mjcf`，`nlegs` 用 `A1_legs_V2_narrow_mjcf`。`assets/legs_URDF/nlegs.py` 已填好 `usd_path`（绝对路径），克隆到别的机器后请改成你本机的实际路径。
 
 ---
 
@@ -136,4 +136,4 @@ pre-commit run --all-files
 
 本项目基于 [Isaac Lab](https://github.com/isaac-sim/IsaacLab) 的扩展模板构建，源码文件头部保留其 SPDX 许可声明，Python 包在 `setup.py` 中声明为 Apache-2.0。使用前请以源码中的实际许可声明为准。
 
-> 说明：本 README 中标 `TODO` / “待填” 的部分（如 `nlegs` 的 USD 路径、sim2sim 的 scene xml 与 policy 路径）需在对应资产准备好后补全。
+> 说明：本 README 中标 `TODO` / “待填” 的部分（如 sim2sim 的 scene xml 与 policy 路径）需在对应资产准备好后补全。
