@@ -35,6 +35,31 @@ def export_deploy_cfg(env: ManagerBasedRLEnv, log_dir):
     cfg["damping"] = damping.tolist()
     cfg["default_joint_pos"] = asset.data.default_joint_pos[0].detach().cpu().numpy().tolist()
 
+    # --- extra robot params for sim2sim (armature / effort limits), in sdk order ---
+    armature = np.zeros(len(joint_sdk_names))
+    effort = np.zeros(len(joint_sdk_names))
+    for act_cfg in env.cfg.scene.robot.actuators.values():
+        act_ids, _ = resolve_matching_names(act_cfg.joint_names_expr, asset.data.joint_names, preserve_order=False)
+        arm = getattr(act_cfg, "armature", None)
+        eff = getattr(act_cfg, "effort_limit_sim", None)
+        if eff is None:
+            eff = getattr(act_cfg, "effort_limit", None)
+        for isaac_idx in act_ids:
+            sdk_idx = joint_ids_map.index(isaac_idx)
+            if arm is not None:
+                armature[sdk_idx] = arm
+            if eff is not None:
+                effort[sdk_idx] = eff
+    cfg["armature"] = armature.tolist()
+    cfg["effort"] = effort.tolist()
+
+    # --- gait clock period (nlegs GaitCfg, or a custom env with .period) ---
+    gait_cfg = getattr(env.cfg, "gait", None)
+    if gait_cfg is not None and getattr(gait_cfg, "period", None) is not None:
+        cfg["gait_period"] = gait_cfg.period
+    elif getattr(env, "period", None) is not None:
+        cfg["gait_period"] = env.period
+
     # --- commands ---
     cfg["commands"] = {}
     if hasattr(env.cfg.commands, "base_velocity"):  # some environments do not have base_velocity command
