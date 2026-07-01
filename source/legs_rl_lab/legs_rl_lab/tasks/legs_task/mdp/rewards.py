@@ -8,6 +8,8 @@ from isaaclab.assets import Articulation, RigidObject
 from isaaclab.managers import SceneEntityCfg
 from isaaclab.sensors import ContactSensor
 
+from .gait import get_phase
+
 if TYPE_CHECKING:
     from isaaclab.envs import ManagerBasedRLEnv
 
@@ -133,8 +135,8 @@ def height_l2(env: ManagerBasedRLEnv, target_height: float,
 
 
 def _get_leg_phases(env: ManagerBasedRLEnv):
-    cycle_phase = env.get_phase()
-    off_tensor = torch.tensor(env.feet_offset, device=env.device).unsqueeze(0)
+    cycle_phase = get_phase(env)
+    off_tensor = torch.tensor(env.cfg.gait.feet_offset, device=env.device).unsqueeze(0)
     leg_phases = (cycle_phase + off_tensor) % 1.0
     return leg_phases
 
@@ -143,7 +145,7 @@ def feet_gait(env: ManagerBasedRLEnv, sensor_cfg: SceneEntityCfg) -> torch.Tenso
     contact_sensor = env.scene.sensors[sensor_cfg.name]
     is_contact = contact_sensor.data.current_contact_time[:, sensor_cfg.body_ids] > 0
     leg_phases = _get_leg_phases(env)
-    should_be_stance = leg_phases < env.stance_ratio
+    should_be_stance = leg_phases < env.cfg.gait.stance_ratio
     match = (should_be_stance == is_contact)
     return torch.mean(torch.where(match, 1.0, -0.5), dim=1)
 
@@ -152,7 +154,7 @@ def body_sway(env: ManagerBasedRLEnv, amplitude: float = 0.1,
               asset_cfg: SceneEntityCfg = SceneEntityCfg("robot")) -> torch.Tensor:
     asset: RigidObject = env.scene[asset_cfg.name]
     gravity_y = asset.data.projected_gravity_b[:, 1]
-    phase = env.get_phase().squeeze(1)
+    phase = get_phase(env).squeeze(1)
     target_y = amplitude * torch.sin(2 * torch.pi * phase)
     error = torch.square(gravity_y - target_y)
     return torch.exp(-40.0 * error)
@@ -173,8 +175,8 @@ def arm_swing_gait(env: ManagerBasedRLEnv, asset_cfg: SceneEntityCfg) -> torch.T
     cmd_vel = env.command_manager.get_command("base_velocity")[:, 0]
     amp = torch.abs(cmd_vel) * 0.5  # 幅度系数
     amp = torch.clamp(amp, 0.0, 1.0).unsqueeze(1)
-    cycle_phase = env.get_phase()
-    off_tensor = torch.tensor(env.feet_offset[::-1], device=env.device).unsqueeze(0)
+    cycle_phase = get_phase(env)
+    off_tensor = torch.tensor(env.cfg.gait.feet_offset[::-1], device=env.device).unsqueeze(0)
     arm_phases = (cycle_phase + off_tensor) % 1.0
     target_wave = torch.sin(arm_phases * 2 * torch.pi)
     target_pos = amp * target_wave
@@ -207,24 +209,24 @@ def feet_slide(env, sensor_cfg: SceneEntityCfg, asset_cfg: SceneEntityCfg = Scen
 
 def feet_clearance_old(env: ManagerBasedRLEnv, asset_cfg: SceneEntityCfg, target_height: float = 0.1) -> torch.Tensor:
     asset = env.scene[asset_cfg.name]
-    feet_pos_z = asset.data.body_pos_w[:, asset_cfg.body_ids, 2] - 0.038
+    feet_pos_z = asset.data.body_pos_w[:, asset_cfg.body_ids, 2] - 0.0135
     leg_phases = _get_leg_phases(env)
     target_curve = torch.zeros_like(leg_phases)
-    in_swing = leg_phases > env.stance_ratio
-    swing_duration = 1.0 - env.stance_ratio
-    swing_progress = (leg_phases[in_swing] - env.stance_ratio) / swing_duration * torch.pi
+    in_swing = leg_phases > env.cfg.gait.stance_ratio
+    swing_duration = 1.0 - env.cfg.gait.stance_ratio
+    swing_progress = (leg_phases[in_swing] - env.cfg.gait.stance_ratio) / swing_duration * torch.pi
     target_curve[in_swing] = torch.sin(swing_progress) * target_height
     error = torch.square(target_curve - feet_pos_z)
     return torch.exp(-torch.sum(error, dim=1) / 0.02)
 
 def feet_clearance(env: ManagerBasedRLEnv, asset_cfg: SceneEntityCfg, target_height: float = 0.1) -> torch.Tensor:
     asset = env.scene[asset_cfg.name]
-    feet_pos_z = asset.data.body_pos_w[:, asset_cfg.body_ids, 2] - 0.038
+    feet_pos_z = asset.data.body_pos_w[:, asset_cfg.body_ids, 2] - 0.0135
     leg_phases = _get_leg_phases(env)
-    swing_duration = 1.0 - env.stance_ratio
-    in_swing = leg_phases > env.stance_ratio
+    swing_duration = 1.0 - env.cfg.gait.stance_ratio
+    in_swing = leg_phases > env.cfg.gait.stance_ratio
     swing_progress = torch.zeros_like(leg_phases)
-    swing_progress[in_swing] = (leg_phases[in_swing] - env.stance_ratio) / swing_duration
+    swing_progress[in_swing] = (leg_phases[in_swing] - env.cfg.gait.stance_ratio) / swing_duration
     weight = torch.sin(swing_progress * torch.pi) ** 2
     shortfall = torch.clamp(target_height - feet_pos_z, min=0.0)
     error = weight * shortfall ** 2

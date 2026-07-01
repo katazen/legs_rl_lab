@@ -36,8 +36,9 @@ def export_deploy_cfg(env: ManagerBasedRLEnv, log_dir):
     cfg["default_joint_pos"] = asset.data.default_joint_pos[0].detach().cpu().numpy().tolist()
 
     # --- extra robot params for sim2sim (armature / effort limits), in sdk order ---
-    armature = np.zeros(len(joint_sdk_names))
-    effort = np.zeros(len(joint_sdk_names))
+    # build in isaac order then remap to sdk order with joint_ids_map (same as stiffness/damping)
+    armature_isaac = np.zeros(len(joint_sdk_names))
+    effort_isaac = np.zeros(len(joint_sdk_names))
     for act_cfg in env.cfg.scene.robot.actuators.values():
         act_ids, _ = resolve_matching_names(act_cfg.joint_names_expr, asset.data.joint_names, preserve_order=False)
         arm = getattr(act_cfg, "armature", None)
@@ -45,11 +46,14 @@ def export_deploy_cfg(env: ManagerBasedRLEnv, log_dir):
         if eff is None:
             eff = getattr(act_cfg, "effort_limit", None)
         for isaac_idx in act_ids:
-            sdk_idx = joint_ids_map.index(isaac_idx)
             if arm is not None:
-                armature[sdk_idx] = arm
+                armature_isaac[isaac_idx] = arm
             if eff is not None:
-                effort[sdk_idx] = eff
+                effort_isaac[isaac_idx] = eff
+    armature = np.zeros(len(joint_sdk_names))
+    armature[joint_ids_map] = armature_isaac
+    effort = np.zeros(len(joint_sdk_names))
+    effort[joint_ids_map] = effort_isaac
     cfg["armature"] = armature.tolist()
     cfg["effort"] = effort.tolist()
 
@@ -59,6 +63,12 @@ def export_deploy_cfg(env: ManagerBasedRLEnv, log_dir):
         cfg["gait_period"] = gait_cfg.period
     elif getattr(env, "period", None) is not None:
         cfg["gait_period"] = env.period
+
+    # --- action delay (DelayedPDActuatorCfg min/max_delay), in physics steps ---
+    min_delays = [a.min_delay for a in env.cfg.scene.robot.actuators.values() if getattr(a, "min_delay", None) is not None]
+    max_delays = [a.max_delay for a in env.cfg.scene.robot.actuators.values() if getattr(a, "max_delay", None) is not None]
+    if min_delays and max_delays:
+        cfg["action_delay"] = [int(min(min_delays)), int(max(max_delays))]
 
     # --- commands ---
     cfg["commands"] = {}

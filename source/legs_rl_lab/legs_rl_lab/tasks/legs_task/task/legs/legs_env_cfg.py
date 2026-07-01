@@ -21,6 +21,20 @@ from isaaclab.utils.noise import AdditiveUniformNoiseCfg as Unoise
 from legs_rl_lab.assets.legs_URDF.legs import LEGS_CFG as ROBOT_CFG
 from legs_rl_lab.tasks.legs_task import mdp
 
+
+@configclass
+class GaitCfg:
+    """步态时钟参数（原 LegsEnv 里硬编码的三个量）。
+
+    放进 env_cfg 后会被 train.py 的 dump_yaml 写进 env.yaml，训练/部署可复现。
+    reward / observation 通过 env.cfg.gait.* 读取。
+    """
+
+    period: float = 0.85           # 步态周期 (s)
+    stance_ratio: float = 0.55     # 支撑相占比
+    feet_offset: list = [0.0, 0.5]  # 左右腿相位偏移
+
+
 COBBLESTONE_ROAD_CFG = terrain_gen.TerrainGeneratorCfg(
     size=(8.0, 8.0),
     border_width=20.0,
@@ -161,7 +175,7 @@ class CommandsCfg:
             lin_vel_x=(-0.1, 0.1), lin_vel_y=(-0.0, 0.0), ang_vel_z=(-0.0, 0.0)
         ),
         limit_ranges=mdp.UniformLevelVelocityCommandCfg.Ranges(
-            lin_vel_x=(-0.5, 1.0), lin_vel_y=(-0.5, 0.5), ang_vel_z=(-0.3, 0.3)
+            lin_vel_x=(-0.5, 0.5), lin_vel_y=(-0.3, 0.3), ang_vel_z=(-0.3, 0.3)
         ),
     )
 
@@ -235,15 +249,13 @@ class RewardsCfg:
     # stand_still = RewTerm(func=mdp.stand_still, weight=1.0)
     # -- base
     base_linear_velocity = RewTerm(func=mdp.lin_vel_z_l2, weight=-2.0)
-    # base_angular = RewTerm(func=mdp.ang_vel_xy_l2, weight=-0.05)
-    base_angular = RewTerm(func=mdp.ang_vel_y, weight=-0.05)
+    base_angular = RewTerm(func=mdp.ang_vel_xy_l2, weight=-0.05)
     joint_vel = RewTerm(func=mdp.joint_vel_l2, weight=-0.001)
     joint_acc = RewTerm(func=mdp.joint_acc_l2, weight=-2.5e-7)
     action_rate = RewTerm(func=mdp.action_rate_l2, weight=-0.05)
     dof_pos_limits = RewTerm(func=mdp.joint_pos_limits, weight=-5.0)
     energy = RewTerm(func=mdp.energy, weight=-2e-5)
-    # flat_orientation = RewTerm(func=mdp.flat_orientation_l2, weight=-5.0)
-    flat_orientation = RewTerm(func=mdp.flat_orientation_x, weight=-5.0)
+    flat_orientation = RewTerm(func=mdp.flat_orientation_l2, weight=-5.0)
 
     joint_deviation_legs = RewTerm(
         func=mdp.joint_deviation_l1,
@@ -264,8 +276,8 @@ class RewardsCfg:
 
     feet_y_distance = RewTerm(
         func=mdp.feet_y_distance,
-        weight=-4.0,
-        params={"asset_cfg": SceneEntityCfg("robot", body_names=".*6")},
+        weight=-2.0,
+        params={"threshold": 0.36, "asset_cfg": SceneEntityCfg("robot", body_names=".*6")},
     )
 
     feet_x_distance = RewTerm(
@@ -286,7 +298,7 @@ class RewardsCfg:
     feet_clearance = RewTerm(
         func=mdp.feet_clearance,
         weight=1.0,
-        params={"target_height": 0.05,"asset_cfg": SceneEntityCfg("robot", body_names=".*6")},
+        params={"target_height": 0.1,"asset_cfg": SceneEntityCfg("robot", body_names=".*6")},
     )
 
     feet_contact_forces = RewTerm(
@@ -353,6 +365,8 @@ class RobotEnvCfg(ManagerBasedRLEnvCfg):
     terminations: TerminationsCfg = TerminationsCfg()
     events: EventCfg = EventCfg()
     curriculum: CurriculumCfg = CurriculumCfg()
+    # 步态时钟参数（会被 dump 到 env.yaml）
+    gait: GaitCfg = GaitCfg()
 
     def __post_init__(self):
         """Post initialization."""

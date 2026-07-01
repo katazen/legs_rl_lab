@@ -7,6 +7,6 @@ gym.register(
     kwargs={
         "env_cfg_entry_point": f"{__name__}.nlegs_env_cfg:RobotEnvCfg",
         "play_env_cfg_entry_point": f"{__name__}.nlegs_env_cfg:RobotPlayEnvCfg",
-        "rsl_rl_cfg_entry_point": f"legs_rl_lab.tasks.nlegs_task.agents.rsl_rl_ppo_cfg:BasePPORunnerCfg",
+        "rsl_rl_cfg_entry_point": "legs_rl_lab.tasks.legs_task.agents.rsl_rl_ppo_cfg:NlegsPPORunnerCfg",
     },
 )

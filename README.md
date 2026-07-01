@@ -70,7 +70,7 @@ python scripts/random_agent.py --task nlegs --num_envs 16
 
 ```bash
 # 编辑脚本顶部 SimToSimCfg.path 里的 model_path / xml 路径后运行
-python source/legs_rl_lab/legs_rl_lab/tasks/nlegs_task/task/nlegs/sim2sim.py
+python source/legs_rl_lab/legs_rl_lab/tasks/legs_task/task/nlegs/sim2sim.py
 ```
 
 > `nlegs` 的 sim2sim 需要窄本体的 scene xml 与 nlegs 导出的 `policy.pt`，脚本里已用 `TODO` 标注待填项。
@@ -87,11 +87,12 @@ legs_rl_lab/
 └── source/legs_rl_lab/legs_rl_lab/
     ├── assets/legs_URDF/     # A1 双腿机器人：MJCF + STL 网格 + 资产配置(legs.py / nlegs.py)
     └── tasks/
-        ├── legs_task/        # 任务 "legs"：A1 双腿原型
-        ├── nlegs_task/       # 任务 "nlegs"：窄本体变体（脚间距 0.2）
-        │   ├── mdp/          # rewards / observations / gait / symmetry ...
-        │   ├── agents/       # rsl_rl PPO 配置
-        │   └── task/nlegs/   # 环境配置 + sim2sim
+        ├── legs_task/        # 双腿任务集（legs 与 nlegs 共用 mdp/agents）
+        │   ├── mdp/          # rewards / observations / gait / symmetry ...（共享）
+        │   ├── agents/       # rsl_rl PPO 配置（共享，nlegs 仅覆盖 experiment_name）
+        │   └── task/
+        │       ├── legs/     # 任务 "legs"：A1 双腿原型（脚间距 0.36）
+        │       └── nlegs/    # 任务 "nlegs"：窄本体变体（脚间距 0.2，env_cfg 继承 legs）
         └── g1_task/          # 任务 "g1qie"
 ```
 
@@ -103,11 +104,11 @@ legs_rl_lab/
 
 | Task id  | 机器人 | 说明 |
 |----------|--------|------|
-| `legs`   | A1 双腿原型 | 速度跟踪 locomotion，脚间距 0.36 m，带自定义 env 的相位时钟 |
-| `nlegs`  | A1 窄本体变体 | 复刻 `legs`，本体换窄立方体、脚间距缩到 0.2 m；步态参数进 `GaitCfg`，相位仅由 episode 时间决定（无自定义 env、无相位随机化） |
+| `legs`   | A1 双腿原型 | 速度跟踪 locomotion，脚间距 0.36 m |
+| `nlegs`  | A1 窄本体变体 | 与 `legs` 共用全部 mdp/agents 与 env 配置，仅机器人资产（脚间距 0.2 m）和 `feet_y_distance` 目标间距不同（env_cfg 子类化继承 legs） |
 | `g1qie`  | G1 | G1 相关任务 |
 
-`legs` 与 `nlegs` 的差异集中在：机器人资产（USD）、`feet_y_distance` 目标间距（0.36 → 0.2）、以及步态参数的组织方式。
+`legs` 与 `nlegs` 的**唯一功能差异**：机器人资产（USD，0.36 vs 0.2）与 `feet_y_distance` 目标间距（0.36 → 0.2）；其余（步态时钟 `GaitCfg`、奖励、观测、对称增强等）完全共享。
 
 ---
 

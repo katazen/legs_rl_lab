@@ -28,7 +28,7 @@ SCENE_XML = "/home/woan/workspace/legs_rl_lab/source/legs_rl_lab/legs_rl_lab/ass
 PHYS_DT = 0.005            # MuJoCo 物理步长（仿真选择）
 CONTROL_MODE = "motor"     # "motor" or "position"
 SIM_DURATION = 10000.0
-ACTION_DELAY_RANGE = (3, 4)
+ACTION_DELAY_RANGE_DEFAULT = (11, 15)  # 缺 deploy.yaml 字段时的兜底（physics steps, 含端点）
 COLLECT_DURATION = 10.0    # 采集时长 (秒)
 
 # 关节顺序：isaac(策略/yaml) vs mujoco
@@ -98,12 +98,17 @@ def build_cfg(run: str, save_data: bool = False):
     else:
         print("[sim2sim] 警告: deploy.yaml 缺字段 'gait_period'，改用默认 0.85")
         gait_cycle = _DEFAULT_GAIT_PERIOD
+    if "action_delay" in d:
+        action_delay_range = tuple(int(x) for x in d["action_delay"])
+    else:
+        print(f"[sim2sim] 警告: deploy.yaml 缺字段 'action_delay'，改用默认 {ACTION_DELAY_RANGE_DEFAULT}")
+        action_delay_range = ACTION_DELAY_RANGE_DEFAULT
 
     path = types.SimpleNamespace(pos_xml_path=SCENE_XML, tau_xml_path=SCENE_XML, model_path=model_path)
     sim = types.SimpleNamespace(
         sim_duration=SIM_DURATION, control_mode=CONTROL_MODE, action_dim=action_dim,
         state_dim=state_dim, dt=PHYS_DT, decimation=decimation, gait_cycle=gait_cycle,
-        action_delay_range=ACTION_DELAY_RANGE, his_lens=his_lens,
+        action_delay_range=action_delay_range, his_lens=his_lens,
         collect_data=save_data, collect_duration=COLLECT_DURATION, obs_slices=obs_slices,
     )
     robot = types.SimpleNamespace(
@@ -122,11 +127,11 @@ class LatencySimulator:
     def reset(self, action_delay_range: tuple):
         """
         在 Episode 重置时调用。
-        :param action_delay_range: (min, max) 动作延迟步数范围
+        :param action_delay_range: (min, max) 动作延迟步数范围（含端点，与 isaaclab 一致）
         :param obs_delay_ranges: dict { 'dof_pos': (min, max), ... } 观测延迟范围
         :param initial_obs: dict { 'dof_pos': initial_value, ... } 初始观测值，用于填充 Buffer
         """
-        act_delay = np.random.randint(*action_delay_range)
+        act_delay = np.random.randint(action_delay_range[0], action_delay_range[1] + 1)
         self.action_buffer = deque(
             [np.zeros(self.action_dim, dtype=np.float32)] * (act_delay + 1),
             maxlen=act_delay + 1
