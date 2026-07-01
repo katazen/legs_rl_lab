@@ -1,0 +1,151 @@
+source/legs_rl_lab/legs_rl_lab/tasks/nlegs_task/mdp/symmetry.py
+  s_aede2d0005e56c::t_1502fea9174b6f 1-92,94-141
+  s_aede2d0005e56c::t_611366ec151f95 93
+source/legs_rl_lab/legs_rl_lab/tasks/nlegs_task/__init__.py
+  s_aede2d0005e56c::t_1502fea9174b6f 1
+source/legs_rl_lab/legs_rl_lab/tasks/nlegs_task/task/nlegs/__init__.py
+  s_aede2d0005e56c::t_1502fea9174b6f 1-3,6-7,11-12
+  s_aede2d0005e56c::t_3f6c9eda9d80e5 4-5,8-10
+source/legs_rl_lab/legs_rl_lab/tasks/nlegs_task/task/nlegs/nlegs_env_cfg.py
+  s_aede2d0005e56c::t_73bd9a6c865ba8 373-374
+  s_aede2d0005e56c::t_1502fea9174b6f 1-20,23,38-161,165-284,286-372,375-407
+  s_aede2d0005e56c::t_aafeed1158488f 21-22
+  s_aede2d0005e56c::t_19e36b87c068a0 24-37
+  s_aede2d0005e56c::t_8375f695da3a59 285
+  s_aede2d0005e56c::t_03bed7d0c58bf4 162-164
+source/legs_rl_lab/legs_rl_lab/assets/legs_URDF/nlegs.py
+  s_aede2d0005e56c::t_8609b8d4ddc31e 1-61
+source/legs_rl_lab/legs_rl_lab/tasks/nlegs_task/mdp/gait.py
+  s_aede2d0005e56c::t_20cb5a895fa5b2 1-29
+source/legs_rl_lab/legs_rl_lab/tasks/nlegs_task/mdp/observations.py
+  s_aede2d0005e56c::t_1502fea9174b6f 1-8,10,12-13,15-19
+  s_aede2d0005e56c::t_dc7cee719f3a93 9,11,14
+source/legs_rl_lab/legs_rl_lab/tasks/nlegs_task/task/nlegs/sim2sim.py
+  s_aede2d0005e56c::t_238f92da05b473 13-16,26
+  s_aede2d0005e56c::t_1502fea9174b6f 1-12,17-25,27-366
+source/legs_rl_lab/legs_rl_lab/tasks/nlegs_task/agents/rsl_rl_ppo_cfg.py
+  s_aede2d0005e56c::t_b25544be7b7dba 9
+  s_aede2d0005e56c::t_1502fea9174b6f 1-8,10-34,36-63
+  s_aede2d0005e56c::t_5c15e7248ce7bd 35
+source/legs_rl_lab/legs_rl_lab/assets/legs_URDF/mjcf/A1_legs_V2_mjcf.xml
+  s_aede2d0005e56c::t_dbe85872e2022f 12-105
+  s_aede2d0005e56c::t_e07de4ba90837e 9-11
+  s_aede2d0005e56c::t_a00a4c322f9cd8 106-108
+source/legs_rl_lab/legs_rl_lab/tasks/nlegs_task/mdp/curriculums.py
+  s_aede2d0005e56c::t_1502fea9174b6f 1-61
+source/legs_rl_lab/legs_rl_lab/tasks/nlegs_task/mdp/commands.py
+  s_aede2d0005e56c::t_1502fea9174b6f 1-11
+source/legs_rl_lab/legs_rl_lab/tasks/nlegs_task/mdp/__init__.py
+  s_aede2d0005e56c::t_701e33fe8672d1 4
+  s_aede2d0005e56c::t_1502fea9174b6f 1-3,5-7
+source/legs_rl_lab/legs_rl_lab/assets/legs_URDF/mjcf/A1_legs_V2_narrow_mjcf.xml
+  s_aede2d0005e56c::t_4ca7c71edeab86 1-153
+source/legs_rl_lab/legs_rl_lab/tasks/nlegs_task/mdp/rewards.py
+  s_aede2d0005e56c::t_31c6fa6b28f31d 138,157,178
+  s_aede2d0005e56c::t_6294b3d82af39a 139,179
+  s_aede2d0005e56c::t_5525d8a671c967 11-12
+  s_aede2d0005e56c::t_b88abd58c6503c 148,215-217,226-227,229
+  s_aede2d0005e56c::t_1502fea9174b6f 1-10,13-137,140-147,149-156,158-177,180-214,218-225,228,230-273
+source/legs_rl_lab/legs_rl_lab/tasks/nlegs_task/mdp/terminations.py
+  s_aede2d0005e56c::t_1502fea9174b6f 1-12
+.gitignore
+  s_aede2d0005e56c::t_f751ee65773e6e 16
+legs_rl_lab.sh
+  s_328ad7f5de3f18::t_12b4aca749618d 1-83
+scripts/rsl_rl/cli_args.py
+  s_328ad7f5de3f18::t_a44fb612bbfd42 1,13,42,55-57,62,93-96
+scripts/rsl_rl/play.py
+  s_328ad7f5de3f18::t_45134e48bfbc35 1,11,37,48,53,56-63,67,70,72-80,87,122,125-126,135-152,154-170,179-180,190
+scripts/rsl_rl/train.py
+  s_328ad7f5de3f18::t_c9bdad0264c4ac 1,10-12,15-28,40,50,71-72,74,88-89,91-92,95,97,107,112,120-121,151,184,196-201
+source/legs_rl_lab/legs_rl_lab/assets/legs_URDF/legs.py
+  s_328ad7f5de3f18::t_973bff2e8b20ca 1-82
+source/legs_rl_lab/legs_rl_lab/assets/legs_URDF/mjcf/A1_legs_V2_mjcf_scene.xml
+  s_328ad7f5de3f18::t_e33ca4113c3b2f 1-162
+source/legs_rl_lab/legs_rl_lab/assets/legs_URDF/mjcf/convert_urdf_to_mjcf.py
+  s_328ad7f5de3f18::t_055bcfbed8e69e 1-107
+source/legs_rl_lab/legs_rl_lab/assets/legs_URDF/mjcf/legs_URDF.xml
+  s_328ad7f5de3f18::t_92eab1f0085460 1-174
+source/legs_rl_lab/legs_rl_lab/assets/robots/g123.py
+  s_328ad7f5de3f18::t_f123380519ba22 1-155
+source/legs_rl_lab/legs_rl_lab/tasks/g1_task/__init__.py
+  s_328ad7f5de3f18::t_ef0ba487e05a1d 1
+source/legs_rl_lab/legs_rl_lab/tasks/g1_task/agents/rsl_rl_ppo_cfg.py
+  s_328ad7f5de3f18::t_3c0aaba11931cf 1,7,9-17,21-40,47
+source/legs_rl_lab/legs_rl_lab/tasks/g1_task/mdp/__init__.py
+  s_328ad7f5de3f18::t_9d47032991a99c 2-4
+source/legs_rl_lab/legs_rl_lab/tasks/g1_task/mdp/commands.py
+  s_328ad7f5de3f18::t_97af4cfa1c479d 1-11
+source/legs_rl_lab/legs_rl_lab/tasks/g1_task/mdp/curriculums.py
+  s_328ad7f5de3f18::t_c4ea899cf912fe 1-61
+source/legs_rl_lab/legs_rl_lab/tasks/g1_task/mdp/observations.py
+  s_328ad7f5de3f18::t_6d415c6a6429a3 1-16
+source/legs_rl_lab/legs_rl_lab/tasks/g1_task/mdp/rewards.py
+  s_328ad7f5de3f18::t_f221d4aa0ebc43 1-258
+source/legs_rl_lab/legs_rl_lab/tasks/g1_task/task/qie/__init__.py
+  s_328ad7f5de3f18::t_c4b52674234c83 1-12
+source/legs_rl_lab/legs_rl_lab/tasks/g1_task/task/qie/plot_gravity_y.py
+  s_328ad7f5de3f18::t_cb2d04ae990531 1-55
+source/legs_rl_lab/legs_rl_lab/tasks/g1_task/task/qie/qie_env.py
+  s_328ad7f5de3f18::t_afb918535e3f75 1-27
+source/legs_rl_lab/legs_rl_lab/tasks/g1_task/task/qie/qie_env_cfg.py
+  s_328ad7f5de3f18::t_6a0ee987e0b260 1-403
+source/legs_rl_lab/legs_rl_lab/tasks/g1_task/task/qie/sim2sim.py
+  s_328ad7f5de3f18::t_8b7d600aaf9eda 1-311
+source/legs_rl_lab/legs_rl_lab/tasks/legs_task/__init__.py
+  s_328ad7f5de3f18::t_6ac4804282e12a 1
+source/legs_rl_lab/legs_rl_lab/tasks/legs_task/agents/rsl_rl_ppo_cfg.py
+  s_328ad7f5de3f18::t_b1aeb11971658d 1-63
+source/legs_rl_lab/legs_rl_lab/tasks/legs_task/mdp/__init__.py
+  s_328ad7f5de3f18::t_50387b162bf295 1-6
+source/legs_rl_lab/legs_rl_lab/tasks/legs_task/mdp/commands.py
+  s_328ad7f5de3f18::t_e21c923b4ea0ca 1-11
+source/legs_rl_lab/legs_rl_lab/tasks/legs_task/mdp/curriculums.py
+  s_328ad7f5de3f18::t_4fade2f0c063fd 1-61
+source/legs_rl_lab/legs_rl_lab/tasks/legs_task/mdp/observations.py
+  s_328ad7f5de3f18::t_e81c0f563c621b 1-17
+source/legs_rl_lab/legs_rl_lab/tasks/legs_task/mdp/rewards.py
+  s_328ad7f5de3f18::t_c6b77cec701be5 1-271
+source/legs_rl_lab/legs_rl_lab/tasks/legs_task/mdp/symmetry.py
+  s_328ad7f5de3f18::t_e38dbe32564f00 1-141
+source/legs_rl_lab/legs_rl_lab/tasks/legs_task/mdp/terminations.py
+  s_328ad7f5de3f18::t_1977c48c3b020b 1-12
+source/legs_rl_lab/legs_rl_lab/tasks/legs_task/task/legs/MUJOCO_LOG.TXT
+  s_328ad7f5de3f18::t_f607bcb1aa39cc 1-3
+source/legs_rl_lab/legs_rl_lab/tasks/legs_task/task/legs/__init__.py
+  s_328ad7f5de3f18::t_9970f8db7bab9c 1-12
+source/legs_rl_lab/legs_rl_lab/tasks/legs_task/task/legs/legs_env.py
+  s_328ad7f5de3f18::t_7c55e72ff18ca2 1-33
+source/legs_rl_lab/legs_rl_lab/tasks/legs_task/task/legs/legs_env_cfg.py
+  s_328ad7f5de3f18::t_bd596d7841fb26 4,7,15-16,18-37,40-42,44-84,87-89,91-102,104-112,114-128,131-138,140-145,149-166,173-175,187-197,203-225,228-229,231-251,254-279,281-282,286-290,292-296,298-299,301-304,306-310,312-320,329-331,333-337,342-344,346,350,354-355,357,360-361,363-388
+source/legs_rl_lab/legs_rl_lab/tasks/legs_task/task/legs/sim2sim.py
+  s_328ad7f5de3f18::t_a90c92fbcd7d82 1-364
+source/legs_rl_lab/legs_rl_lab/utils/export_deploy_cfg.py
+  s_328ad7f5de3f18::t_d1d5bec229c210 1-117
+source/legs_rl_lab/legs_rl_lab/utils/parser_cfg.py
+  s_328ad7f5de3f18::t_195cb492f8d531 1-46
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.6.5",
+  "base_commit_sha": "20ede1729ba788b82837c5418ef4aafa6a106ee2",
+  "prompts": {},
+  "sessions": {
+    "s_328ad7f5de3f18": {
+      "agent_id": {
+        "tool": "claude",
+        "id": "bf891d0d-2763-4fa9-82f7-80d358906685",
+        "model": "claude-opus-4-8"
+      },
+      "human_author": "woan <377801872@qq.com>"
+    },
+    "s_aede2d0005e56c": {
+      "agent_id": {
+        "tool": "claude",
+        "id": "cdfd5184-d1e6-44c4-8105-792b029609d7",
+        "model": "claude-opus-4-8"
+      },
+      "human_author": "woan <377801872@qq.com>"
+    }
+  }
+}
