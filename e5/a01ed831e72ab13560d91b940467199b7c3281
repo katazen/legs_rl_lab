@@ -1,0 +1,19 @@
+legs_rl_lab.sh
+  s_aede2d0005e56c::t_b93e6518770656 36
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.6.5",
+  "base_commit_sha": "e5a01ed831e72ab13560d91b940467199b7c3281",
+  "prompts": {},
+  "sessions": {
+    "s_aede2d0005e56c": {
+      "agent_id": {
+        "tool": "claude",
+        "id": "cdfd5184-d1e6-44c4-8105-792b029609d7",
+        "model": "claude-opus-4-8"
+      },
+      "human_author": "woan <377801872@qq.com>"
+    }
+  }
+}
