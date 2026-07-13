@@ -29,9 +29,9 @@ _ASSETS_DIR = os.path.join(_REPO_ROOT, "source", "legs_rl_lab", "legs_rl_lab", "
 #  sim2sim 会据此自动读取
 #      logs/rsl_rl/<EXPERIMENT>/<RUN>/params/deploy.yaml   （所有模型参数）
 #      logs/rsl_rl/<EXPERIMENT>/<RUN>/exported/policy.pt   （策略，需先 play 导出）
-RUN = "2026-07-13_15-07-39"   # TODO: 换成你实际的 legs 训练 run（logs/rsl_rl/legs/<RUN>）
+RUN = "2026-07-13_15-56-58"   # TODO: 换成你实际的 legs 训练 run（logs/rsl_rl/legs/<RUN>）
 #  唯一可选变量：是否采集关节跟踪数据并出图
-SAVE_DATA = False
+SAVE_DATA = True
 # ============================================================================
 
 # 与具体 run 无关的仿真侧设置（不是模型参数，故不放进 deploy.yaml）
