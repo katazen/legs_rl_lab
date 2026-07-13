@@ -30,7 +30,7 @@ class GaitCfg:
     reward / observation 通过 env.cfg.gait.* 读取。
     """
 
-    period: float = 0.85           # 步态周期 (s)
+    period: float = 0.6           # 步态周期 (s)
     stance_ratio: float = 0.55     # 支撑相占比
     feet_offset: list = [0.0, 0.5]  # 左右腿相位偏移
 
@@ -108,8 +108,8 @@ class EventCfg:
         mode="startup",
         params={
             "asset_cfg": SceneEntityCfg("robot", body_names=".*"),
-            "static_friction_range": (0.2, 1.3),
-            "dynamic_friction_range": (0.2, 1.3),
+            "static_friction_range": (0.1, 1.3),
+            "dynamic_friction_range": (0.1, 1.3),
             "restitution_range": (0.0, 0.0),
             "num_buckets": 64,
         },
@@ -244,7 +244,7 @@ class RewardsCfg:
 
     # -- task
     track_lin_vel_xy = RewTerm(func=mdp.track_lin_vel_xy_exp,weight=1.0)
-    track_ang_vel_z = RewTerm(func=mdp.track_ang_vel_z_exp, weight=1.0)
+    track_ang_vel_z = RewTerm(func=mdp.track_ang_vel_z_exp, weight=0.5)
     alive = RewTerm(func=mdp.is_alive, weight=0.15)
     # stand_still = RewTerm(func=mdp.stand_still, weight=1.0)
     # -- base
@@ -260,7 +260,19 @@ class RewardsCfg:
     joint_deviation_legs = RewTerm(
         func=mdp.joint_deviation_l1,
         weight=-0.3,
-        params={"asset_cfg": SceneEntityCfg("robot", joint_names=[".*2", ".*3"])},
+        params={"asset_cfg": SceneEntityCfg("robot", joint_names=[".*2", ".*3", ".*6"])},
+    )
+
+    # 让踝(pitch .*5 + roll .*6)被动，脚触地自然贴合，抑制踝滚转侧崴（移植自 TienKung，沿用其权重）
+    ankle_action = RewTerm(
+        func=mdp.ankle_action,
+        weight=-0.001,
+        params={"asset_cfg": SceneEntityCfg("robot", joint_names=[".*5", ".*6"])},
+    )
+    ankle_torque = RewTerm(
+        func=mdp.ankle_torque,
+        weight=-0.0005,
+        params={"asset_cfg": SceneEntityCfg("robot", joint_names=[".*5", ".*6"])},
     )
 
     # -- robot

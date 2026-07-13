@@ -36,25 +36,13 @@ def export_deploy_cfg(env: ManagerBasedRLEnv, log_dir):
     cfg["default_joint_pos"] = asset.data.default_joint_pos[0].detach().cpu().numpy().tolist()
 
     # --- extra robot params for sim2sim (armature / effort limits), in sdk order ---
-    # build in isaac order then remap to sdk order with joint_ids_map (same as stiffness/damping)
-    armature_isaac = np.zeros(len(joint_sdk_names))
-    effort_isaac = np.zeros(len(joint_sdk_names))
-    for act_cfg in env.cfg.scene.robot.actuators.values():
-        act_ids, _ = resolve_matching_names(act_cfg.joint_names_expr, asset.data.joint_names, preserve_order=False)
-        arm = getattr(act_cfg, "armature", None)
-        eff = getattr(act_cfg, "effort_limit_sim", None)
-        if eff is None:
-            eff = getattr(act_cfg, "effort_limit", None)
-        for isaac_idx in act_ids:
-            if arm is not None:
-                armature_isaac[isaac_idx] = arm
-            if eff is not None:
-                effort_isaac[isaac_idx] = eff
+    # 直接读 asset.data 里已解析的每关节值（robust: cfg 里 armature/effort 可能是 scalar/dict/None），
+    # 再按 joint_ids_map 重排到 sdk 顺序（与 stiffness/damping 同一套映射）
     armature = np.zeros(len(joint_sdk_names))
-    armature[joint_ids_map] = armature_isaac
-    effort = np.zeros(len(joint_sdk_names))
-    effort[joint_ids_map] = effort_isaac
+    armature[joint_ids_map] = asset.data.default_joint_armature[0].detach().cpu().numpy().tolist()
     cfg["armature"] = armature.tolist()
+    effort = np.zeros(len(joint_sdk_names))
+    effort[joint_ids_map] = asset.data.joint_effort_limits[0].detach().cpu().numpy().tolist()
     cfg["effort"] = effort.tolist()
 
     # --- gait clock period (nlegs GaitCfg, or a custom env with .period) ---

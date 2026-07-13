@@ -82,6 +82,17 @@ def energy(env: ManagerBasedRLEnv, asset_cfg: SceneEntityCfg = SceneEntityCfg("r
     return torch.sum(torch.abs(qvel) * torch.abs(qfrc), dim=-1)
 
 
+def ankle_action(env: ManagerBasedRLEnv, asset_cfg: SceneEntityCfg) -> torch.Tensor:
+    """惩罚踝关节的动作量，让踝被动、脚触地时自然贴合（移植自 TienKung）。"""
+    return torch.sum(torch.abs(env.action_manager.action[:, asset_cfg.joint_ids]), dim=1)
+
+
+def ankle_torque(env: ManagerBasedRLEnv, asset_cfg: SceneEntityCfg) -> torch.Tensor:
+    """惩罚踝关节输出力矩，使踝柔顺、不主动扭地面（移植自 TienKung）。"""
+    asset: Articulation = env.scene[asset_cfg.name]
+    return torch.sum(torch.square(asset.data.applied_torque[:, asset_cfg.joint_ids]), dim=1)
+
+
 def stand_still(
         env: ManagerBasedRLEnv, command_name: str = "base_velocity", asset_cfg: SceneEntityCfg = SceneEntityCfg("robot")
 ) -> torch.Tensor:

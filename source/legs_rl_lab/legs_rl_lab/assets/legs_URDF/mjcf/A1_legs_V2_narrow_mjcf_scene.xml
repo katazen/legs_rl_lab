@@ -1,5 +1,5 @@
-<mujoco model="legs_URDF_scene">
-  <include file="A1_legs_V2_mjcf.xml"/>
+<mujoco model="legs_URDF_narrow_scene">
+  <include file="A1_legs_V2_narrow_mjcf.xml"/>
 
   <asset>
     <texture name="texplane" type="2d" builtin="checker" rgb1=".2 .3 .4" rgb2=".1 0.15 0.2"

@@ -29,7 +29,7 @@ _ASSETS_DIR = os.path.join(_REPO_ROOT, "source", "legs_rl_lab", "legs_rl_lab", "
 #  sim2sim 会据此自动读取
 #      logs/rsl_rl/<EXPERIMENT>/<RUN>/params/deploy.yaml   （所有模型参数）
 #      logs/rsl_rl/<EXPERIMENT>/<RUN>/exported/policy.pt   （策略，需先 play 导出）
-RUN = "2026-06-29_20-36-21"   # TODO: 换成你实际的 legs 训练 run（logs/rsl_rl/legs/<RUN>）
+RUN = "2026-07-13_15-07-39"   # TODO: 换成你实际的 legs 训练 run（logs/rsl_rl/legs/<RUN>）
 #  唯一可选变量：是否采集关节跟踪数据并出图
 SAVE_DATA = False
 # ============================================================================
@@ -42,7 +42,6 @@ SCENE_XML = os.path.join(_ASSETS_DIR, "legs_URDF", "mjcf", "A1_legs_V2_mjcf_scen
 PHYS_DT = 0.005            # MuJoCo 物理步长（仿真选择）
 CONTROL_MODE = "motor"     # "motor" or "position"
 SIM_DURATION = 10000.0
-ACTION_DELAY_RANGE_DEFAULT = (11, 15)  # 缺 deploy.yaml 字段时的兜底（physics steps, 含端点）
 COLLECT_DURATION = 10.0    # 采集时长 (秒)
 
 # 关节顺序：isaac(策略/yaml) vs mujoco
@@ -61,11 +60,6 @@ _OBS_NAME_MAP = {
     "gait_phase": "gait",
 }
 
-# 老 run 的 deploy.yaml 可能缺新字段时的兜底默认（mjc 顺序）
-_DEFAULT_ARMATURE = [0.032, 0.032, 0.032, 0.032, 0.0018, 0.0018, 0.032, 0.032, 0.032, 0.032, 0.0018, 0.0018]
-_DEFAULT_EFFORT = [27, 27, 27, 27, 7, 7, 27, 27, 27, 27, 7, 7]
-_DEFAULT_GAIT_PERIOD = 0.85
-
 
 def build_cfg(run: str, save_data: bool = False):
     """从某个训练 run 的 deploy.yaml 构造 sim2sim 配置（不依赖 mujoco，可单独测试）。"""
@@ -75,12 +69,19 @@ def build_cfg(run: str, save_data: bool = False):
     with open(deploy_path) as f:
         d = yaml.safe_load(f)
 
-    action_dim = len(d["default_joint_pos"])
-    step_dt = float(d["step_dt"])
+    def _req(key):
+        """取 deploy.yaml 字段; 缺失直接报错, 绝不用默认兜底(避免静默用错配置)。"""
+        if key not in d:
+            raise KeyError(f"[sim2sim] deploy.yaml 缺字段 '{key}' ({deploy_path}); "
+                           f"请重新导出 deploy.yaml, 不使用默认兜底")
+        return d[key]
+
+    action_dim = len(_req("default_joint_pos"))
+    step_dt = float(_req("step_dt"))
     decimation = max(1, round(step_dt / PHYS_DT))
 
     # observations: 按 yaml 顺序推出切片 / state_dim / history_length
-    obs = d["observations"]
+    obs = _req("observations")
     his_lens = int(next(iter(obs.values()))["history_length"])
     obs_slices, cursor = {}, 0
     for term_name, term in obs.items():
@@ -89,34 +90,20 @@ def build_cfg(run: str, save_data: bool = False):
         cursor += dim
     state_dim = cursor
 
-    action_scale = float(d["actions"]["JointPositionAction"]["scale"][0])
-    r = d["commands"]["base_velocity"]["ranges"]
+    action_scale = float(_req("actions")["JointPositionAction"]["scale"][0])
+    r = _req("commands")["base_velocity"]["ranges"]
     cmd_range = [list(r["lin_vel_x"]), list(r["lin_vel_y"]), list(r["ang_vel_z"])]
 
     # default_joint_pos: yaml 为 isaac 顺序 -> 转 mjc 顺序
-    default_mjc = np.array(d["default_joint_pos"], dtype=np.float32)[_ISAAC2MJC]
+    default_mjc = np.array(_req("default_joint_pos"), dtype=np.float32)[_ISAAC2MJC]
 
-    # stiffness/damping/armature/effort: yaml 已是 sdk(=mjc) 顺序，直接用
-    def _read(key, fallback):
-        if key not in d:
-            print(f"[sim2sim] 警告: deploy.yaml 缺字段 '{key}'，改用默认值（重新训练即可写入该字段）")
-            return np.array(fallback, dtype=np.float32)
-        return np.array(d[key], dtype=np.float32)
-
-    stiffness = np.array(d["stiffness"], dtype=np.float32)
-    damping = np.array(d["damping"], dtype=np.float32)
-    armature = _read("armature", _DEFAULT_ARMATURE)
-    effort = _read("effort", _DEFAULT_EFFORT)
-    if "gait_period" in d:
-        gait_cycle = float(d["gait_period"])
-    else:
-        print("[sim2sim] 警告: deploy.yaml 缺字段 'gait_period'，改用默认 0.85")
-        gait_cycle = _DEFAULT_GAIT_PERIOD
-    if "action_delay" in d:
-        action_delay_range = tuple(int(x) for x in d["action_delay"])
-    else:
-        print(f"[sim2sim] 警告: deploy.yaml 缺字段 'action_delay'，改用默认 {ACTION_DELAY_RANGE_DEFAULT}")
-        action_delay_range = ACTION_DELAY_RANGE_DEFAULT
+    # stiffness/damping/armature/effort: yaml 已是 sdk(=mjc) 顺序, 直接用; 缺任一字段直接报错
+    stiffness = np.array(_req("stiffness"), dtype=np.float32)
+    damping = np.array(_req("damping"), dtype=np.float32)
+    armature = np.array(_req("armature"), dtype=np.float32)
+    effort = np.array(_req("effort"), dtype=np.float32)
+    gait_cycle = float(_req("gait_period"))
+    action_delay_range = tuple(int(x) for x in _req("action_delay"))
 
     path = types.SimpleNamespace(pos_xml_path=SCENE_XML, tau_xml_path=SCENE_XML, model_path=model_path)
     sim = types.SimpleNamespace(
@@ -137,28 +124,27 @@ class LatencySimulator:
     def __init__(self, action_dim: int):
         self.action_dim = action_dim
         self.action_buffer = None
+        self.action_delay_range = None
 
     def reset(self, action_delay_range: tuple):
         """
         在 Episode 重置时调用。
         :param action_delay_range: (min, max) 动作延迟步数范围（含端点，与 isaaclab 一致）
-        :param obs_delay_ranges: dict { 'dof_pos': (min, max), ... } 观测延迟范围
-        :param initial_obs: dict { 'dof_pos': initial_value, ... } 初始观测值，用于填充 Buffer
         """
-        act_delay = np.random.randint(action_delay_range[0], action_delay_range[1] + 1)
-        self.action_buffer = deque(
-            [np.zeros(self.action_dim, dtype=np.float32)] * (act_delay + 1),
-            maxlen=act_delay + 1
-        )
-        print(f"[Latency] Action Delay: {act_delay} steps")
+        self.action_delay_range = tuple(int(x) for x in action_delay_range)
+        self.action_buffer = deque(maxlen=self.action_delay_range[1] + 1)
+        print(f"[Latency] Action Delay Range: {self.action_delay_range} steps")
 
     def process_action(self, new_action: np.ndarray) -> np.ndarray:
         """
         [在物理步调用]
-        输入策略产生的最新动作，推入队列，并弹出当前应该执行的旧动作。
+        输入策略产生的最新动作，推入队列，并返回延迟后的动作。
+        reset 后历史不足时，将 delay clamp 到已有历史，避免先执行一段全零动作。
         """
-        self.action_buffer.append(new_action.copy())
-        return self.action_buffer.popleft()
+        self.action_buffer.append(new_action.astype(np.float32, copy=True))
+        act_delay = np.random.randint(self.action_delay_range[0], self.action_delay_range[1] + 1)
+        valid_delay = min(act_delay, len(self.action_buffer) - 1)
+        return self.action_buffer[-1 - valid_delay].copy()
 
 
 class MujocoRunner:
@@ -183,13 +169,14 @@ class MujocoRunner:
         self.control_mode = self.cfg.sim.control_mode
         print(f"action_scale: {self.action_scale}, control_mode: {self.control_mode}")
         self.state_dim = self.cfg.sim.state_dim
-        self.obs_his = np.zeros((self.cfg.sim.his_lens, self.state_dim))
+        self.obs_his = np.zeros((self.cfg.sim.his_lens, self.state_dim), dtype=np.float32)
         self.sim_duration = self.cfg.sim.sim_duration
         self.decimation = self.cfg.sim.decimation
         self.dt = self.decimation * self.cfg.sim.dt
         self.dof_pos = np.zeros(self.action_dim)
         self.dof_vel = np.zeros(self.action_dim)
-        self.action = np.zeros(self.action_dim)
+        self.action = np.zeros(self.action_dim, dtype=np.float32)
+        self.raw_action = np.zeros(self.action_dim, dtype=np.float32)
         self.prev_action = np.zeros(self.action_dim, dtype=np.float32)
         self.default_dof_pos = self.cfg.robot.default_dof_pos
         self.reset_dof_pos = self.cfg.robot.reset_dof_pos
@@ -206,6 +193,11 @@ class MujocoRunner:
         self.mjc2isaac = np.array([self.mjc_joint.index(i) for i in self.isaac_joint])
         self.command_vel = np.array([0.0, 0.0, 0.0])
         self.cmd_range = self.cfg.robot.cmd_range
+        self.joint_ids = np.array([self._joint_id(name) for name in self.mjc_joint], dtype=np.int32)
+        joint_ranges = self.model.jnt_range[self.joint_ids].astype(np.float32)
+        joint_limited = self.model.jnt_limited[self.joint_ids].astype(bool)
+        self.joint_pos_min = np.where(joint_limited, joint_ranges[:, 0], -np.inf).astype(np.float32)
+        self.joint_pos_max = np.where(joint_limited, joint_ranges[:, 1], np.inf).astype(np.float32)
 
         # ---- actuator config: position vs motor ----
         if self.control_mode == "position":
@@ -220,16 +212,41 @@ class MujocoRunner:
             self.model.dof_damping[-self.action_dim:] = 0.0
         self.model.dof_armature[-self.action_dim:] = self.cfg.robot.armature
 
+        # ---- DCMotor 转矩-转速滚降参数(与 legs.py 一致, mjc 序 R1..R6,L1..L6) ----
+        # 只有髋pitch(.*1)和膝(.*4)用 DCMotor: (velocity_limit, saturation_effort)
+        _DC = {"R1": (2.2, 26.0), "L1": (2.2, 26.0), "R4": (3.0, 26.0), "L4": (2.3, 26.0)}
+        _eff = np.asarray(self.cfg.robot.effort, dtype=np.float32)
+        _vlim, _sat = [], []
+        for j, name in enumerate(self.mjc_joint):
+            if name in _DC:
+                v, s = _DC[name]; _vlim.append(v); _sat.append(s)
+            else:                                  # 非 DCMotor: vlim=inf → 退化成普通 ±effort clip
+                _vlim.append(np.inf); _sat.append(float(_eff[j]))
+        self._dc_vlim = np.asarray(_vlim, dtype=np.float32)
+        self._dc_sat = np.asarray(_sat, dtype=np.float32)
+
         mujoco.mj_resetData(self.model, self.data)
         self.data.qpos = np.concatenate([np.array([0, 0, 0.55], dtype=np.float32),
                                          np.array([1, 0, 0, 0], dtype=np.float32), self.reset_dof_pos])
         mujoco.mj_forward(self.model, self.data)
         self.latency_sim.reset(self.cfg.sim.action_delay_range)
+        self.reset_obs_history()
         self.start_time = time.time()
         self.his_data = []
         self.collect_data = self.cfg.sim.collect_data    # 是否采集
         self.collect_T = self.cfg.sim.collect_duration   # 采集时长 (秒)
-        self.track_log = []          # 关节跟踪采集: (t, target_pos_mjc, qpos_mjc, cmd_vel)
+        self.track_log = []          # 关节跟踪采集: (t, target_pos_mjc, qpos_mjc, cmd_vel, tau_mjc)
+        self._tau = np.zeros(self.action_dim, dtype=np.float32)  # 最近一步应用力矩(mjc序, 已 clip effort)
+
+    def _joint_id(self, short_name: str) -> int:
+        joint_name = short_name if short_name.startswith("joint_") else f"joint_{short_name}"
+        joint_id = mujoco.mj_name2id(self.model, mujoco.mjtObj.mjOBJ_JOINT, joint_name)
+        if joint_id < 0:
+            raise ValueError(f"MuJoCo XML 缺少关节: {joint_name}")
+        return joint_id
+
+    def reset_obs_history(self):
+        self.obs_his[:] = self.compute_obs()
 
     def update_obs_his(self, new_obs):
         self.obs_his[:-1] = self.obs_his[1:]
@@ -245,7 +262,7 @@ class MujocoRunner:
             input_parts.append(flat_feature)
         return np.concatenate(input_parts)
 
-    def get_obs(self):
+    def compute_obs(self):
         self.dof_pos = self.data.qpos[7:].astype(np.float32)
         self.dof_vel = self.data.qvel[6:].astype(np.float32)
         obs = np.zeros((self.state_dim,), dtype=np.float32)
@@ -262,21 +279,37 @@ class MujocoRunner:
         # Dof vel
         obs[9 + self.action_dim:9 + 2 * self.action_dim] = self.dof_vel[self.mjc2isaac] * 0.05
         # Action
-        obs[9 + 2 * self.action_dim:9 + 3 * self.action_dim] = self.action
+        obs[9 + 2 * self.action_dim:9 + 3 * self.action_dim] = self.raw_action
         obs[9 + 3 * self.action_dim:10 + 3 * self.action_dim] = np.sin(2 * torch.pi * self.gait_phase)
         obs[10 + 3 * self.action_dim:11 + 3 * self.action_dim] = np.cos(2 * torch.pi * self.gait_phase)
+        return obs
+
+    def get_obs(self):
+        obs = self.compute_obs()
         self.update_obs_his(obs)
         return self.get_inference_input()
 
 
-    def compute_target_pos(self):
-        actions_scaled = self.action * self.action_scale
-        return actions_scaled[self.isaac2mjc] + self.default_dof_pos
+    def compute_target_pos(self, action: np.ndarray | None = None):
+        if action is None:
+            action = self.action
+        actions_scaled = action * self.action_scale
+        target_pos = actions_scaled[self.isaac2mjc] + self.default_dof_pos
+        return np.clip(target_pos, self.joint_pos_min, self.joint_pos_max)
 
     def compute_torque(self):
         target_pos = self.compute_target_pos()
         tau = self.cfg.robot.stiffness * (target_pos - self.dof_pos) - self.cfg.robot.damping * self.dof_vel
-        return np.clip(tau, -self.cfg.robot.effort, self.cfg.robot.effort)
+        # DCMotor 转矩-转速限幅(与 Isaac DelayedDCMotor._clip_effort 一致):
+        #   τ_max(v)=clip(sat·(1−v/vlim), max=+effort);  τ_min(v)=clip(sat·(−1−v/vlim), min=−effort)
+        # 非 DCMotor 关节 vlim=inf → 退化成普通 ±effort clip。缺这条会导致 sim2sim 飞车(执行器与训练不一致)。
+        eff = np.asarray(self.cfg.robot.effort, dtype=np.float32)
+        v = self.dof_vel
+        vel_at_lim = self._dc_vlim * (1.0 + eff / self._dc_sat)   # 速度预夹(inf 关节不夹)
+        vv = np.clip(v, -vel_at_lim, vel_at_lim)
+        tmax = np.minimum(self._dc_sat * (1.0 - vv / self._dc_vlim), eff)
+        tmin = np.maximum(self._dc_sat * (-1.0 - vv / self._dc_vlim), -eff)
+        return np.clip(tau, tmin, tmax)
 
     def _draw_velocity_arrows(self):
         """在 viewer 里画两个实时箭头观察速度跟踪: 绿=指令速度, 蓝=实际速度 (世界系水平 vx,vy)。
@@ -308,7 +341,8 @@ class MujocoRunner:
 
     def run(self):
         self.setup_keyboard_listener()
-        self.listener.start()
+        if self.listener is not None:
+            self.listener.start()
         while self.data.time < self.sim_duration:
             input_obs = self.get_obs().flatten()
             raw_policy_action = self.policy(torch.tensor(input_obs, dtype=torch.float32)).detach().numpy()
@@ -316,6 +350,7 @@ class MujocoRunner:
             # delta = np.clip(raw_policy_action - self.prev_action, -self.action_rate_limit, self.action_rate_limit)
             # clamped_action = (self.prev_action + delta).astype(np.float32)
             # self.prev_action = clamped_action
+            self.raw_action[:] = raw_policy_action
             for _ in range(self.decimation):
                 self.action[:] = self.latency_sim.process_action(raw_policy_action)
                 if self.control_mode == "position":
@@ -323,17 +358,19 @@ class MujocoRunner:
                 else:
                     self.dof_pos = self.data.qpos[7:].astype(np.float32)
                     self.dof_vel = self.data.qvel[6:].astype(np.float32)
-                    self.data.ctrl = self.compute_torque()
+                    self._tau = self.compute_torque()
+                    self.data.ctrl = self._tau
                 mujoco.mj_step(self.model, self.data)
             # --- 采集关节跟踪 (mjc 序 R1..R6,L1..L6) ---
             # target 取「策略决策时刻、延迟前」的目标(与实机发布 /dog_joint_pos 口径一致),
             # qpos 是经 action_delay 后的实际响应 -> 这样链路死区(action_delay)在图上才显现。
             if self.collect_data and self.data.time <= self.collect_T:
-                raw_target = (raw_policy_action * self.action_scale)[self.isaac2mjc] + self.default_dof_pos
+                raw_target = self.compute_target_pos(raw_policy_action)
                 self.track_log.append((float(self.data.time),
                                        raw_target.astype(np.float32).copy(),
                                        self.data.qpos[7:].astype(np.float32).copy(),
-                                       self.command_vel.copy()))
+                                       self.command_vel.copy(),
+                                       np.asarray(self._tau, np.float32).copy()))
             cost_time = time.time() - self.start_time
             time.sleep(max(0.0, 0.02 - cost_time))
             self.start_time = time.time()
@@ -347,7 +384,8 @@ class MujocoRunner:
             if self.collect_data and self.data.time >= self.collect_T:   # 采够就停下来出图
                 break
 
-        self.listener.stop()
+        if self.listener is not None:
+            self.listener.stop()
         if self.collect_data:
             self._plot_tracking()
         self.viewer.close()
@@ -364,17 +402,25 @@ class MujocoRunner:
         tgt = np.array([r[1] for r in self.track_log])   # (N,12) mjc 序
         act = np.array([r[2] for r in self.track_log])
         cmd = np.array([r[3] for r in self.track_log])
+        tau = np.array([r[4] for r in self.track_log])        # (N,12) mjc 序, 已 clip effort
+        eff = np.asarray(self.cfg.robot.effort, dtype=float)  # mjc 序 effort 上限
         # 重排成 [L1..L6,R1..R6], 与实机图一致
         names = ['L1', 'L2', 'L3', 'L4', 'L5', 'L6', 'R1', 'R2', 'R3', 'R4', 'R5', 'R6']
         order = [self.mjc_ctrl.index(n) for n in names]
-        outdir = os.path.expanduser("~/rl_real_logs"); os.makedirs(outdir, exist_ok=True)
+        import datetime
+        run_dir = os.path.dirname(os.path.dirname(self.cfg.path.model_path))  # <训练run>/(exported 的上级)
+        stamp = datetime.datetime.now().strftime("%Y%m%d_%H%M%S")             # 保存时间
+        outdir = os.path.join(run_dir, "sim2sim"); os.makedirs(outdir, exist_ok=True)
+        fig_dir = os.path.join(outdir, stamp); os.makedirs(fig_dir, exist_ok=True)
         # csv
-        csv_path = os.path.join(outdir, "sim2sim_track.csv")
+        csv_path = os.path.join(outdir, f"{stamp}.csv")
         with open(csv_path, "w") as f:
             f.write("t," + ",".join(f"target_{n}" for n in names) + "," +
-                    ",".join(f"sim_{n}" for n in names) + ",cmd_vx,cmd_vy,cmd_yaw\n")
+                    ",".join(f"sim_{n}" for n in names) + "," +
+                    ",".join(f"tau_{n}" for n in names) + ",cmd_vx,cmd_vy,cmd_yaw\n")
             for k in range(len(t)):
-                row = [t[k]] + [tgt[k, j] for j in order] + [act[k, j] for j in order] + list(cmd[k])
+                row = [t[k]] + [tgt[k, j] for j in order] + [act[k, j] for j in order] + \
+                      [tau[k, j] for j in order] + list(cmd[k])
                 f.write(",".join(f"{v:.6f}" for v in row) + "\n")
         # 图
         fig, ax = plt.subplots(4, 3, figsize=(20, 12), sharex=True)
@@ -388,8 +434,21 @@ class MujocoRunner:
         for c in range(3): ax[3, c].set_xlabel("t [s]")
         fig.suptitle(f"sim2sim dof following (0-{t[-1]:.0f}s, target=balck, sim=orange; obtain action_delay death range)", fontsize=12)
         plt.tight_layout()
-        png = os.path.join(outdir, "sim2sim_track_0-10s.png")
+        png = os.path.join(fig_dir, "track.png")
         plt.savefig(png, dpi=100); plt.close()
+        # 力矩图: 每关节 tau 与 ±effort 上限, 标注饱和%(踝 L5/R5 重点)
+        fig2, ax2 = plt.subplots(4, 3, figsize=(20, 12), sharex=True)
+        for i, n in enumerate(names):
+            j = order[i]; a = ax2[i // 3, i % 3]
+            a.plot(t, tau[:, j], "-", color="tab:purple", lw=1.0)
+            a.axhline(eff[j], color="r", ls=":", lw=1.0); a.axhline(-eff[j], color="r", ls=":", lw=1.0)
+            sat = np.mean(np.abs(tau[:, j]) >= eff[j] - 1e-3) * 100
+            a.set_title(f"{n} tau (limit +-{eff[j]:.0f}Nm, sat {sat:.0f}%)", fontsize=11); a.grid(alpha=.3)
+        for c in range(3): ax2[3, c].set_xlabel("t [s]")
+        fig2.suptitle("sim2sim joint torque (red dotted = effort limit)", fontsize=12)
+        plt.tight_layout(); png_t = os.path.join(fig_dir, "torque.png")
+        plt.savefig(png_t, dpi=100); plt.close()
+        print(f"[采集] 力矩图 -> {png_t}")
         print(f"[采集] {len(t)} 帧 -> {csv_path}\n[采集] 图 -> {png}")
 
     def quat_rotate_inverse(self, q: np.ndarray, v: np.ndarray):
@@ -409,6 +468,11 @@ class MujocoRunner:
         print([round(float(i), 2) for i in self.command_vel])
 
     def setup_keyboard_listener(self):
+        if keyboard is None:
+            self.listener = None
+            print("[sim2sim] 警告: 未安装 pynput，键盘速度控制不可用")
+            return
+
         def on_press(key):
             try:
                 if key.char == "8":
