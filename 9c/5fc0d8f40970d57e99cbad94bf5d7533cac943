@@ -1,0 +1,269 @@
+deploy/imu_ws/src/wit_ros2_imu/wit_ros2_imu/wit_ros2_imu.py
+  s_1c282a56a9c63a::t_6672a3daeb8be3 186-187
+  s_1c282a56a9c63a::t_9308daef3a7097 202-205
+  s_1c282a56a9c63a::t_f830d5ff1a68e0 183-185
+  s_1c282a56a9c63a::t_010292ae9923f9 188-190,199-201
+  s_1c282a56a9c63a::t_e2edad7cc590dd 206-208
+  s_1c282a56a9c63a::t_0ed82e567a2f94 1-182,191-198,209-246
+deploy/control_ws/src/armcontrol/src/arm_control_node.cpp
+  s_1c282a56a9c63a::t_345aed1fbc3214 42
+  s_1c282a56a9c63a::t_47b4f9e42728b4 46-51,61
+  s_1c282a56a9c63a::t_87e093bcddb4e9 43
+  s_1c282a56a9c63a::t_9a2ffa1fcd2e73 39-41
+  s_1c282a56a9c63a::t_b4568ba0d15915 44-45
+  s_1c282a56a9c63a::t_d5e8f5ba97fb11 52-54,58-60
+  s_1c282a56a9c63a::t_65f0ce60c52346 62-64
+  s_1c282a56a9c63a::t_6907bef9f2e238 1-38,55-57,65-1431
+deploy/rl_real_py/configs/common.yaml
+  h_d698c05df35737 9,47
+  s_1c282a56a9c63a::t_0182df88f7cd5a 10-11
+  s_1c282a56a9c63a::t_e9e06ac220ddf1 43-46,48
+  s_1c282a56a9c63a::t_82df491785b0b9 12-14,40-42
+  s_1c282a56a9c63a::t_4a6f46e1d2a364 49-51
+  s_1c282a56a9c63a::t_aa17a9c2cd2be7 1-8,15-39,52-54
+source/legs_rl_lab/legs_rl_lab/tasks/legs_task/mdp/__init__.py
+  s_1c282a56a9c63a::t_677220a87d9912 4
+source/legs_rl_lab/legs_rl_lab/tasks/legs_task/task/legs/legs_env_cfg.py
+  s_1c282a56a9c63a::t_0bde064f870800 264-265
+  s_1c282a56a9c63a::t_e7595cc15fe00d 213
+  s_1c282a56a9c63a::t_6b32c8fc00f281 154-162
+deploy/sysid/src/knee_kp_sweep.sh
+  s_1c282a56a9c63a::t_4ddfa5cef4694c 14
+  s_1c282a56a9c63a::t_7b158b5a887702 11-13
+  s_1c282a56a9c63a::t_aa7a922c0aa048 15-17
+  s_1c282a56a9c63a::t_175a291479672a 1-10,18-72
+deploy/sync_pd.py
+  s_1c282a56a9c63a::t_80a530643efee0 17
+  s_1c282a56a9c63a::t_e366cd26fd9936 27-30
+  s_1c282a56a9c63a::t_1d77cb0ce95526 14-16
+  s_1c282a56a9c63a::t_4b16fe3f93cea4 18-20,24-26
+  s_1c282a56a9c63a::t_1f43786b46bb2c 31-33
+  s_1c282a56a9c63a::t_d776dd8e29e259 1-13,21-23,34-64
+deploy/sysid/src/replay_real_in_mujoco.py
+  s_1c282a56a9c63a::t_2d9ad42c9ffef2 23-24
+  s_1c282a56a9c63a::t_7164e82ad0b32e 20-22
+  s_1c282a56a9c63a::t_16e3b2c1c9658f 25-27
+  s_1c282a56a9c63a::t_55b41e445ccbb9 1-19,28-133
+deploy/sysid/src/joint_kp_sweep.sh
+  s_1c282a56a9c63a::t_c91f8ad45bed61 5
+  s_1c282a56a9c63a::t_0030e9d92cc46c 2-4
+  s_1c282a56a9c63a::t_c35e22305d0a59 6-8
+  s_1c282a56a9c63a::t_3310be07eab74b 1,9-60
+deploy/sysid/src/set_pd.py
+  s_1c282a56a9c63a::t_02d356cc6c9cf5 19
+  s_1c282a56a9c63a::t_9a0da8c31b1b9e 16-18
+  s_1c282a56a9c63a::t_fc0e955fab2170 20-22
+  s_1c282a56a9c63a::t_3c9ac7354fc33a 1-15,23-73
+source/legs_rl_lab/legs_rl_lab/tasks/legs_task/task/legs/sim2sim.py
+  s_1c282a56a9c63a::t_5a981c77daa5e9 279-280
+  h_d698c05df35737 32,34,58
+  s_1c282a56a9c63a::t_b03d88e76856fb 203-206
+  s_1c282a56a9c63a::t_22f1a35fc3c469 52-57,59-60
+  s_1c282a56a9c63a::t_9f23d6b16a0184 371-372,374
+source/legs_rl_lab/legs_rl_lab/tasks/legs_task/mdp/rewards.py
+  s_1c282a56a9c63a::t_043e9a1b581311 67-79
+deploy/control_ws/src/armcontrol/CMakeLists.txt
+  s_1c282a56a9c63a::t_262e67bd12ba3a 39
+  s_1c282a56a9c63a::t_f2d84b64b894c0 86-87
+  s_1c282a56a9c63a::t_9a1a8302004d70 36-38
+  s_1c282a56a9c63a::t_bdb66e3f3d6d2c 40-42,83-85
+  s_1c282a56a9c63a::t_40b419011c665e 88-90
+  s_1c282a56a9c63a::t_8c0117f7d37f52 1-35,43-82,91
+source/legs_rl_lab/legs_rl_lab/tasks/legs_task/mdp/observations.py
+  s_1c282a56a9c63a::t_10ea5a07d181f6 6-7,14-27
+  s_1c282a56a9c63a::t_15c15954ec912c 28-29
+source/legs_rl_lab/legs_rl_lab/tasks/legs_task/mdp/events.py
+  s_1c282a56a9c63a::t_db4100971584b6 1-34
+deploy/sysid/src/isaac/replay.py
+  s_1c282a56a9c63a::t_c951f5e83cf979 32-33
+  s_1c282a56a9c63a::t_9bf2550085794b 27
+  s_1c282a56a9c63a::t_7b4dffc55cc73e 24-26
+  s_1c282a56a9c63a::t_c86a392effe802 28-31
+  s_1c282a56a9c63a::t_5613a3b0943351 34-36
+  s_1c282a56a9c63a::t_67967fd257275e 1-23,37-228
+deploy/start_real.sh
+  s_1c282a56a9c63a::t_684768b4e47a87 10
+  s_1c282a56a9c63a::t_d8e6d341aa9464 7-9
+  s_1c282a56a9c63a::t_b7f9b766df3d5b 11-13
+  s_1c282a56a9c63a::t_d36908ea413706 1-6,14-40
+deploy/rl_real_py/rl_real_py/rl_real_common.py
+  s_1c282a56a9c63a::t_d8d2add400525e 128-131
+  s_1c282a56a9c63a::t_b581d87e5f7577 219
+  s_1c282a56a9c63a::t_d07a4f41060736 77-88
+  s_1c282a56a9c63a::t_86a20cbae8454b 74-76
+  s_1c282a56a9c63a::t_2af978b038ee98 89-91,125-127
+  s_1c282a56a9c63a::t_6419ad02513d37 132-134,216-218
+  s_1c282a56a9c63a::t_45c40b96712782 220-222
+  s_1c282a56a9c63a::t_3fedcafcdd89be 1-73,92-124,135-215,223-425
+deploy/.gitignore
+  s_1c282a56a9c63a::t_020c634ede224c 1-50
+deploy/control_ws/src/3rdparty/json_vendor/CMakeLists.txt
+  s_1c282a56a9c63a::t_a5c6a365f5644a 1-31
+deploy/control_ws/src/3rdparty/json_vendor/package.xml
+  s_1c282a56a9c63a::t_97709694c6cfb5 1-18
+deploy/control_ws/src/3rdparty/json_vendor/src/main.cc
+  s_1c282a56a9c63a::t_ed550ded647857 1-26
+deploy/control_ws/src/3rdparty/json_vendor/targets-extras.cmake.in
+  s_1c282a56a9c63a::t_1003a16c86f9bf 1
+deploy/control_ws/src/3rdparty/rbdl_vendor/CMakeLists.txt
+  s_1c282a56a9c63a::t_d8fecb85d5cd0d 1-43
+deploy/control_ws/src/3rdparty/rbdl_vendor/package.xml
+  s_1c282a56a9c63a::t_72bca99964d506 1-22
+deploy/control_ws/src/3rdparty/xtils_vendor/CMakeLists.txt
+  s_1c282a56a9c63a::t_a93c635b9ad8f7 1-19
+deploy/control_ws/src/3rdparty/xtils_vendor/package.xml
+  s_1c282a56a9c63a::t_9b63e927944fa4 1-18
+deploy/control_ws/src/3rdparty/xtils_vendor/targets-extras.cmake.in
+  s_1c282a56a9c63a::t_911e012692e9ea 1
+deploy/control_ws/src/armcontrol/include/armcontrol/damiao.h
+  s_1c282a56a9c63a::t_cd6bdbab75f746 1-1056
+deploy/control_ws/src/armcontrol/include/armcontrol/damiao_can.h
+  s_1c282a56a9c63a::t_62465ac2e1e7b6 1-1177
+deploy/control_ws/src/armcontrol/include/armcontrol/os_support.h
+  s_1c282a56a9c63a::t_d86f0a0a6eb964 1-115
+deploy/control_ws/src/armcontrol/include/armcontrol/path_smoother.h
+  s_1c282a56a9c63a::t_87f268f32c7eca 1-60
+deploy/control_ws/src/armcontrol/include/armcontrol/serial_port.h
+  s_1c282a56a9c63a::t_68e4d5a3324e65 1-164
+deploy/control_ws/src/armcontrol/include/armcontrol/smooth.h
+  s_1c282a56a9c63a::t_cefdf61d1ad964 1-117
+deploy/control_ws/src/armcontrol/include/armcontrol/socketcan.h
+  s_1c282a56a9c63a::t_42b6b59e96b071 1-74
+deploy/control_ws/src/armcontrol/include/armcontrol/types.h
+  s_1c282a56a9c63a::t_02580149d57f76 1-118
+deploy/control_ws/src/armcontrol/package.xml
+  s_1c282a56a9c63a::t_4e2b4384889f93 1-21
+deploy/control_ws/src/armcontrol/src/path_smoother.cpp
+  s_1c282a56a9c63a::t_3403f12fa585a4 1-210
+deploy/control_ws/src/armcontrol/src/socketcan.cpp
+  s_1c282a56a9c63a::t_fe4796bf248e7f 1-253
+deploy/control_ws/src/armcontrol/urdf/v1.0/arm_damiao_left.urdf
+  s_1c282a56a9c63a::t_0c49a4a6c608af 1-955
+deploy/control_ws/src/armcontrol/urdf/v1.0/arm_damiao_right.urdf
+  s_1c282a56a9c63a::t_8fb4503663ca49 1-955
+deploy/control_ws/src/armcontrol/urdf/v1.0/robot.urdf
+  s_1c282a56a9c63a::t_c16d2f33169117 1-1967
+deploy/control_ws/src/armcontrol/urdf/v2.0/damiao_left.urdf
+  s_1c282a56a9c63a::t_2875d627629210 1-917
+deploy/control_ws/src/armcontrol/urdf/v2.0/damiao_right.urdf
+  s_1c282a56a9c63a::t_c1ca53f80a675d 1-917
+deploy/control_ws/src/armcontrol/urdf/v2.0/robot.urdf
+  s_1c282a56a9c63a::t_c5481b526e6bdd 1-1887
+deploy/control_ws/src/armcontrol/urdf/v2.1/damiao_left.urdf
+  s_1c282a56a9c63a::t_34ba8f53081f7a 1-917
+deploy/control_ws/src/armcontrol/urdf/v2.1/damiao_right.urdf
+  s_1c282a56a9c63a::t_99ef7d31e440a3 1-917
+deploy/control_ws/src/armcontrol/urdf/v2.1/robot.urdf
+  s_1c282a56a9c63a::t_829c4d5907dd17 1-1891
+deploy/control_ws/src/armcontrol/urdf/v2.2/damiao_left.urdf
+  s_1c282a56a9c63a::t_f234daaa9a4b2b 1-904
+deploy/control_ws/src/armcontrol/urdf/v2.2/damiao_left_1kg.urdf
+  s_1c282a56a9c63a::t_9f1647003c3ca7 1-942
+deploy/control_ws/src/armcontrol/urdf/v2.2/damiao_left_without_gripper.urdf
+  s_1c282a56a9c63a::t_f79f74fc200e10 1-360
+deploy/control_ws/src/armcontrol/urdf/v2.2/damiao_right.urdf
+  s_1c282a56a9c63a::t_b08e9272948dc8 1-916
+deploy/control_ws/src/armcontrol/urdf/v2.2/damiao_right_1kg.urdf
+  s_1c282a56a9c63a::t_d34d0253a25dc3 1-943
+deploy/control_ws/src/armcontrol/urdf/v2.2/robot.urdf
+  s_1c282a56a9c63a::t_8d5ce118b637ef 1-1879
+deploy/control_ws/src/armcontrol/urdf/v3.2/damiao_left.srdf
+  s_1c282a56a9c63a::t_bffdd9e286f998 1-12
+deploy/control_ws/src/armcontrol/urdf/v3.2/damiao_left.urdf
+  s_1c282a56a9c63a::t_89d6798688daed 1-504
+deploy/control_ws/src/armcontrol/urdf/v3.2/damiao_right.srdf
+  s_1c282a56a9c63a::t_2b1b2b2138245b 1-12
+deploy/control_ws/src/armcontrol/urdf/v3.2/damiao_right.urdf
+  s_1c282a56a9c63a::t_8886bf7fd36b94 1-505
+deploy/control_ws/src/armcontrol/urdf/v3.3/damiao_left.srdf
+  s_1c282a56a9c63a::t_b445c7cb0e7725 1-12
+deploy/control_ws/src/armcontrol/urdf/v3.3/damiao_left.urdf
+  s_1c282a56a9c63a::t_f43be52c728982 1-518
+deploy/control_ws/src/armcontrol/urdf/v3.3/damiao_right.srdf
+  s_1c282a56a9c63a::t_9ba1e3e26c8074 1-12
+deploy/control_ws/src/armcontrol/urdf/v3.3/damiao_right.urdf
+  s_1c282a56a9c63a::t_35f3afb940d2b0 1-547
+deploy/control_ws/src/logger/CMakeLists.txt
+  s_1c282a56a9c63a::t_be9b2da6270c04 1-28
+deploy/control_ws/src/logger/Logger.cpp
+  s_1c282a56a9c63a::t_24d13aa43a46fd 1-34
+deploy/control_ws/src/logger/Logger.h
+  s_1c282a56a9c63a::t_3a75ca2e157054 1-28
+deploy/control_ws/usbcan.rules
+  s_1c282a56a9c63a::t_ec0ceaac14a468 1-13
+deploy/imu_ws/src/wit_ros2_imu/bind_usb.sh
+  s_1c282a56a9c63a::t_df94da03f5ec8b 1-7
+deploy/imu_ws/src/wit_ros2_imu/launch/rviz_and_imu.launch.py
+  s_1c282a56a9c63a::t_3460434c26823c 1-29
+deploy/imu_ws/src/wit_ros2_imu/package.xml
+  s_1c282a56a9c63a::t_57a00f61c4b699 1-20
+deploy/imu_ws/src/wit_ros2_imu/setup.cfg
+  s_1c282a56a9c63a::t_254c7fbee302d6 1-4
+deploy/imu_ws/src/wit_ros2_imu/setup.py
+  s_1c282a56a9c63a::t_eaa81cd19aca51 1-28
+deploy/imu_ws/src/wit_ros2_imu/test/test_copyright.py
+  s_1c282a56a9c63a::t_7a91e811669425 1-23
+deploy/imu_ws/src/wit_ros2_imu/test/test_flake8.py
+  s_1c282a56a9c63a::t_a8c460f405cf29 1-25
+deploy/imu_ws/src/wit_ros2_imu/test/test_pep257.py
+  s_1c282a56a9c63a::t_18543a19f5613e 1-23
+deploy/imu_ws/src/wit_ros2_imu/tty_imu.rules
+  s_1c282a56a9c63a::t_9f492fa346a35d 1-2
+deploy/install_ros2_humble.sh
+  s_1c282a56a9c63a::t_4a77c9bc8853aa 1-54
+deploy/rl_real_py/package.xml
+  s_1c282a56a9c63a::t_3f8ad9e35b254a 1-25
+deploy/rl_real_py/setup.cfg
+  s_1c282a56a9c63a::t_f29c4133bab13e 1-4
+deploy/rl_real_py/setup.py
+  s_1c282a56a9c63a::t_7adb4e672ea27d 1-31
+deploy/stop_real.sh
+  s_1c282a56a9c63a::t_9f868ebad257ff 1-38
+deploy/sysid/src/analyze_pd_grid.py
+  s_1c282a56a9c63a::t_cd374f824f72fd 1-229
+deploy/sysid/src/excite_record.py
+  s_1c282a56a9c63a::t_e99bc9e460ac92 1-319
+deploy/sysid/src/gen_summary.py
+  s_1c282a56a9c63a::t_deff41c77fa214 1-79
+deploy/sysid/src/plot_dc_sweep.py
+  s_1c282a56a9c63a::t_3e019eb933bc1c 1-83
+deploy/sysid/src/plot_ddc.py
+  s_1c282a56a9c63a::t_c46ea5d9b1594f 1-79
+deploy/sysid/src/plot_ddc_sweep.py
+  s_1c282a56a9c63a::t_e335cac568c8cd 1-83
+deploy/sysid/src/plot_experiment.py
+  s_1c282a56a9c63a::t_78ee6069d46d34 1-85
+deploy/sysid/src/plot_kp_detail.py
+  s_1c282a56a9c63a::t_f9e5e836a6389a 1-117
+deploy/sysid/src/plot_kp_sweep.py
+  s_1c282a56a9c63a::t_50402ca9754186 1-152
+deploy/sysid/src/plot_real_log.py
+  s_1c282a56a9c63a::t_7e0c529d52564b 1-76
+deploy/sysid/src/plot_repeat.py
+  s_1c282a56a9c63a::t_11cf56efd71acf 1-88
+deploy/sysid/src/plot_walk_replay.py
+  s_1c282a56a9c63a::t_2d31b96e4a9481 1-51
+deploy/control_ws/src/armcontrol/config/arm_control_node.yaml
+  s_1c282a56a9c63a::t_1e65b2b7eba028 1-6
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.6.14",
+  "base_commit_sha": "9c5fc0d8f40970d57e99cbad94bf5d7533cac943",
+  "prompts": {},
+  "humans": {
+    "h_d698c05df35737": {
+      "author": "woan <377801872@qq.com>"
+    }
+  },
+  "sessions": {
+    "s_1c282a56a9c63a": {
+      "agent_id": {
+        "tool": "claude",
+        "id": "e038b5d5-a23a-437e-8075-8a78e1995bbe",
+        "model": "claude-opus-4-8"
+      },
+      "human_author": "woan <377801872@qq.com>"
+    }
+  }
+}
