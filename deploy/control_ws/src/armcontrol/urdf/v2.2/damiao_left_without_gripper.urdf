@@ -1,0 +1,360 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!-- This URDF was automatically created by SolidWorks to URDF Exporter! Originally created by Stephen Brawner (brawner@gmail.com) 
+     Commit Version: 1.6.0-4-g7f85cfe  Build Version: 1.6.7995.38578
+     For more information, please see http://wiki.ros.org/sw_urdf_exporter -->
+<robot
+  name="damiao_left_v2.2">
+          <mujoco>
+    <compiler meshdir="../meshes/" balanceinertia="true" discardvisual="false"/>
+</mujoco>
+  <link
+    name="left_base_link">
+    <inertial>
+      <origin
+        xyz="-1.2967E-05 0.00012256 0.02611"
+        rpy="0 0 0" />
+      <mass
+        value="0.35652" />
+      <inertia
+        ixx="0.00027366"
+        ixy="4.9585E-08"
+        ixz="-5.8548E-08"
+        iyy="0.00027121"
+        iyz="-3.1434E-07"
+        izz="0.00029471" />
+    </inertial>
+    <visual>
+      <origin
+        xyz="0 0 0"
+        rpy="0 0 0" />
+      <geometry>
+        <mesh
+          filename="package://damiao_left_v2.2/meshes/left_base_link.STL" />
+      </geometry>
+      <material
+        name="">
+        <color
+          rgba="0.89804 0.91765 0.92941 1" />
+      </material>
+    </visual>
+    <collision>
+      <origin
+        xyz="0 0 0"
+        rpy="0 0 0" />
+      <geometry>
+        <mesh
+          filename="package://damiao_left_v2.2/meshes/left_base_link.STL" />
+      </geometry>
+    </collision>
+  </link>
+  <link
+    name="left_link1">
+    <inertial>
+      <origin
+        xyz="2.29916933195823E-05 -0.0102497786870162 0.0686589280889037"
+        rpy="0 0 0" />
+      <mass
+        value="0.243213262665487" />
+      <inertia
+        ixx="0.000234214831815828"
+        ixy="6.79060790360316E-08"
+        ixz="-1.20830072816191E-09"
+        iyy="0.000240528479490307"
+        iyz="3.67022957765617E-05"
+        izz="9.83648620061998E-05" />
+    </inertial>
+    <visual>
+      <origin
+        xyz="0 0 0"
+        rpy="0 0 0" />
+      <geometry>
+        <mesh
+          filename="package://damiao_left_v2.2/meshes/left_link1.STL" />
+      </geometry>
+      <material
+        name="">
+        <color
+          rgba="0.976470588235294 0.266666666666667 0.356862745098039 1" />
+      </material>
+    </visual>
+    <collision>
+      <origin
+        xyz="0 0 0"
+        rpy="0 0 0" />
+      <geometry>
+        <mesh
+          filename="package://damiao_left_v2.2/meshes/left_link1.STL" />
+      </geometry>
+    </collision>
+  </link>
+  <joint
+    name="left_joint1"
+    type="revolute">
+    <origin
+      xyz="0 0 0.0625"
+      rpy="0 0 0" />
+    <parent
+      link="left_base_link" />
+    <child
+      link="left_link1" />
+    <axis
+      xyz="0 0 1" />
+    <limit
+      lower="-3"
+      upper="3"
+      effort="0"
+      velocity="0" />
+  </joint>
+  <link
+    name="left_link2">
+    <inertial>
+      <origin
+        xyz="-0.115127797849061 0.0041299269706305 -0.0236893327677353"
+        rpy="0 0 0" />
+      <mass
+        value="0.420520940658106" />
+      <inertia
+        ixx="0.000192897065872515"
+        ixy="2.30108040409341E-05"
+        ixz="-2.42210381625112E-05"
+        iyy="0.000287283807256161"
+        iyz="6.78465554381062E-08"
+        izz="0.000282711909014237" />
+    </inertial>
+    <visual>
+      <origin
+        xyz="0 0 0"
+        rpy="0 0 0" />
+      <geometry>
+        <mesh
+          filename="package://damiao_left_v2.2/meshes/left_link2.STL" />
+      </geometry>
+      <material
+        name="">
+        <color
+          rgba="0.898039215686275 0.917647058823529 0.929411764705882 1" />
+      </material>
+    </visual>
+    <collision>
+      <origin
+        xyz="0 0 0"
+        rpy="0 0 0" />
+      <geometry>
+        <mesh
+          filename="package://damiao_left_v2.2/meshes/left_link2.STL" />
+      </geometry>
+    </collision>
+  </link>
+  <joint
+    name="left_joint2"
+    type="revolute">
+    <origin
+      xyz="0 0.02825 0.09195"
+      rpy="-1.5708 0 0" />
+    <parent
+      link="left_link1" />
+    <child
+      link="left_link2" />
+    <axis
+      xyz="0 0 1" />
+    <limit
+      lower="-3"
+      upper="3"
+      effort="0"
+      velocity="0" />
+  </joint>
+  <link
+    name="left_link3">
+    <inertial>
+      <origin
+        xyz="-0.0640691438504693 2.57276916116808E-08 -0.0225108796426785"
+        rpy="0 0 0" />
+      <mass
+        value="0.165940406741773" />
+      <inertia
+        ixx="7.08512582142169E-05"
+        ixy="-1.86923720665555E-11"
+        ixz="-1.08270180423094E-05"
+        iyy="8.29887395778812E-05"
+        iyz="-2.26347691720425E-11"
+        izz="7.78627748740741E-05" />
+    </inertial>
+    <visual>
+      <origin
+        xyz="0 0 0"
+        rpy="0 0 0" />
+      <geometry>
+        <mesh
+          filename="package://damiao_left_v2.2/meshes/left_link3.STL" />
+      </geometry>
+      <material
+        name="">
+        <color
+          rgba="0.898039215686275 0.917647058823529 0.929411764705882 1" />
+      </material>
+    </visual>
+    <collision>
+      <origin
+        xyz="0 0 0"
+        rpy="0 0 0" />
+      <geometry>
+        <mesh
+          filename="package://damiao_left_v2.2/meshes/left_link3.STL" />
+      </geometry>
+    </collision>
+  </link>
+  <joint
+    name="left_joint3"
+    type="revolute">
+    <origin
+      xyz="-0.178 -0.02825 -0.02825"
+      rpy="1.5708 0 0" />
+    <parent
+      link="left_link2" />
+    <child
+      link="left_link3" />
+    <axis
+      xyz="0 0 1" />
+    <limit
+      lower="-3"
+      upper="3"
+      effort="0"
+      velocity="0" />
+  </joint>
+  <link
+    name="left_link4">
+    <inertial>
+      <origin
+        xyz="2.1971969826895E-08 0.00977248826811224 0.0533255118122016"
+        rpy="0 0 0" />
+      <mass
+        value="0.200638131206218" />
+      <inertia
+        ixx="0.000191261993872409"
+        ixy="4.46501392438127E-11"
+        ixz="2.33060453338546E-10"
+        iyy="0.000200403908803124"
+        iyz="-2.94922660287913E-05"
+        izz="7.49944105303278E-05" />
+    </inertial>
+    <visual>
+      <origin
+        xyz="0 0 0"
+        rpy="0 0 0" />
+      <geometry>
+        <mesh
+          filename="package://damiao_left_v2.2/meshes/left_link4.STL" />
+      </geometry>
+      <material
+        name="">
+        <color
+          rgba="0.898039215686275 0.917647058823529 0.929411764705882 1" />
+      </material>
+    </visual>
+    <collision>
+      <origin
+        xyz="0 0 0"
+        rpy="0 0 0" />
+      <geometry>
+        <mesh
+          filename="package://damiao_left_v2.2/meshes/left_link4.STL" />
+      </geometry>
+    </collision>
+  </link>
+  <joint
+    name="left_joint4"
+    type="revolute">
+    <origin
+      xyz="-0.1015 0 -0.02825"
+      rpy="0 -1.5708 0" />
+    <parent
+      link="left_link3" />
+    <child
+      link="left_link4" />
+    <axis
+      xyz="0 0 1" />
+    <limit
+      lower="-3"
+      upper="3"
+      effort="0"
+      velocity="0" />
+  </joint>
+  <link
+    name="left_link5">
+    <inertial>
+      <origin
+        xyz="-0.00017830875283309 -1.09271562475644E-05 0.0395914439449273"
+        rpy="0 0 0" />
+      <mass
+        value="0.207971430469228" />
+      <inertia
+        ixx="0.000107819232248404"
+        ixy="-1.06922012251443E-08"
+        ixz="4.28462110049003E-07"
+        iyy="8.19513855318664E-05"
+        iyz="-5.40354335871118E-10"
+        izz="8.55009941376512E-05" />
+    </inertial>
+    <visual>
+      <origin
+        xyz="0 0 0"
+        rpy="0 0 0" />
+      <geometry>
+        <mesh
+          filename="package://damiao_left_v2.2/meshes/left_link5.STL" />
+      </geometry>
+      <material
+        name="">
+        <color
+          rgba="0.898039215686275 0.917647058823529 0.929411764705882 1" />
+      </material>
+    </visual>
+    <collision>
+      <origin
+        xyz="0 0 0"
+        rpy="0 0 0" />
+      <geometry>
+        <mesh
+          filename="package://damiao_left_v2.2/meshes/left_link5.STL" />
+      </geometry>
+    </collision>
+  </link>
+  <joint
+    name="left_joint5"
+    type="revolute">
+    <origin
+      xyz="0 0.0364 0.1185"
+      rpy="1.5708 1.5708 0" />
+    <parent
+      link="left_link4" />
+    <child
+      link="left_link5" />
+    <axis
+      xyz="0 0 1" />
+    <limit
+      lower="-3"
+      upper="3"
+      effort="0"
+      velocity="0" />
+  </joint>
+  <link
+    name="left_link6" />
+  <joint
+    name="left_joint6"
+    type="revolute">
+    <origin
+      xyz="-0.036996 0 0.0364"
+      rpy="-1.5708 0 1.5708" />
+    <parent
+      link="left_link5" />
+    <child
+      link="left_link6" />
+    <axis
+      xyz="0 0 1" />
+    <limit
+      lower="-3"
+      upper="3"
+      effort="0"
+      velocity="0" />
+  </joint>
+</robot>

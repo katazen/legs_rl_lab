@@ -1,0 +1,13 @@
+# 达妙双腿 USB-CAN 适配器固定别名规则
+# 背景: 两个适配器 vid(2e88)/pid(4603)/serial(00000000050C) 完全相同,无法靠序列号区分,
+#        只能按"插在哪个物理 USB 口"区分。下面两个口号来自本机 udevadm 实测:
+#          物理口 3-6.4  (当前枚举为 ttyACM0)
+#          物理口 3-6.1  (当前枚举为 ttyACM1)
+# arm_control_node 默认打开 /dev/ttyCANL (left_arm_device) 和 /dev/ttyCANR (right_arm_device)。
+#
+# ⚠️ 左右腿对应关系需核实: 下面假设 3-6.4=左腿、3-6.1=右腿。若起节点后发现左右腿反了,
+#    把这两行的 ttyCANL / ttyCANR 互换即可。
+# ⚠️ 口号绑定的是物理 USB 位置: 换插口/换 HUB 口会失效,请固定用同样两个口(建议用 USB-HUB)。
+
+KERNEL=="ttyACM*", KERNELS=="3-6.4:1.0", MODE:="0666", SYMLINK+="ttyCANL"
+KERNEL=="ttyACM*", KERNELS=="3-6.1:1.0", MODE:="0666", SYMLINK+="ttyCANR"

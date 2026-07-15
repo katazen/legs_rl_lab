@@ -29,9 +29,9 @@ _ASSETS_DIR = os.path.join(_REPO_ROOT, "source", "legs_rl_lab", "legs_rl_lab", "
 #  sim2sim 会据此自动读取
 #      logs/rsl_rl/<EXPERIMENT>/<RUN>/params/deploy.yaml   （所有模型参数）
 #      logs/rsl_rl/<EXPERIMENT>/<RUN>/exported/policy.pt   （策略，需先 play 导出）
-RUN = "2026-07-13_15-56-58"   # TODO: 换成你实际的 legs 训练 run（logs/rsl_rl/legs/<RUN>）
+RUN = "2026-07-14_12-04-19"   # TODO: 换成你实际的 legs 训练 run（logs/rsl_rl/legs/<RUN>）
 #  唯一可选变量：是否采集关节跟踪数据并出图
-SAVE_DATA = True
+SAVE_DATA = False
 # ============================================================================
 
 # 与具体 run 无关的仿真侧设置（不是模型参数，故不放进 deploy.yaml）
@@ -48,6 +48,15 @@ COLLECT_DURATION = 10.0    # 采集时长 (秒)
 ISAAC_JOINT = ['R1', 'L1', 'R2', 'L2', 'R3', 'L3', 'R4', 'L4', 'R5', 'L5', 'R6', 'L6']
 MJC_JOINT = ['R1', 'R2', 'R3', 'R4', 'R5', 'R6', 'L1', 'L2', 'L3', 'L4', 'L5', 'L6']
 _ISAAC2MJC = np.array([ISAAC_JOINT.index(j) for j in MJC_JOINT])
+
+# ---- 标0偏置注入(sim2sim 验证用)----
+# 模拟实机编码器零位标定误差: 机器人"以为"某关节在 x, 客观(物理)在 x+δ。
+# 键=关节名(mjc/sdk 序: R1..R6,L1..L6; 1髋yaw 2髋roll 3髋pitch 4膝 5踝pitch 6踝roll),
+# 值=物理偏置 δ(rad)。未列出的关节=0。留空 {} 关闭注入。
+# 原理: 凡从 MuJoCo 读关节角喂给 obs / PD 的地方都用 (qpos - δ) 作"上报值",
+#       物理 qpos 与施加力矩不变 -> 策略被瞒着、以为在 x, 实则在 x+δ。
+ZERO_OFFSET = {}   # 例: {"L4": 0.05, "R2": -0.03}
+
 
 # deploy.yaml 里 obs 术语名 -> get_obs 用的特征键
 _OBS_NAME_MAP = {
@@ -191,6 +200,10 @@ class MujocoRunner:
 
         self.isaac2mjc = np.array([self.isaac_joint.index(i) for i in self.mjc_joint])
         self.mjc2isaac = np.array([self.mjc_joint.index(i) for i in self.isaac_joint])
+        # 标0偏置(mjc 序): 由 ZERO_OFFSET 字典按关节名展开; 全 0 = 不注入
+        self.zero_offset = np.array([ZERO_OFFSET.get(n, 0.0) for n in self.mjc_joint], dtype=np.float32)
+        if np.any(self.zero_offset != 0.0):
+            print(f"[sim2sim] 标0偏置注入(mjc序 rad): {dict(zip(self.mjc_joint, self.zero_offset))}")
         self.command_vel = np.array([0.0, 0.0, 0.0])
         self.cmd_range = self.cfg.robot.cmd_range
         self.joint_ids = np.array([self._joint_id(name) for name in self.mjc_joint], dtype=np.int32)
@@ -263,7 +276,8 @@ class MujocoRunner:
         return np.concatenate(input_parts)
 
     def compute_obs(self):
-        self.dof_pos = self.data.qpos[7:].astype(np.float32)
+        # qpos 是物理真值; 减标0偏置 -> "上报值"(策略以为的位置)。offset=0 时无影响。
+        self.dof_pos = self.data.qpos[7:].astype(np.float32) - self.zero_offset
         self.dof_vel = self.data.qvel[6:].astype(np.float32)
         obs = np.zeros((self.state_dim,), dtype=np.float32)
         # Angular vel
@@ -354,9 +368,10 @@ class MujocoRunner:
             for _ in range(self.decimation):
                 self.action[:] = self.latency_sim.process_action(raw_policy_action)
                 if self.control_mode == "position":
-                    self.data.ctrl = self.compute_target_pos()
+                    # MuJoCo 内部 PD 用物理 qpos, 故 ctrl 加回偏置: kp*(target+δ - qpos)=kp*(target - 上报)
+                    self.data.ctrl = self.compute_target_pos() + self.zero_offset
                 else:
-                    self.dof_pos = self.data.qpos[7:].astype(np.float32)
+                    self.dof_pos = self.data.qpos[7:].astype(np.float32) - self.zero_offset
                     self.dof_vel = self.data.qvel[6:].astype(np.float32)
                     self._tau = self.compute_torque()
                     self.data.ctrl = self._tau

@@ -1,0 +1,43 @@
+cmake_minimum_required(VERSION 3.16)
+project(rbdl_vendor LANGUAGES C CXX)
+
+find_package(ament_cmake REQUIRED)
+include(ExternalProject)
+
+# 使用 git 仓库
+set(RBDL_GIT_REPOSITORY "https://github.com/rbdl/rbdl.git")
+set(RBDL_GIT_TAG "v3.3.1")
+
+set(RBDL_SRC_DIR "${CMAKE_BINARY_DIR}/rbdl-src")
+set(RBDL_BUILD_DIR "${CMAKE_BINARY_DIR}/rbdl-build")
+
+set(RBDL_CMAKE_ARGS
+  -DCMAKE_INSTALL_PREFIX=${CMAKE_INSTALL_PREFIX}
+  -DBUILD_TESTING=OFF
+  -DRBDL_BUILD_EXECUTABLES=OFF
+  -DRBDL_BUILD_ADDON_URDFREADER=ON
+  -DRBDL_BUILD_STATIC=OFF
+)
+
+ExternalProject_Add(rbdl_external
+  PREFIX "${CMAKE_BINARY_DIR}/rbdl"
+  GIT_REPOSITORY ${RBDL_GIT_REPOSITORY}
+  GIT_TAG ${RBDL_GIT_TAG}
+  SOURCE_DIR ${RBDL_SRC_DIR}
+  BINARY_DIR ${RBDL_BUILD_DIR}
+  CMAKE_ARGS ${RBDL_CMAKE_ARGS}
+  BUILD_BYPRODUCTS "${RBDL_BUILD_DIR}/CMakeCache.txt"
+  INSTALL_DIR ${CMAKE_INSTALL_PREFIX}
+  UPDATE_DISCONNECTED TRUE
+  LOG_DOWNLOAD ON
+  LOG_CONFIGURE ON
+  LOG_BUILD ON
+  LOG_INSTALL ON
+)
+
+add_custom_target(rbdl_vendor_build ALL
+  DEPENDS rbdl_external
+)
+
+ament_package()
+

@@ -1,0 +1,50 @@
+# ===== ROS2 / 编译产物 =====
+build/
+install/
+log/
+__pycache__/
+*.pyc
+*.pyo
+*.egg-info/
+
+# ===== IDE / 工具元数据 =====
+.idea/
+.vscode/
+.omc/
+
+# ===== 诊断 / 数据 =====
+dual_leg_diag/
+*.csv
+
+# ===== 图片 / 文档 =====
+*.png
+*.jpg
+*.jpeg
+*.svg
+*.md
+
+# ===== 模型二进制 =====
+*.onnx
+*.pt
+*.pth
+*.pkl
+
+# ===== 网格资产(大二进制) =====
+meshes/
+*.stl
+*.STL
+*.dae
+*.obj
+*.ply
+
+# ===== 压缩包 / 备份 =====
+*.zip
+*.tar
+*.tar.gz
+*.7z
+*.bak
+
+# ===== sysid 数据与文档 / 部署模型 =====
+sysid/data/
+sysid/doc/
+rl_real_py/policy/

@@ -1,0 +1,917 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!-- This URDF was automatically created by SolidWorks to URDF Exporter! Originally created by
+Stephen Brawner (brawner@gmail.com) 
+     Commit Version: 1.6.0-4-g7f85cfe  Build Version: 1.6.7995.38578
+     For more information, please see http://wiki.ros.org/sw_urdf_exporter -->
+<robot
+  name="damiao_left_v2.0">
+  <mujoco>
+    <compiler meshdir="../../meshes/v2.0/" balanceinertia="true" discardvisual="false" />
+  </mujoco>
+  <link
+    name="left_base_link">
+    <inertial>
+      <origin
+        xyz="0.0001033 1.1253E-05 -0.025701"
+        rpy="0 0 0" />
+      <mass
+        value="0.35607" />
+      <inertia
+        ixx="0.00027038"
+        ixy="5.5772E-08"
+        ixz="4.1049E-07"
+        iyy="0.00027292"
+        iyz="-4.4564E-08"
+        izz="0.0002944" />
+    </inertial>
+    <visual>
+      <origin
+        xyz="0 0 0"
+        rpy="0 0 0" />
+      <geometry>
+        <mesh
+          filename="package://armcontrol/meshes/v2.0/left_base_link.STL" />
+      </geometry>
+      <material
+        name="">
+        <color
+          rgba="0.89804 0.91765 0.92941 1" />
+      </material>
+    </visual>
+    <collision>
+      <origin
+        xyz="0 0 0"
+        rpy="0 0 0" />
+      <geometry>
+        <mesh
+          filename="package://armcontrol/meshes/v2.0/left_base_link.STL" />
+      </geometry>
+    </collision>
+  </link>
+  <link
+    name="left_link1">
+    <inertial>
+      <origin
+        xyz="-0.0104223036351211 -4.78262887182446E-07 0.0690443255038251"
+        rpy="0 0 0" />
+      <mass
+        value="0.246726989348676" />
+      <inertia
+        ixx="0.000241514465732908"
+        ixy="-2.6495975378856E-09"
+        ixz="3.65608797637437E-05"
+        iyy="0.000234727336337318"
+        iyz="-1.85441884895458E-08"
+        izz="9.88339396362647E-05" />
+    </inertial>
+    <visual>
+      <origin
+        xyz="0 0 0"
+        rpy="0 0 0" />
+      <geometry>
+        <mesh
+          filename="package://armcontrol/meshes/v2.0/left_link1.STL" />
+      </geometry>
+      <material
+        name="">
+        <color
+          rgba="0.898039215686275 0.917647058823529 0.929411764705882 1" />
+      </material>
+    </visual>
+    <collision>
+      <origin
+        xyz="0 0 0"
+        rpy="0 0 0" />
+      <geometry>
+        <mesh
+          filename="package://armcontrol/meshes/v2.0/left_link1.STL" />
+      </geometry>
+    </collision>
+  </link>
+  <joint
+    name="left_joint1"
+    type="revolute">
+    <origin
+      xyz="0 0 -0.0615"
+      rpy="3.1416 0 0" />
+    <parent
+      link="left_base_link" />
+    <child
+      link="left_link1" />
+    <axis
+      xyz="0 0 1" />
+    <limit
+      lower="-3"
+      upper="3"
+      effort="0"
+      velocity="0" />
+  </joint>
+  <link
+    name="left_link2">
+    <inertial>
+      <origin
+        xyz="2.37150287152321E-06 -0.136706449804498 -0.0301807297917868"
+        rpy="0 0 0" />
+      <mass
+        value="0.275429270915022" />
+      <inertia
+        ixx="0.000679338015710505"
+        ixy="1.83819469049439E-08"
+        ixz="6.58851277962061E-08"
+        iyy="0.000169121045755525"
+        iyz="-0.000214063982825337"
+        izz="0.000619776045136109" />
+    </inertial>
+    <visual>
+      <origin
+        xyz="0 0 0"
+        rpy="0 0 0" />
+      <geometry>
+        <mesh
+          filename="package://armcontrol/meshes/v2.0/left_link2.STL" />
+      </geometry>
+      <material
+        name="">
+        <color
+          rgba="0.898039215686275 0.917647058823529 0.929411764705882 1" />
+      </material>
+    </visual>
+    <collision>
+      <origin
+        xyz="0 0 0"
+        rpy="0 0 0" />
+      <geometry>
+        <mesh
+          filename="package://armcontrol/meshes/v2.0/left_link2.STL" />
+      </geometry>
+    </collision>
+  </link>
+  <joint
+    name="left_joint2"
+    type="revolute">
+    <origin
+      xyz="0.0282500000000382 0 0.091949999999999"
+      rpy="0 1.5707963267949 0" />
+    <parent
+      link="left_link1" />
+    <child
+      link="left_link2" />
+    <axis
+      xyz="0 0 1" />
+    <limit
+      lower="-3"
+      upper="3"
+      effort="0"
+      velocity="0" />
+  </joint>
+  <link
+    name="left_link3">
+    <inertial>
+      <origin
+        xyz="-3.68523325744441E-09 -0.0644706584253762 -0.0226266402880408"
+        rpy="0 0 0" />
+      <mass
+        value="0.165004902316693" />
+      <inertia
+        ixx="8.28698111155116E-05"
+        ixy="-5.48698081480911E-12"
+        ixz="2.76337917939173E-12"
+        iyy="7.07028292884014E-05"
+        iyz="-1.08007992927097E-05"
+        izz="7.75668803646458E-05" />
+    </inertial>
+    <visual>
+      <origin
+        xyz="0 0 0"
+        rpy="0 0 0" />
+      <geometry>
+        <mesh
+          filename="package://armcontrol/meshes/v2.0/left_link3.STL" />
+      </geometry>
+      <material
+        name="">
+        <color
+          rgba="0.898039215686275 0.917647058823529 0.929411764705882 1" />
+      </material>
+    </visual>
+    <collision>
+      <origin
+        xyz="0 0 0"
+        rpy="0 0 0" />
+      <geometry>
+        <mesh
+          filename="package://armcontrol/meshes/v2.0/left_link3.STL" />
+      </geometry>
+    </collision>
+  </link>
+  <joint
+    name="left_joint3"
+    type="revolute">
+    <origin
+      xyz="0 -0.178 0"
+      rpy="0 0 0" />
+    <parent
+      link="left_link2" />
+    <child
+      link="left_link3" />
+    <axis
+      xyz="0 0 1" />
+    <limit
+      lower="-3"
+      upper="3"
+      effort="0"
+      velocity="0" />
+  </joint>
+  <link
+    name="left_link4">
+    <inertial>
+      <origin
+        xyz="-8.00718866211803E-09 -0.00683244438792391 0.0477552907463806"
+        rpy="0 0 0" />
+      <mass
+        value="0.177312238659543" />
+      <inertia
+        ixx="0.00010254083034906"
+        ixy="3.48694060136866E-12"
+        ixz="-2.40846240645199E-11"
+        iyy="0.00011166287944293"
+        iyz="1.27118433721344E-05"
+        izz="6.80240698840826E-05" />
+    </inertial>
+    <visual>
+      <origin
+        xyz="0 0 0"
+        rpy="0 0 0" />
+      <geometry>
+        <mesh
+          filename="package://armcontrol/meshes/v2.0/left_link4.STL" />
+      </geometry>
+      <material
+        name="">
+        <color
+          rgba="0.898039215686275 0.917647058823529 0.929411764705882 1" />
+      </material>
+    </visual>
+    <collision>
+      <origin
+        xyz="0 0 0"
+        rpy="0 0 0" />
+      <geometry>
+        <mesh
+          filename="package://armcontrol/meshes/v2.0/left_link4.STL" />
+      </geometry>
+    </collision>
+  </link>
+  <joint
+    name="left_joint4"
+    type="revolute">
+    <origin
+      xyz="0 -0.101000044326077 -0.0282500000001093"
+      rpy="1.57079632679487 0 0" />
+    <parent
+      link="left_link3" />
+    <child
+      link="left_link4" />
+    <axis
+      xyz="0 0 1" />
+    <limit
+      lower="-3"
+      upper="3"
+      effort="0"
+      velocity="0" />
+  </joint>
+  <link
+    name="left_link5">
+    <inertial>
+      <origin
+        xyz="-3.86339232827382E-09 -0.0699886016583268 -0.0211254938054257"
+        rpy="0 0 0" />
+      <mass
+        value="0.131076924077037" />
+      <inertia
+        ixx="5.45472652995429E-05"
+        ixy="-5.07219053493843E-12"
+        ixz="7.9447448141033E-13"
+        iyy="5.36087043224312E-05"
+        iyz="-3.18863390860148E-06"
+        izz="5.3687736554828E-05" />
+    </inertial>
+    <visual>
+      <origin
+        xyz="0 0 0"
+        rpy="0 0 0" />
+      <geometry>
+        <mesh
+          filename="package://armcontrol/meshes/v2.0/left_link5.STL" />
+      </geometry>
+      <material
+        name="">
+        <color
+          rgba="1 1 1 1" />
+      </material>
+    </visual>
+    <collision>
+      <origin
+        xyz="0 0 0"
+        rpy="0 0 0" />
+      <geometry>
+        <mesh
+          filename="package://armcontrol/meshes/v2.0/left_link5.STL" />
+      </geometry>
+    </collision>
+  </link>
+  <joint
+    name="left_joint5"
+    type="revolute">
+    <origin
+      xyz="0 0.023 0.057"
+      rpy="-1.5708 0 0" />
+    <parent
+      link="left_link4" />
+    <child
+      link="left_link5" />
+    <axis
+      xyz="0 0 1" />
+    <limit
+      lower="-3"
+      upper="3"
+      effort="0"
+      velocity="0" />
+  </joint>
+  <link
+    name="left_link6" />
+  <joint
+    name="left_joint6"
+    type="revolute">
+    <origin
+      xyz="0 -0.09899604432578 -0.0229999999998816"
+      rpy="1.57079632679487 0 0" />
+    <parent
+      link="left_link5" />
+    <child
+      link="left_link6" />
+    <axis
+      xyz="0 0 1" />
+    <limit
+      lower="-3"
+      upper="3"
+      effort="0"
+      velocity="0" />
+  </joint>
+  <link name="left_gripper_base_link">
+    <inertial>
+      <origin
+        xyz="-0.00005520 1.2341E-05 0.03296193"
+        rpy="0 0 0" />
+      <mass
+        value="0.25641368" />
+      <inertia
+        ixx="4.6351E-04" ixy="-1.0E-08" ixz="-1.04E-06" iyy="4.4525E-04" iyz="-5.00E-08"
+        izz="1.0438E-04" />
+    </inertial>
+    <visual>
+      <origin rpy="0 0 0" xyz="0 0 0" />
+      <geometry>
+        <mesh filename="package://armcontrol/meshes/v2.0/gripper_base_link.STL" />
+      </geometry>
+      <material name="">
+        <color rgba="0.89804 0.91765 0.92941 1" />
+      </material>
+    </visual>
+  </link>
+  <joint
+    name="left_joint7"
+    type="fixed">
+    <origin
+      xyz="0 0 0"
+      rpy="0 0 1.5708" />
+    <parent
+      link="left_link6" />
+    <child
+      link="left_gripper_base_link" />
+    <axis
+      xyz="0 0 1" />
+    <limit
+      lower="-3.14"
+      upper="3.14"
+      effort="0"
+      velocity="0" />
+  </joint>
+  <link
+    name="left_gripper_narrow1_Link">
+    <inertial>
+      <origin
+        xyz="0.0094685 0.0068806 6.5437E-05"
+        rpy="0 0 0" />
+      <mass
+        value="0.025428" />
+      <inertia
+        ixx="1.9574E-06"
+        ixy="-4.2911E-07"
+        ixz="-3.7111E-11"
+        iyy="2.3919E-06"
+        iyz="-3.008E-10"
+        izz="1.5501E-06" />
+    </inertial>
+    <visual>
+      <origin
+        xyz="0 0 0"
+        rpy="0 0 0" />
+      <geometry>
+        <mesh
+          filename="package://armcontrol/meshes/v2.0/gripper_narrow1_Link.STL" />
+      </geometry>
+      <material
+        name="">
+        <color
+          rgba="0.75294 0.75294 0.75294 1" />
+      </material>
+    </visual>
+    <collision>
+      <origin
+        xyz="0 0 0"
+        rpy="0 0 0" />
+      <geometry>
+        <mesh
+          filename="package://armcontrol/meshes/v2.0/gripper_narrow1_Link.STL" />
+      </geometry>
+    </collision>
+  </link>
+  <joint
+    name="left_gripper_narrow1_joint"
+    type="fixed">
+    <origin
+      xyz="0 -0.0195 0.0565"
+      rpy="-2.9951 -1.5708 -0.15964" />
+    <parent
+      link="left_gripper_base_link" />
+    <child
+      link="left_gripper_narrow1_Link" />
+    <axis
+      xyz="0 0 -1" />
+    <limit
+      lower="-3.14"
+      upper="3.14"
+      effort="0"
+      velocity="0" />
+  </joint>
+  <link
+    name="left_gripper_narrow2_Link">
+    <inertial>
+      <origin
+        xyz="0.0088027 -0.007035 1.6424E-05"
+        rpy="0 0 0" />
+      <mass
+        value="0.0040132" />
+      <inertia
+        ixx="1.0307E-07"
+        ixy="5.7851E-08"
+        ixz="9.5801E-11"
+        iyy="1.1385E-07"
+        iyz="-2.81E-11"
+        izz="1.7009E-07" />
+    </inertial>
+    <visual>
+      <origin
+        xyz="0 0 0"
+        rpy="0 0 0" />
+      <geometry>
+        <mesh
+          filename="package://armcontrol/meshes/v2.0/gripper_narrow2_Link.STL" />
+      </geometry>
+      <material
+        name="">
+        <color
+          rgba="0.75294 0.75294 0.75294 1" />
+      </material>
+    </visual>
+    <collision>
+      <origin
+        xyz="0 0 0"
+        rpy="0 0 0" />
+      <geometry>
+        <mesh
+          filename="package://armcontrol/meshes/v2.0/gripper_narrow2_Link.STL" />
+      </geometry>
+    </collision>
+  </link>
+  <joint
+    name="left_gripper_narrow2_joint"
+    type="fixed">
+    <origin
+      xyz="0.030852 0.018551 0"
+      rpy="0 0 0" />
+    <parent
+      link="left_gripper_narrow1_Link" />
+    <child
+      link="left_gripper_narrow2_Link" />
+    <axis
+      xyz="0 0 -1" />
+    <limit
+      lower="-3.14"
+      upper="3.14"
+      effort="0"
+      velocity="0" />
+  </joint>
+  <link
+    name="left_gripper_narrow3_Link">
+    <inertial>
+      <origin
+        xyz="0.012508 -0.0079729 9.4339E-05"
+        rpy="0 0 0" />
+      <mass
+        value="0.018029" />
+      <inertia
+        ixx="1.1403E-06"
+        ixy="5.5159E-07"
+        ixz="-4.0096E-13"
+        iyy="2.5704E-06"
+        iyz="1.0951E-12"
+        izz="2.3252E-06" />
+    </inertial>
+    <visual>
+      <origin
+        xyz="0 0 0"
+        rpy="0 0 0" />
+      <geometry>
+        <mesh
+          filename="package://armcontrol/meshes/v2.0/gripper_narrow3_Link.STL" />
+      </geometry>
+      <material
+        name="">
+        <color
+          rgba="0.75294 0.75294 0.75294 1" />
+      </material>
+    </visual>
+    <collision>
+      <origin
+        xyz="0 0 0"
+        rpy="0 0 0" />
+      <geometry>
+        <mesh
+          filename="package://armcontrol/meshes/v2.0/gripper_narrow3_Link.STL" />
+      </geometry>
+    </collision>
+  </link>
+  <joint
+    name="left_gripper_narrow3_joint"
+    type="fixed">
+    <origin
+      xyz="0.018118 -0.01574 0"
+      rpy="0 0 0" />
+    <parent
+      link="left_gripper_narrow2_Link" />
+    <child
+      link="left_gripper_narrow3_Link" />
+    <axis
+      xyz="0 0 -1" />
+    <limit
+      lower="-3.14"
+      upper="3.14"
+      effort="0"
+      velocity="0" />
+  </joint>
+  <link
+    name="left_gripper_narrow4_Link">
+  </link>
+  <joint
+    name="left_gripper_narrow4_joint"
+    type="fixed">
+    <origin
+      xyz="0 -0.0104 0"
+      rpy="0 0 0" />
+    <parent
+      link="left_gripper_narrow3_Link" />
+    <child
+      link="left_gripper_narrow4_Link" />
+    <axis
+      xyz="0 0 1" />
+    <limit
+      lower="-3.14"
+      upper="3.14"
+      effort="0"
+      velocity="0" />
+  </joint>
+  <link
+    name="left_gripper_narrow_loop_Link">
+    <inertial>
+      <origin
+        xyz="0.014869 -0.0036066 0.00029307"
+        rpy="0 0 0" />
+      <mass
+        value="0.022591" />
+      <inertia
+        ixx="4.3916E-06"
+        ixy="1.114E-07"
+        ixz="-4.9655E-12"
+        iyy="4.737E-06"
+        iyz="1.7121E-11"
+        izz="6.0445E-07" />
+    </inertial>
+    <visual>
+      <origin
+        xyz="0 0 0"
+        rpy="0 0 0" />
+      <geometry>
+        <mesh
+          filename="package://armcontrol/meshes/v2.0/gripper_narrow_loop_Link.STL" />
+      </geometry>
+      <material
+        name="">
+        <color
+          rgba="0.75294 0.75294 0.75294 1" />
+      </material>
+    </visual>
+    <collision>
+      <origin
+        xyz="0 0 0"
+        rpy="0 0 0" />
+      <geometry>
+        <mesh
+          filename="package://armcontrol/meshes/v2.0/gripper_narrow_loop_Link.STL" />
+      </geometry>
+    </collision>
+  </link>
+  <joint
+    name="left_gripper_narrow_loop_joint"
+    type="fixed">
+    <origin
+      xyz="0 -0.021633 0.07387"
+      rpy="-2.9951 -1.5708 -0.15964" />
+    <parent
+      link="left_gripper_base_link" />
+    <child
+      link="left_gripper_narrow_loop_Link" />
+    <axis
+      xyz="0 0 -1" />
+    <limit
+      lower="-3.14"
+      upper="3.14"
+      effort="0"
+      velocity="0" />
+  </joint>
+  <link
+    name="left_gripper_wide1_Link">
+    <inertial>
+      <origin
+        xyz="0.0095051 -0.0068479 6.8268E-05"
+        rpy="0 0 0" />
+      <mass
+        value="0.025428" />
+      <inertia
+        ixx="1.9565E-06"
+        ixy="4.2798E-07"
+        ixz="2.3844E-10"
+        iyy="2.3928E-06"
+        iyz="-1.4454E-10"
+        izz="1.5501E-06" />
+    </inertial>
+    <visual>
+      <origin
+        xyz="0 0 0"
+        rpy="0 0 0" />
+      <geometry>
+        <mesh
+          filename="package://armcontrol/meshes/v2.0/gripper_wide1_Link.STL" />
+      </geometry>
+      <material
+        name="">
+        <color
+          rgba="0.75294 0.75294 0.75294 1" />
+      </material>
+    </visual>
+    <collision>
+      <origin
+        xyz="0 0 0"
+        rpy="0 0 0" />
+      <geometry>
+        <mesh
+          filename="package://armcontrol/meshes/v2.0/gripper_wide1_Link.STL" />
+      </geometry>
+    </collision>
+  </link>
+  <joint
+    name="left_gripper_wide1_joint"
+    type="fixed">
+    <origin
+      xyz="0 0.0195 0.0565"
+      rpy="-2.9951 -1.5708 -0.15964" />
+    <parent
+      link="left_gripper_base_link" />
+    <child
+      link="left_gripper_wide1_Link" />
+    <axis
+      xyz="0 0 -1" />
+    <limit
+      lower="-3.14"
+      upper="3.14"
+      effort="0"
+      velocity="0" />
+  </joint>
+  <link
+    name="left_gripper_wide2_Link">
+    <inertial>
+      <origin
+        xyz="0.0088027 0.007035 -1.6424E-05"
+        rpy="0 0 0" />
+      <mass
+        value="0.0040132" />
+      <inertia
+        ixx="1.0307E-07"
+        ixy="-5.7851E-08"
+        ixz="-9.58E-11"
+        iyy="1.1385E-07"
+        iyz="-2.81E-11"
+        izz="1.7009E-07" />
+    </inertial>
+    <visual>
+      <origin
+        xyz="0 0 0"
+        rpy="0 0 0" />
+      <geometry>
+        <mesh
+          filename="package://armcontrol/meshes/v2.0/gripper_wide2_Link.STL" />
+      </geometry>
+      <material
+        name="">
+        <color
+          rgba="0.75294 0.75294 0.75294 1" />
+      </material>
+    </visual>
+    <collision>
+      <origin
+        xyz="0 0 0"
+        rpy="0 0 0" />
+      <geometry>
+        <mesh
+          filename="package://armcontrol/meshes/v2.0/gripper_wide2_Link.STL" />
+      </geometry>
+    </collision>
+  </link>
+  <joint
+    name="left_gripper_wide2_joint"
+    type="fixed">
+    <origin
+      xyz="0.030852 -0.018551 0"
+      rpy="0 0 0" />
+    <parent
+      link="left_gripper_wide1_Link" />
+    <child
+      link="left_gripper_wide2_Link" />
+    <axis
+      xyz="0 0 -1" />
+    <limit
+      lower="-3.14"
+      upper="3.14"
+      effort="0"
+      velocity="0" />
+  </joint>
+  <link
+    name="left_gripper_wide3_Link">
+    <inertial>
+      <origin
+        xyz="0.016206 0.0094593 4.7668E-05"
+        rpy="0 0 0" />
+      <mass
+        value="0.035835" />
+      <inertia
+        ixx="8.5056E-06"
+        ixy="-1.1363E-06"
+        ixz="-4.2908E-11"
+        iyy="1.1235E-05"
+        iyz="-2.9251E-11"
+        izz="4.6309E-06" />
+    </inertial>
+    <visual>
+      <origin
+        xyz="0 0 0"
+        rpy="0 0 0" />
+      <geometry>
+        <mesh
+          filename="package://armcontrol/meshes/v2.0/gripper_wide3_Link.STL" />
+      </geometry>
+      <material
+        name="">
+        <color
+          rgba="0.75294 0.75294 0.75294 1" />
+      </material>
+    </visual>
+    <collision>
+      <origin
+        xyz="0 0 0"
+        rpy="0 0 0" />
+      <geometry>
+        <mesh
+          filename="package://armcontrol/meshes/v2.0/gripper_wide3_Link.STL" />
+      </geometry>
+    </collision>
+  </link>
+  <joint
+    name="left_gripper_wide3_joint"
+    type="fixed">
+    <origin
+      xyz="0.018118 0.01574 0"
+      rpy="0 0 0" />
+    <parent
+      link="left_gripper_wide2_Link" />
+    <child
+      link="left_gripper_wide3_Link" />
+    <axis
+      xyz="0 0 -1" />
+    <limit
+      lower="-3.14"
+      upper="3.14"
+      effort="0"
+      velocity="0" />
+  </joint>
+  <link
+    name="left_gripper_wide4_Link">
+  </link>
+  <joint
+    name="left_gripper_wide4_joint"
+    type="fixed">
+    <origin
+      xyz="0 0.0104 0"
+      rpy="0 0 0" />
+    <parent
+      link="left_gripper_wide3_Link" />
+    <child
+      link="left_gripper_wide4_Link" />
+    <axis
+      xyz="0 0 1" />
+    <limit
+      lower="-3.14"
+      upper="3.14"
+      effort="0"
+      velocity="0" />
+  </joint>
+  <link
+    name="left_gripper_wide_loop_Link">
+    <inertial>
+      <origin
+        xyz="0.016268 0.0040555 0.00030323"
+        rpy="0 0 0" />
+      <mass
+        value="0.025142" />
+      <inertia
+        ixx="5.887E-06"
+        ixy="-1.1234E-07"
+        ixz="2.1954E-11"
+        iyy="6.236E-06"
+        iyz="-9.473E-12"
+        izz="6.2389E-07" />
+    </inertial>
+    <visual>
+      <origin
+        xyz="0 0 0"
+        rpy="0 0 0" />
+      <geometry>
+        <mesh
+          filename="package://armcontrol/meshes/v2.0/gripper_wide_loop_Link.STL" />
+      </geometry>
+      <material
+        name="">
+        <color
+          rgba="0.75294 0.75294 0.75294 1" />
+      </material>
+    </visual>
+    <collision>
+      <origin
+        xyz="0 0 0"
+        rpy="0 0 0" />
+      <geometry>
+        <mesh
+          filename="package://armcontrol/meshes/v2.0/gripper_wide_loop_Link.STL" />
+      </geometry>
+    </collision>
+  </link>
+  <joint
+    name="left_gripper_wide_loop_joint"
+    type="fixed">
+    <origin
+      xyz="0 0.021633 0.07387"
+      rpy="-2.9951 -1.5708 -0.15964" />
+    <parent
+      link="left_gripper_base_link" />
+    <child
+      link="left_gripper_wide_loop_Link" />
+    <axis
+      xyz="0 0 -1" />
+    <limit
+      lower="-3.14"
+      upper="3.14"
+      effort="0"
+      velocity="0" />
+  </joint>
+  <link
+    name="left_load" />
+  <joint name="load_joint" type="fixed">
+    <origin
+      xyz="0 0 0.17"
+      rpy="0 0 0" />
+    <parent
+      link="left_gripper_base_link" />
+    <child
+      link="left_load" />
+  </joint>
+</robot>

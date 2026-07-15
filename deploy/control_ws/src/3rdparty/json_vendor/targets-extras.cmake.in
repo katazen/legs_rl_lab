@@ -1,0 +1,1 @@
+set(nlohmann_json_TARGETS nlohmann_json::nlohmann_json)

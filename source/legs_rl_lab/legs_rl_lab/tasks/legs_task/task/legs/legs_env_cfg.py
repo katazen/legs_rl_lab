@@ -151,6 +151,15 @@ class EventCfg:
         },
     )
 
+    # 标0偏置随机化: 每环境每关节一个恒定偏置(reset 采样, 整幕不变), 模拟实机编码器零位
+    # 标定误差, 让策略对恒定零偏鲁棒 -> 消除实机零速漂移。仅作用于策略观测的 joint_pos_rel。
+    # 对称 ±0.05rad(≈±2.9°): 均值0 是有意的(目的是不敏感, 非拟合实机特定偏置)。
+    joint_zero_bias = EventTerm(
+        func=mdp.randomize_joint_zero_bias,
+        mode="reset",
+        params={"bias_range": (-0.05, 0.05)},
+    )
+
     # interval
     push_robot = EventTerm(
         func=mdp.push_by_setting_velocity,
@@ -201,7 +210,7 @@ class ObservationsCfg:
         base_ang_vel = ObsTerm(func=mdp.base_ang_vel, scale=0.2, noise=Unoise(n_min=-0.2, n_max=0.2))
         projected_gravity = ObsTerm(func=mdp.projected_gravity, noise=Unoise(n_min=-0.05, n_max=0.05))
         velocity_commands = ObsTerm(func=mdp.generated_commands, params={"command_name": "base_velocity"})
-        joint_pos_rel = ObsTerm(func=mdp.joint_pos_rel, noise=Unoise(n_min=-0.01, n_max=0.01))
+        joint_pos_rel = ObsTerm(func=mdp.joint_pos_rel_biased, noise=Unoise(n_min=-0.01, n_max=0.01))
         joint_vel_rel = ObsTerm(func=mdp.joint_vel_rel, scale=0.05, noise=Unoise(n_min=-1.5, n_max=1.5))
         last_action = ObsTerm(func=mdp.last_action)
         gait_phase = ObsTerm(func=mdp.gait_phase_obs)
@@ -252,7 +261,8 @@ class RewardsCfg:
     base_angular = RewTerm(func=mdp.ang_vel_xy_l2, weight=-0.05)
     joint_vel = RewTerm(func=mdp.joint_vel_l2, weight=-0.001)
     joint_acc = RewTerm(func=mdp.joint_acc_l2, weight=-2.5e-7)
-    action_rate = RewTerm(func=mdp.action_rate_l2, weight=-0.05)
+    action_rate = RewTerm(func=mdp.action_rate_l2, weight=-0.15)
+    action_acc = RewTerm(func=mdp.action_acc_l2, weight=-0.05)   # 二阶平滑, 压高频颤动(膝 5Hz)
     dof_pos_limits = RewTerm(func=mdp.joint_pos_limits, weight=-5.0)
     energy = RewTerm(func=mdp.energy, weight=-2e-5)
     flat_orientation = RewTerm(func=mdp.flat_orientation_l2, weight=-5.0)

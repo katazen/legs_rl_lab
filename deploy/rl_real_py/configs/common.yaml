@@ -1,0 +1,54 @@
+# ============================================================
+#  实机部署配置 (rl_real_common 节点)
+#  ★ 部署时通常只改 run 这一项 ★
+#  所有模型参数(默认站姿/观测顺序+scale/history/action_scale/步态周期/step_dt)
+#  都从 <logs_root>/<run>/params/deploy.yaml 自动读取;
+#  策略从 <logs_root>/<run>/exported/policy.onnx (优先) 或 policy.pt 读取;
+#  实机数据自动存到 <logs_root>/<run>/sim2real/<保存时间>.csv
+# ============================================================
+run: 2026-07-14_12-04-19
+# 相对 legs_rl_lab 根(deploy 的上一级); 也可填绝对路径覆盖。代码自动解析。
+logs_root: logs/rsl_rl/legs
+
+# ---------- 部署时序 (硬件相关, 非模型参数) ----------
+publish_rate: 200          # 下发率 Hz; 策略率 = 1/step_dt (由 deploy.yaml 决定), decimation 自动算
+
+# ---------- 关节顺序 (硬件事实, deploy.yaml 里没有, 按名映射) ----------
+# 实机话题序 (/left_joint_states, /dog_joint_pos): position[0..5]=L1..L6, [6..11]=R1..R6
+joint_index_in_real: ["L1","L2","L3","L4","L5","L6","R1","R2","R3","R4","R5","R6"]
+# 策略/仿真序 (Isaac 交错序, 与 deploy.yaml 的 default_joint_pos 对应)
+joint_index_in_sim:  ["R1","L1","R2","L2","R3","L3","R4","L4","R5","L5","R6","L6"]
+
+# ---------- 发布安全限位 (实机序 L1..L6,R1..R6; 取自 URDF) ----------
+joint_lower_limits: [-1.05, -0.26, -1.0, 0.0, -0.52, -0.35,
+                     -1.05, -1.05, -1.0, 0.0, -0.52, -0.35]
+joint_upper_limits: [ 1.05,  1.05,  1.0, 1.92, 0.52,  0.35,
+                      1.05,  0.26,  1.0, 1.92, 0.52,  0.35]
+
+# ---------- 关节速度来源 ----------
+# 解码表已按固件 VMAX=45 校正, msg.velocity 现已正确; False=直接用电机上报速度(更准更低延迟)
+use_derived_vel: False
+vel_ema_alpha: 0.5         # 位置差分速度的 EMA 系数 (仅 use_derived_vel=True 时用)
+
+# ---------- 上电缓入准备姿态 ----------
+prepare_time: 4.0          # 秒; 从当前实测姿态 smoothstep 平滑移动到 default
+
+# ---------- 数据新鲜度看门狗 ----------
+state_timeout: 0.2         # 秒; run 中若关节/IMU 超过此时间没更新 -> 冻结指令, 不拿旧观测推理
+
+# ---------- 手柄 (满杆对应指令上限 [vx,vy,wz]; A=行走 B=停 X=复位) ----------
+cmd_clip: [0.5, 0.3, 0.3]
+deadzone: 0.12
+
+# ---------- 指令零偏修正 [vx, vy, wz] (m/s, m/s, rad/s) ----------
+# 实机零指令下若持续漂移, 在此填一个反向常量速度抵消(相当于给策略一个"补偿指令")。
+# 只加到喂策略的观测上, 不影响日志/手柄上限。全 0 = 不修正。
+# 标定法: 零指令下观察漂移方向 -> 往相反方向小步加(如右漂加 +vy / 反向 wz), 迭代到不漂为止。
+cmd_bias: [0.0, 0.0, -0.0]
+
+# ---------- 键盘 (W/S=vx A/D=vy Q/E=yaw 空格=清零 P=行走/暂停 R=复位) ----------
+keyboard:
+  step: 0.1
+  vx_max: 0.5
+  vy_max: 0.3
+  wz_max: 0.3

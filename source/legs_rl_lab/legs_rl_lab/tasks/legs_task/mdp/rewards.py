@@ -64,6 +64,19 @@ def action_rate_l2(env: ManagerBasedRLEnv) -> torch.Tensor:
     return torch.sum(torch.square(diff), dim=1)
 
 
+def action_acc_l2(env: ManagerBasedRLEnv) -> torch.Tensor:
+    """二阶动作平滑(动作"加速度")= a_t - 2·a_{t-1} + a_{t-2}, 专治高频颤动(方向反复)。
+    a_{t-2} 用自维护缓冲(action_manager 只存到 prev_action=a_{t-1}); 每步只被 reward 管理器调一次, 故更新安全。
+    注意: DCMotor 会把命令颤动滤掉→物理 joint_acc 抓不到, 必须在【动作】上惩罚。"""
+    act = env.action_manager.action
+    prev = env.action_manager.prev_action
+    if (not hasattr(env, "_prev_prev_action")) or env._prev_prev_action.shape != act.shape:
+        env._prev_prev_action = prev.clone()
+    acc = torch.clamp(act - 2.0 * prev + env._prev_prev_action, -2.0, 2.0)
+    env._prev_prev_action = prev.clone()
+    return torch.sum(torch.square(acc), dim=1)
+
+
 def joint_pos_limits(env: ManagerBasedRLEnv, asset_cfg: SceneEntityCfg = SceneEntityCfg("robot")) -> torch.Tensor:
     asset: Articulation = env.scene[asset_cfg.name]
     out_of_limits = -(
