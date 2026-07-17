@@ -181,10 +181,10 @@ class CommandsCfg:
         heading_command=False,
         debug_vis=True,
         ranges=mdp.UniformLevelVelocityCommandCfg.Ranges(
-            lin_vel_x=(-0.1, 0.1), lin_vel_y=(-0.0, 0.0), ang_vel_z=(-0.0, 0.0)
+            lin_vel_x=(-0.1, 0.1), lin_vel_y=(-0.1, 0.1), ang_vel_z=(-0.1, 0.1)
         ),
         limit_ranges=mdp.UniformLevelVelocityCommandCfg.Ranges(
-            lin_vel_x=(-0.5, 0.5), lin_vel_y=(-0.3, 0.3), ang_vel_z=(-0.3, 0.3)
+            lin_vel_x=(-0.3, 0.5), lin_vel_y=(-0.3, 0.3), ang_vel_z=(-0.5, 0.5)
         ),
     )
 
@@ -253,7 +253,7 @@ class RewardsCfg:
 
     # -- task
     track_lin_vel_xy = RewTerm(func=mdp.track_lin_vel_xy_exp,weight=1.0)
-    track_ang_vel_z = RewTerm(func=mdp.track_ang_vel_z_exp, weight=0.5)
+    track_ang_vel_z = RewTerm(func=mdp.track_ang_vel_z_exp, weight=1.0)
     alive = RewTerm(func=mdp.is_alive, weight=0.15)
     # stand_still = RewTerm(func=mdp.stand_still, weight=1.0)
     # -- base

@@ -29,7 +29,7 @@ _ASSETS_DIR = os.path.join(_REPO_ROOT, "source", "legs_rl_lab", "legs_rl_lab", "
 #  sim2sim 会据此自动读取
 #      logs/rsl_rl/<EXPERIMENT>/<RUN>/params/deploy.yaml   （所有模型参数）
 #      logs/rsl_rl/<EXPERIMENT>/<RUN>/exported/policy.pt   （策略，需先 play 导出）
-RUN = "2026-07-14_12-04-19"   # TODO: 换成你实际的 legs 训练 run（logs/rsl_rl/legs/<RUN>）
+RUN = "2026-07-16_21-01-52"   # TODO: 换成你实际的 legs 训练 run（logs/rsl_rl/legs/<RUN>）
 #  唯一可选变量：是否采集关节跟踪数据并出图
 SAVE_DATA = False
 # ============================================================================
@@ -51,7 +51,7 @@ _ISAAC2MJC = np.array([ISAAC_JOINT.index(j) for j in MJC_JOINT])
 
 # ---- 标0偏置注入(sim2sim 验证用)----
 # 模拟实机编码器零位标定误差: 机器人"以为"某关节在 x, 客观(物理)在 x+δ。
-# 键=关节名(mjc/sdk 序: R1..R6,L1..L6; 1髋yaw 2髋roll 3髋pitch 4膝 5踝pitch 6踝roll),
+# 键=关节名(mjc/sdk 序: R1..R6,L1..L6; 1髋pitch 2髋roll 3髋yaw 4膝 5踝pitch 6踝roll),
 # 值=物理偏置 δ(rad)。未列出的关节=0。留空 {} 关闭注入。
 # 原理: 凡从 MuJoCo 读关节角喂给 obs / PD 的地方都用 (qpos - δ) 作"上报值",
 #       物理 qpos 与施加力矩不变 -> 策略被瞒着、以为在 x, 实则在 x+δ。
