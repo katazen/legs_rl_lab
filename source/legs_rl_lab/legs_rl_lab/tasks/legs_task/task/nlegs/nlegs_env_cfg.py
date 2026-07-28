@@ -6,7 +6,7 @@
 from isaaclab.utils import configclass
 
 from legs_rl_lab.assets.legs_narrow.nlegs import NLEGS_CFG
-from legs_rl_lab.tasks.legs_task.task.legs.legs_env_cfg import (
+from legs_rl_lab.tasks.legs_task.task.legs.legs_dr_env_cfg import (
     RobotEnvCfg as LegsEnvCfg,
     RobotPlayEnvCfg as LegsPlayEnvCfg,
 )
@@ -33,4 +33,4 @@ class RobotEnvCfg(LegsEnvCfg):
 class RobotPlayEnvCfg(LegsPlayEnvCfg):
     def __post_init__(self):
         super().__post_init__()
-        _apply_nlegs(self)
+        self.scene.robot = NLEGS_CFG.replace(prim_path="{ENV_REGEX_NS}/Robot")
