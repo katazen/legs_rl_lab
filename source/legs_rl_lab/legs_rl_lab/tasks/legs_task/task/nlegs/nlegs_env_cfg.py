@@ -18,7 +18,7 @@ def _apply_nlegs(cfg) -> None:
     cfg.events.add_base_mass.params["mass_distribution_params"] = (0.0, 4.0)
     cfg.events.reset_robot_joints.params["position_range"] = (-0.2, 0.2)
 
-    cfg.rewards.flat_orientation.weight = 10.0
+    cfg.rewards.flat_orientation.weight = -10.0
     cfg.rewards.base_height.params["target_height"] = 0.58
     cfg.rewards.feet_y_distance.params["threshold"] = 0.222
 
