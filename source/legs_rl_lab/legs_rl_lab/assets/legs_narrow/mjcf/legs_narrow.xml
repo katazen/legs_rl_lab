@@ -42,14 +42,14 @@
   </asset>
 
   <worldbody>
-    <!-- 整块 base(含左右腿挂点)绕 X 轴上下倒置 180°: quat 加在 base body 上, 其下 inertial/外壳/Link_R0/L0 及整条腿都跟着翻 -->
-    <body name="base" pos="0 0 0" quat="0 1 0 0">
+    <!-- base 本体坐标系保持恒等(浮动根, 恒等出生即正立); 倒置 180°(Rx) 已烘焙进 base 外壳/惯量/imu 朝向及 R0/L0 挂点偏移, 与 body-quat 版物理等价 -->
+    <body name="base" pos="0 0 0">
       <freejoint/>
       <site name="imu" pos="0 0 0" quat="1 0 0 0" group="3"/>
-      <inertial pos="0 0 0.0190667" mass="0.4038888" diaginertia="0.0005155 0.0006249 0.0008118"/>
-      <geom class="visual" material="base_mat" mesh="base_link" />
+      <inertial pos="0 0 -0.0190667" mass="0.4038888" diaginertia="0.0005155 0.0006249 0.0008118"/>
+      <geom class="visual" material="base_mat" mesh="base_link" quat="0 1 0 0" />
       <!-- <geom class="collision" type="box" pos="0 0 0.03" size="0.05 0.05 0.04" /> -->
-      <body name="Link_R0" pos="0 -0.0075 0.061" quat="0 1 0 0">
+      <body name="Link_R0" pos="0 0.0075 -0.061">
         <inertial pos="0.0000344 -0.0297324 0.0000527" mass="0.7356663" fullinertia="0.0004923 0.0004979 0.0005018 0.0000010 -0.0000000 -0.0000010"/>
         <geom class="visual" material="Link_R0_mat" mesh="Link_R0" />
         <body name="Link_R1" pos="0 -0.06025 0">
@@ -86,7 +86,7 @@
           </body>
         </body>
       </body>
-      <body name="Link_L0" pos="0 0.0075 0.061" quat="0 1 0 0">
+      <body name="Link_L0" pos="0 -0.0075 -0.061">
         <inertial pos="0.0000344 0.0297324 -0.0000527" mass="0.7356663" fullinertia="0.0004923 0.0004979 0.0005018 -0.0000010 0.0000000 -0.0000010"/>
         <geom class="visual" material="Link_L0_mat" mesh="Link_L0" />
         <body name="Link_L1" pos="0 0.06025 0">
