@@ -1,0 +1,39 @@
+source/legs_rl_lab/legs_rl_lab/tasks/legs_task/task/nlegs/sim2sim.py
+  s_aede2d0005e56c::t_12a55d595f6180 56-63
+  s_aede2d0005e56c::t_34ade583ed9eb4 36,44-45
+  s_aede2d0005e56c::t_21d3abb58b0d08 376-377,379
+  s_aede2d0005e56c::t_45a82cb5a75de5 321-331
+  s_aede2d0005e56c::t_503a5270b89226 206-209
+  s_aede2d0005e56c::t_6b90adcb013771 84-92,96,105-106,110,112-118
+  s_aede2d0005e56c::t_b08812bf7a0071 283-284
+  s_aede2d0005e56c::t_b529e1f713d5c4 231-244,246
+source/legs_rl_lab/legs_rl_lab/assets/legs_narrow/mjcf/legs_narrow_scene.xml
+  s_aede2d0005e56c::t_c35e0860553c27 1-15
+deploy/rl_real_py/configs/common.yaml
+  h_d698c05df35737 9,11
+source/legs_rl_lab/legs_rl_lab/tasks/legs_task/task/nlegs/nlegs_env_cfg.py
+  h_d698c05df35737 20
+deploy/control_ws/src/armcontrol/config/arm_control_node.yaml
+  s_aede2d0005e56c::t_6ab50c33ca1ac2 3
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.6.16",
+  "base_commit_sha": "32cee5079d8a6a3eabf986b3f90fc6690a0025a1",
+  "prompts": {},
+  "humans": {
+    "h_d698c05df35737": {
+      "author": "woan <377801872@qq.com>"
+    }
+  },
+  "sessions": {
+    "s_aede2d0005e56c": {
+      "agent_id": {
+        "tool": "claude",
+        "id": "cdfd5184-d1e6-44c4-8105-792b029609d7",
+        "model": "claude-opus-4-8"
+      },
+      "human_author": "woan <377801872@qq.com>"
+    }
+  }
+}
