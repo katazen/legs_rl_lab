@@ -33,7 +33,7 @@ _ASSETS_DIR = os.path.join(_REPO_ROOT, "source", "legs_rl_lab", "legs_rl_lab", "
 #  sim2sim 会据此自动读取
 #      logs/rsl_rl/<EXPERIMENT>/<RUN>/params/deploy.yaml   （所有模型参数）
 #      logs/rsl_rl/<EXPERIMENT>/<RUN>/exported/policy.pt   （策略，需先 play 导出）
-RUN = "2026-07-03_11-25-00"
+RUN = "2026-07-28_15-25-26"   # nlegs 训练 run（logs/rsl_rl/nlegs/<RUN>）
 #  唯一可选变量：是否采集关节跟踪数据并出图
 SAVE_DATA = False
 # ============================================================================
@@ -41,18 +41,25 @@ SAVE_DATA = False
 # 与具体 run 无关的仿真侧设置（不是模型参数，故不放进 deploy.yaml）
 EXPERIMENT = "nlegs"
 LOGS_ROOT = os.path.join(_REPO_ROOT, "logs", "rsl_rl")
-# MuJoCo 场景 xml（含 actuator/imu 传感器，与 USD 无关）。TODO: 生成 narrow scene xml。
-SCENE_XML = os.path.join(_ASSETS_DIR, "legs_URDF", "mjcf", "A1_legs_V2_narrow_mjcf_scene.xml")
+# MuJoCo 场景 xml（含 actuator/imu 传感器，与 USD 无关）: 窄本体 rebake 后的 legs_narrow + 地面
+SCENE_XML = os.path.join(_ASSETS_DIR, "legs_narrow", "mjcf", "legs_narrow_scene.xml")
 PHYS_DT = 0.005            # MuJoCo 物理步长（仿真选择）
 CONTROL_MODE = "motor"     # "motor" or "position"
 SIM_DURATION = 10000.0
-ACTION_DELAY_RANGE_DEFAULT = (11, 15)  # 缺 deploy.yaml 字段时的兜底（physics steps, 含端点）
 COLLECT_DURATION = 10.0    # 采集时长 (秒)
 
 # 关节顺序：isaac(策略/yaml) vs mujoco
 ISAAC_JOINT = ['R1', 'L1', 'R2', 'L2', 'R3', 'L3', 'R4', 'L4', 'R5', 'L5', 'R6', 'L6']
 MJC_JOINT = ['R1', 'R2', 'R3', 'R4', 'R5', 'R6', 'L1', 'L2', 'L3', 'L4', 'L5', 'L6']
 _ISAAC2MJC = np.array([ISAAC_JOINT.index(j) for j in MJC_JOINT])
+
+# ---- 标0偏置注入(sim2sim 验证用)----
+# 模拟实机编码器零位标定误差: 机器人"以为"某关节在 x, 客观(物理)在 x+δ。
+# 键=关节名(mjc/sdk 序: R1..R6,L1..L6; 1髋pitch 2髋roll 3髋yaw 4膝 5踝pitch 6踝roll),
+# 值=物理偏置 δ(rad)。未列出的关节=0。留空 {} 关闭注入。
+# 原理: 凡从 MuJoCo 读关节角喂给 obs / PD 的地方都用 (qpos - δ) 作"上报值",
+#       物理 qpos 与施加力矩不变 -> 策略被瞒着、以为在 x, 实则在 x+δ。
+ZERO_OFFSET = {}   # 例: {"L4": 0.05, "R2": -0.03}
 
 # deploy.yaml 里 obs 术语名 -> get_obs 用的特征键
 _OBS_NAME_MAP = {
@@ -65,11 +72,6 @@ _OBS_NAME_MAP = {
     "gait_phase": "gait",
 }
 
-# 老 run 的 deploy.yaml 可能缺新字段时的兜底默认（mjc 顺序）
-_DEFAULT_ARMATURE = [0.032, 0.032, 0.032, 0.032, 0.0018, 0.0018, 0.032, 0.032, 0.032, 0.032, 0.0018, 0.0018]
-_DEFAULT_EFFORT = [27, 27, 27, 27, 7, 7, 27, 27, 27, 27, 7, 7]
-_DEFAULT_GAIT_PERIOD = 0.85
-
 
 def build_cfg(run: str, save_data: bool = False):
     """从某个训练 run 的 deploy.yaml 构造 sim2sim 配置（不依赖 mujoco，可单独测试）。"""
@@ -79,12 +81,19 @@ def build_cfg(run: str, save_data: bool = False):
     with open(deploy_path) as f:
         d = yaml.safe_load(f)
 
-    action_dim = len(d["default_joint_pos"])
-    step_dt = float(d["step_dt"])
+    def _req(key):
+        """取 deploy.yaml 字段; 缺失直接报错, 绝不用默认兜底(避免静默用错配置)。"""
+        if key not in d:
+            raise KeyError(f"[sim2sim] deploy.yaml 缺字段 '{key}' ({deploy_path}); "
+                           f"请重新导出 deploy.yaml, 不使用默认兜底")
+        return d[key]
+
+    action_dim = len(_req("default_joint_pos"))
+    step_dt = float(_req("step_dt"))
     decimation = max(1, round(step_dt / PHYS_DT))
 
     # observations: 按 yaml 顺序推出切片 / state_dim / history_length
-    obs = d["observations"]
+    obs = _req("observations")
     his_lens = int(next(iter(obs.values()))["history_length"])
     obs_slices, cursor = {}, 0
     for term_name, term in obs.items():
@@ -93,34 +102,20 @@ def build_cfg(run: str, save_data: bool = False):
         cursor += dim
     state_dim = cursor
 
-    action_scale = float(d["actions"]["JointPositionAction"]["scale"][0])
-    r = d["commands"]["base_velocity"]["ranges"]
+    action_scale = float(_req("actions")["JointPositionAction"]["scale"][0])
+    r = _req("commands")["base_velocity"]["ranges"]
     cmd_range = [list(r["lin_vel_x"]), list(r["lin_vel_y"]), list(r["ang_vel_z"])]
 
     # default_joint_pos: yaml 为 isaac 顺序 -> 转 mjc 顺序
-    default_mjc = np.array(d["default_joint_pos"], dtype=np.float32)[_ISAAC2MJC]
+    default_mjc = np.array(_req("default_joint_pos"), dtype=np.float32)[_ISAAC2MJC]
 
-    # stiffness/damping/armature/effort: yaml 已是 sdk(=mjc) 顺序，直接用
-    def _read(key, fallback):
-        if key not in d:
-            print(f"[sim2sim] 警告: deploy.yaml 缺字段 '{key}'，改用默认值（重新训练即可写入该字段）")
-            return np.array(fallback, dtype=np.float32)
-        return np.array(d[key], dtype=np.float32)
-
-    stiffness = np.array(d["stiffness"], dtype=np.float32)
-    damping = np.array(d["damping"], dtype=np.float32)
-    armature = _read("armature", _DEFAULT_ARMATURE)
-    effort = _read("effort", _DEFAULT_EFFORT)
-    if "gait_period" in d:
-        gait_cycle = float(d["gait_period"])
-    else:
-        print("[sim2sim] 警告: deploy.yaml 缺字段 'gait_period'，改用默认 0.85")
-        gait_cycle = _DEFAULT_GAIT_PERIOD
-    if "action_delay" in d:
-        action_delay_range = tuple(int(x) for x in d["action_delay"])
-    else:
-        print(f"[sim2sim] 警告: deploy.yaml 缺字段 'action_delay'，改用默认 {ACTION_DELAY_RANGE_DEFAULT}")
-        action_delay_range = ACTION_DELAY_RANGE_DEFAULT
+    # stiffness/damping/armature/effort: yaml 已是 sdk(=mjc) 顺序, 直接用; 缺任一字段直接报错
+    stiffness = np.array(_req("stiffness"), dtype=np.float32)
+    damping = np.array(_req("damping"), dtype=np.float32)
+    armature = np.array(_req("armature"), dtype=np.float32)
+    effort = np.array(_req("effort"), dtype=np.float32)
+    gait_cycle = float(_req("gait_period"))
+    action_delay_range = tuple(int(x) for x in _req("action_delay"))
 
     path = types.SimpleNamespace(pos_xml_path=SCENE_XML, tau_xml_path=SCENE_XML, model_path=model_path)
     sim = types.SimpleNamespace(
@@ -208,6 +203,10 @@ class MujocoRunner:
 
         self.isaac2mjc = np.array([self.isaac_joint.index(i) for i in self.mjc_joint])
         self.mjc2isaac = np.array([self.mjc_joint.index(i) for i in self.isaac_joint])
+        # 标0偏置(mjc 序): 由 ZERO_OFFSET 字典按关节名展开; 全 0 = 不注入
+        self.zero_offset = np.array([ZERO_OFFSET.get(n, 0.0) for n in self.mjc_joint], dtype=np.float32)
+        if np.any(self.zero_offset != 0.0):
+            print(f"[sim2sim] 标0偏置注入(mjc序 rad): {dict(zip(self.mjc_joint, self.zero_offset))}")
         self.command_vel = np.array([0.0, 0.0, 0.0])
         self.cmd_range = self.cfg.robot.cmd_range
         self.joint_ids = np.array([self._joint_id(name) for name in self.mjc_joint], dtype=np.int32)
@@ -229,8 +228,22 @@ class MujocoRunner:
             self.model.dof_damping[-self.action_dim:] = 0.0
         self.model.dof_armature[-self.action_dim:] = self.cfg.robot.armature
 
+        # ---- DCMotor 转矩-转速滚降参数(与 nlegs.py DelayedDCMotor 一致, mjc 序 R1..R6,L1..L6) ----
+        # 只有髋pitch(.*1)和膝(.*4)用 DCMotor: (velocity_limit, saturation_effort)
+        # nlegs.py: velocity_limit={.*1:2.2, joint_L4:2.3, joint_R4:3.0}, sat=effort=26
+        _DC = {"R1": (2.2, 26.0), "L1": (2.2, 26.0), "R4": (3.0, 26.0), "L4": (2.3, 26.0)}
+        _eff = np.asarray(self.cfg.robot.effort, dtype=np.float32)
+        _vlim, _sat = [], []
+        for j, name in enumerate(self.mjc_joint):
+            if name in _DC:
+                v, s = _DC[name]; _vlim.append(v); _sat.append(s)
+            else:                                  # 非 DCMotor: vlim=inf → 退化成普通 ±effort clip
+                _vlim.append(np.inf); _sat.append(float(_eff[j]))
+        self._dc_vlim = np.asarray(_vlim, dtype=np.float32)
+        self._dc_sat = np.asarray(_sat, dtype=np.float32)
+
         mujoco.mj_resetData(self.model, self.data)
-        self.data.qpos = np.concatenate([np.array([0, 0, 0.55], dtype=np.float32),
+        self.data.qpos = np.concatenate([np.array([0, 0, 0.62], dtype=np.float32),
                                          np.array([1, 0, 0, 0], dtype=np.float32), self.reset_dof_pos])
         mujoco.mj_forward(self.model, self.data)
         self.latency_sim.reset(self.cfg.sim.action_delay_range)
@@ -267,7 +280,8 @@ class MujocoRunner:
         return np.concatenate(input_parts)
 
     def compute_obs(self):
-        self.dof_pos = self.data.qpos[7:].astype(np.float32)
+        # qpos 是物理真值; 减标0偏置 -> "上报值"(策略以为的位置)。offset=0 时无影响。
+        self.dof_pos = self.data.qpos[7:].astype(np.float32) - self.zero_offset
         self.dof_vel = self.data.qvel[6:].astype(np.float32)
         obs = np.zeros((self.state_dim,), dtype=np.float32)
         # Angular vel
@@ -304,7 +318,17 @@ class MujocoRunner:
     def compute_torque(self):
         target_pos = self.compute_target_pos()
         tau = self.cfg.robot.stiffness * (target_pos - self.dof_pos) - self.cfg.robot.damping * self.dof_vel
-        return np.clip(tau, -self.cfg.robot.effort, self.cfg.robot.effort)
+        # DCMotor 转矩-转速限幅(与 Isaac DelayedDCMotor._clip_effort 一致):
+        #   τ_max(v)=clip(sat·(1−v/vlim), max=+effort);  τ_min(v)=clip(sat·(−1−v/vlim), min=−effort)
+        # 非 DCMotor 关节 vlim=inf → 退化成普通 ±effort clip。缺这条会导致 sim2sim 飞车(执行器与训练不一致)。
+        # 注意: nlegs DCMotor 关节 effort=1e9, 真正限幅来自这条曲线而非 ±effort 平钳。
+        eff = np.asarray(self.cfg.robot.effort, dtype=np.float32)
+        v = self.dof_vel
+        vel_at_lim = self._dc_vlim * (1.0 + eff / self._dc_sat)   # 速度预夹(inf 关节不夹)
+        vv = np.clip(v, -vel_at_lim, vel_at_lim)
+        tmax = np.minimum(self._dc_sat * (1.0 - vv / self._dc_vlim), eff)
+        tmin = np.maximum(self._dc_sat * (-1.0 - vv / self._dc_vlim), -eff)
+        return np.clip(tau, tmin, tmax)
 
     def _draw_velocity_arrows(self):
         """在 viewer 里画两个实时箭头观察速度跟踪: 绿=指令速度, 蓝=实际速度 (世界系水平 vx,vy)。
@@ -349,9 +373,10 @@ class MujocoRunner:
             for _ in range(self.decimation):
                 self.action[:] = self.latency_sim.process_action(raw_policy_action)
                 if self.control_mode == "position":
-                    self.data.ctrl = self.compute_target_pos()
+                    # MuJoCo 内部 PD 用物理 qpos, 故 ctrl 加回偏置: kp*(target+δ - qpos)=kp*(target - 上报)
+                    self.data.ctrl = self.compute_target_pos() + self.zero_offset
                 else:
-                    self.dof_pos = self.data.qpos[7:].astype(np.float32)
+                    self.dof_pos = self.data.qpos[7:].astype(np.float32) - self.zero_offset
                     self.dof_vel = self.data.qvel[6:].astype(np.float32)
                     self._tau = self.compute_torque()
                     self.data.ctrl = self._tau
