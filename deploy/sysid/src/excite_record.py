@@ -29,9 +29,11 @@ from rclpy.node import Node
 from std_msgs.msg import Float64MultiArray
 from sensor_msgs.msg import JointState
 
-# 按 实机序 (L1..L6, R1..R6) 的电机型号量程: idx0-3,6-9=DM4340; idx4,5,10,11=DM4310
-TAU_MAX = np.array([28, 28, 28, 28, 10, 10, 28, 28, 28, 28, 10, 10], dtype=float)
-DQ_MAX  = np.array([8,  8,  8,  8,  30, 30, 8,  8,  8,  8,  30, 30], dtype=float)
+# 坏帧(railing)判据用的是【解码量程】上限, 不是物理限。达妙固件实测 PMAX/VMAX/TMAX=12.5/45/30,
+# 修正后 12 个关节回传的 q/v/tau 都按这个量程解码(见 damiao.h limit_param), 因此三条上限对所有关节一致。
+# (旧表 DQ=8/TAU=28 是修正前的错误量程, 且把 5 号 idx4 误当成小电机——5 号实为 DM4340 大电机。)
+TAU_MAX = np.full(12, 30.0)
+DQ_MAX  = np.full(12, 45.0)
 Q_MAX   = np.full(12, 12.5)
 
 
@@ -49,15 +51,26 @@ def build_excitation(args):
 
     if args.mode == "sine":
         freqs = [float(x) for x in args.freqs.split(",")]
+        if args.peak_vel and args.peak_vel > 0:
+            # 恒峰值速度扫频: A(f)=clip(v_peak/(2πf), amp_min, amp)。
+            # 低频取到幅值上限(越过死区/粘滑), 高频自动缩小(命令峰值速度恒定, 不撞电机速度天花板),
+            # 从而全频段都留在线性区 —— 这是对有速度/力矩饱和的执行器做频响的关键。
+            amps = [min(max(args.peak_vel / (2 * math.pi * f), args.amp_min), args.amp) for f in freqs]
+        else:
+            amps = [args.amp] * len(freqs)
         durs = [args.cycles / f for f in freqs]          # 每个频率跑 cycles 个周期
         bounds = np.cumsum(durs)
         total = float(bounds[-1])
+        print("[sine] 分频驻留正弦, 每频点 幅值/命令峰值速度:")
+        for f, A in zip(freqs, amps):
+            print(f"   {f:6.3f} Hz   A={A:.4f} rad   v_pk={A * 2 * math.pi * f:.2f} rad/s   ({args.cycles:g}周期≈{args.cycles / f:.1f}s)")
+        print(f"[sine] 激励总时长 ≈ {total:.0f}s")
 
         def fn(t):
             i = int(np.searchsorted(bounds, t, side="right"))
             i = min(i, len(freqs) - 1)
             t0 = 0.0 if i == 0 else bounds[i - 1]
-            return args.amp * math.sin(2 * math.pi * freqs[i] * (t - t0))
+            return amps[i] * math.sin(2 * math.pi * freqs[i] * (t - t0))
         return fn, total
 
     if args.mode == "chirp":
@@ -288,6 +301,11 @@ def main():
     p.add_argument("--freqs", type=str, default="0.5,1,2,3")
     p.add_argument("--amp", type=float, default=0.15)
     p.add_argument("--cycles", type=float, default=6)
+    p.add_argument("--peak-vel", type=float, default=0.0,
+                   help="恒峰值速度扫频(rad/s): >0 则每频点幅值=clip(peak_vel/2πf, amp_min, amp); "
+                        "低频取满 amp 清死区, 高频缩小不撞速度天花板(推荐做法)")
+    p.add_argument("--amp-min", type=float, default=0.02,
+                   help="恒峰值速度模式的幅值下限(rad), 防高频响应过小信噪比差")
     # chirp
     p.add_argument("--f0", type=float, default=0.3)
     p.add_argument("--f1", type=float, default=5.0)

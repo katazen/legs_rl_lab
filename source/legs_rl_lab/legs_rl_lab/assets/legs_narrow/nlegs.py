@@ -36,15 +36,15 @@ class UnitreeUsdFileCfg(sim_utils.UsdFileCfg):
     )
 
 
-LEGS_CFG = UnitreeArticulationCfg(
+NLEGS_CFG = UnitreeArticulationCfg(
     spawn=UnitreeUsdFileCfg(
-        usd_path=os.path.join(_ASSET_DIR, "mjcf/A1_legs_V2_mjcf/A1_legs_V2_mjcf.usd"),
+        usd_path=os.path.join(_ASSET_DIR, "mjcf/legs_narrow/legs_narrow.usd"),
     ),
     # In A1_legs_V2_mjcf.usd the articulation root (PhysicsArticulationRootAPI) is on the
     # `base` body at /<defaultPrim>/base/base, so relative to the spawned Robot prim it is /base/base.
     articulation_root_prim_path='/base/base',
     init_state=ArticulationCfg.InitialStateCfg(
-        pos=(0.0, 0.0, 0.5),
+        pos=(0.0, 0.0, 0.62),  # 次姿态站立本体高度大约0.58
         joint_pos={
             ".*1": -0.1,
             ".*4": 0.2,

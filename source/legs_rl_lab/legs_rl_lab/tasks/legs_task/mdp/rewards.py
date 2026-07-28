@@ -116,6 +116,15 @@ def stand_still(
     return reward * (cmd_norm < 0.1)
 
 
+def base_height_l2_moving(
+        env: ManagerBasedRLEnv, target_height: float, asset_cfg: SceneEntityCfg = SceneEntityCfg("robot")
+) -> torch.Tensor:
+    """base 高度 L2 惩罚, 仅运动时(|cmd|>=0.1)生效; 零速时不管高度, 交给 stand_still 保持姿态。"""
+    asset: RigidObject = env.scene[asset_cfg.name]
+    err = torch.square(asset.data.root_pos_w[:, 2] - target_height)
+    return err * (torch.norm(env.command_manager.get_command("base_velocity"), dim=1) >= 0.1)
+
+
 def joint_deviation_l1(env: ManagerBasedRLEnv, asset_cfg: SceneEntityCfg = SceneEntityCfg("robot")) -> torch.Tensor:
     asset: Articulation = env.scene[asset_cfg.name]
     angle = asset.data.joint_pos[:, asset_cfg.joint_ids] - asset.data.default_joint_pos[:, asset_cfg.joint_ids]
@@ -165,13 +174,16 @@ def _get_leg_phases(env: ManagerBasedRLEnv):
     return leg_phases
 
 
-def feet_gait(env: ManagerBasedRLEnv, sensor_cfg: SceneEntityCfg) -> torch.Tensor:
+def feet_gait(env: ManagerBasedRLEnv, sensor_cfg: SceneEntityCfg, moving_only: bool = False) -> torch.Tensor:
     contact_sensor = env.scene.sensors[sensor_cfg.name]
     is_contact = contact_sensor.data.current_contact_time[:, sensor_cfg.body_ids] > 0
     leg_phases = _get_leg_phases(env)
     should_be_stance = leg_phases < env.cfg.gait.stance_ratio
     match = (should_be_stance == is_contact)
-    return torch.mean(torch.where(match, 1.0, -0.5), dim=1)
+    reward = torch.mean(torch.where(match, 1.0, -0.5), dim=1)
+    if moving_only:  # 速度开关: 零速命令时不奖励踏步(用于静止站立任务)
+        reward = reward * (torch.norm(env.command_manager.get_command("base_velocity"), dim=1) >= 0.1)
+    return reward
 
 
 def body_sway(env: ManagerBasedRLEnv, amplitude: float = 0.1,
@@ -243,7 +255,7 @@ def feet_clearance_old(env: ManagerBasedRLEnv, asset_cfg: SceneEntityCfg, target
     error = torch.square(target_curve - feet_pos_z)
     return torch.exp(-torch.sum(error, dim=1) / 0.02)
 
-def feet_clearance(env: ManagerBasedRLEnv, asset_cfg: SceneEntityCfg, target_height: float = 0.1) -> torch.Tensor:
+def feet_clearance(env: ManagerBasedRLEnv, asset_cfg: SceneEntityCfg, target_height: float = 0.1, moving_only: bool = False) -> torch.Tensor:
     asset = env.scene[asset_cfg.name]
     feet_pos_z = asset.data.body_pos_w[:, asset_cfg.body_ids, 2] - 0.0135
     leg_phases = _get_leg_phases(env)
@@ -254,7 +266,10 @@ def feet_clearance(env: ManagerBasedRLEnv, asset_cfg: SceneEntityCfg, target_hei
     weight = torch.sin(swing_progress * torch.pi) ** 2
     shortfall = torch.clamp(target_height - feet_pos_z, min=0.0)
     error = weight * shortfall ** 2
-    return torch.exp(-error / 0.005).mean(dim=1)
+    reward = torch.exp(-error / 0.005).mean(dim=1)
+    if moving_only:  # 速度开关: 零速命令时不奖励抬脚(用于静止站立任务)
+        reward = reward * (torch.norm(env.command_manager.get_command("base_velocity"), dim=1) >= 0.1)
+    return reward
 
 def contact_forces(env: ManagerBasedRLEnv, threshold: float, sensor_cfg: SceneEntityCfg) -> torch.Tensor:
     contact_sensor: ContactSensor = env.scene.sensors[sensor_cfg.name]

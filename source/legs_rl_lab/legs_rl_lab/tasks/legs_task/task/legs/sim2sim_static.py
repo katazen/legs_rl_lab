@@ -25,11 +25,13 @@ _ASSETS_DIR = os.path.join(_REPO_ROOT, "source", "legs_rl_lab", "legs_rl_lab", "
 
 
 # ============================================================================
+#  legs_static 专用 sim2sim：与 legs 版唯一区别是 gait 相位观测零速归零
+#  (对应 legs_static 训练里的 gait_phase gate_by_cmd)。其余完全相同。
 #  唯一必填变量：训练 run 的日期文件夹名
 #  sim2sim 会据此自动读取
 #      logs/rsl_rl/<EXPERIMENT>/<RUN>/params/deploy.yaml   （所有模型参数）
 #      logs/rsl_rl/<EXPERIMENT>/<RUN>/exported/policy.pt   （策略，需先 play 导出）
-RUN = "2026-07-17_11-39-55"   # TODO: 换成你实际的 legs 训练 run（logs/rsl_rl/legs/<RUN>）
+RUN = "2026-07-23_11-02-25"   # TODO: 换成你实际的 legs_static 训练 run（logs/rsl_rl/legs/<RUN>）
 #  唯一可选变量：是否采集关节跟踪数据并出图
 SAVE_DATA = False
 # ============================================================================
@@ -294,8 +296,10 @@ class MujocoRunner:
         obs[9 + self.action_dim:9 + 2 * self.action_dim] = self.dof_vel[self.mjc2isaac] * 0.05
         # Action
         obs[9 + 2 * self.action_dim:9 + 3 * self.action_dim] = self.raw_action
-        obs[9 + 3 * self.action_dim:10 + 3 * self.action_dim] = np.sin(2 * torch.pi * self.gait_phase)
-        obs[10 + 3 * self.action_dim:11 + 3 * self.action_dim] = np.cos(2 * torch.pi * self.gait_phase)
+        # legs_static: 零速命令时 gait 相位观测归零(与训练 gate_by_cmd 一致)
+        gait_flag = float(np.linalg.norm(self.command_vel) >= 0.1)
+        obs[9 + 3 * self.action_dim:10 + 3 * self.action_dim] = np.sin(2 * torch.pi * self.gait_phase) * gait_flag
+        obs[10 + 3 * self.action_dim:11 + 3 * self.action_dim] = np.cos(2 * torch.pi * self.gait_phase) * gait_flag
         return obs
 
     def get_obs(self):

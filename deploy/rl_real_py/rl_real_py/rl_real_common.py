@@ -105,6 +105,9 @@ class RL_real(Node):
         self.num_obs = sum(self.term_dims)
         self.num_history = int(obs[self.obs_names[0]]["history_length"])
         self.num_commands = len(obs["velocity_commands"]["scale"])
+        # legs_static 等"零速静止"策略: gait 相位在零速命令时归零。
+        # 直接从 deploy.yaml 的 gait_phase obs 参数自动读 -> 门控策略自动门控, 非门控策略不动。
+        self.gait_gate_by_cmd = bool(obs.get("gait_phase", {}).get("params", {}).get("gate_by_cmd", False))
 
         # ---------- 时序 ----------
         self.pub_dt = 1.0 / float(cfg.get("publish_rate", 200))
@@ -226,6 +229,10 @@ class RL_real(Node):
         q_sim = self.obs_raw[7:19][self.real2sim]
         qd_sim = self.obs_raw[19:31][self.real2sim]
         phase = ((time.monotonic() - self.run_t0) / self.gait_period) % 1.0   # 墙钟相位
+        # 门控策略(legs_static): 零速命令时相位归零, 与训练一致 -> 站立不踏步
+        gait_flag = 1.0
+        if self.gait_gate_by_cmd and np.linalg.norm(self.cmd[:self.num_commands]) < 0.1:
+            gait_flag = 0.0
         feats = {
             "base_ang_vel": self.obs_raw[0:3],
             "projected_gravity": gravity_from_quat(self.obs_raw[3:7]),
@@ -233,8 +240,8 @@ class RL_real(Node):
             "joint_pos_rel": q_sim - self.default_sim,
             "joint_vel_rel": qd_sim,
             "last_action": self.last_action,
-            "gait_phase": np.array([np.sin(2 * np.pi * phase),
-                                    np.cos(2 * np.pi * phase)], np.float32),
+            "gait_phase": np.array([np.sin(2 * np.pi * phase) * gait_flag,
+                                    np.cos(2 * np.pi * phase) * gait_flag], np.float32),
         }
         return [(feats[n] * s).astype(np.float32)
                 for n, s in zip(self.obs_names, self.term_scales)]
