@@ -1,0 +1,14 @@
+source/legs_rl_lab/legs_rl_lab/tasks/legs_task/task/nlegs/nlegs_env_cfg.py
+  h_d698c05df35737 21
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.6.16",
+  "base_commit_sha": "7a6db2b1c94ca75311d2cb571e7a0f9103b2c903",
+  "prompts": {},
+  "humans": {
+    "h_d698c05df35737": {
+      "author": "woan <377801872@qq.com>"
+    }
+  }
+}
