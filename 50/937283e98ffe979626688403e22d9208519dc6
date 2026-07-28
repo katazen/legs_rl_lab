@@ -1,0 +1,25 @@
+source/legs_rl_lab/legs_rl_lab/assets/legs_narrow/mjcf/legs_narrow.xml
+  s_aede2d0005e56c::t_6ceb33539fcf58 89
+  s_aede2d0005e56c::t_11e9d45c8965df 45-46,49-50,52
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.6.16",
+  "base_commit_sha": "50937283e98ffe979626688403e22d9208519dc6",
+  "prompts": {},
+  "humans": {
+    "h_d698c05df35737": {
+      "author": "woan <377801872@qq.com>"
+    }
+  },
+  "sessions": {
+    "s_aede2d0005e56c": {
+      "agent_id": {
+        "tool": "claude",
+        "id": "cdfd5184-d1e6-44c4-8105-792b029609d7",
+        "model": "claude-opus-4-8"
+      },
+      "human_author": "woan <377801872@qq.com>"
+    }
+  }
+}
