@@ -1,0 +1,139 @@
+source/legs_rl_lab/legs_rl_lab/amp/amp_ppo.py
+  s_aede2d0005e56c::t_3d30bf1dd2dc24 1-179
+source/legs_rl_lab/legs_rl_lab/tasks/legs_task/task/nlegs/sim2sim_static.py
+  h_d698c05df35737 1-520
+source/legs_rl_lab/legs_rl_lab/tasks/legs_task/task/nlegs/nlegs_static_env_cfg.py
+  h_d698c05df35737 1-60
+source/legs_rl_lab/legs_rl_lab/tasks/amp_task/agents/rsl_rl_ppo_cfg.py
+  s_aede2d0005e56c::t_a521da111ab2fc 1-120
+deploy/sysid/src/plot_ankle_hyst.py
+  s_1c282a56a9c63a::t_afb1a042553cb1 1-49
+scripts/amp/convert_tienkung_motion.py
+  s_aede2d0005e56c::t_97f9783de029ce 53
+  s_aede2d0005e56c::t_c26da5beab3978 129-130
+  s_aede2d0005e56c::t_74ffd4076f50f2 1-52,54-128,131-152,157-185
+  s_aede2d0005e56c::t_428f64bb0d259c 153-156
+scripts/amp/replay_amp_motion.py
+  s_aede2d0005e56c::t_998ac635a1a4fb 1-23,25-32,34-91,93-108
+  s_aede2d0005e56c::t_ce5aae89eb2945 24
+  s_aede2d0005e56c::t_97f9783de029ce 33
+  s_aede2d0005e56c::t_c9a8348ef4b226 92
+source/legs_rl_lab/legs_rl_lab/amp/normalizer.py
+  s_aede2d0005e56c::t_5135498b20e054 1-57
+source/legs_rl_lab/legs_rl_lab/tasks/amp_task/task/nlegs/nlegs_env_cfg.py
+  h_d698c05df35737 38,99-100,112,156-157,294-298
+  s_aede2d0005e56c::t_a521da111ab2fc 10-11,25,197,205,210,212,380,406,428-430,432-433
+  s_aede2d0005e56c::t_081b0b8deb4220 275-277
+  s_aede2d0005e56c::t_7680306932c88c 76-78
+  s_aede2d0005e56c::t_7b389f642d211c 1-9,12-24,26-37,39-75,79-98,101-111,113-155,158-196,198-204,206-209,211,213-274,278-293,299-308,315-379,381-405,407-427,431,434-435
+  s_aede2d0005e56c::t_6805d800a92b0a 309-314
+source/legs_rl_lab/legs_rl_lab/tasks/amp_task/mdp/rewards.py
+  s_aede2d0005e56c::t_edb0e55d1b2220 112-116,122-133,140
+  s_aede2d0005e56c::t_7400deb6572163 240-243,245
+  s_aede2d0005e56c::t_4e88d47eea3c93 6-86,134,190-196,229-232
+  s_aede2d0005e56c::t_ca8cfbae94a744 98-108,143,151
+  s_aede2d0005e56c::t_989f4d8ca9c1b9 89,94,138,147,155,159-189,197-198,200-214,221,224-226,228,233-234,236-238,244,247
+  s_aede2d0005e56c::t_b377cbcbd3c0ea 199,215,223,227,235,239,246
+  s_aede2d0005e56c::t_a90cad669c76d6 216-220,222
+  s_aede2d0005e56c::t_7685bc148f64bd 3-5
+  s_aede2d0005e56c::t_d61676bab9b26d 87-88
+  s_aede2d0005e56c::t_acbdaa1b6626f1 90-93
+  s_aede2d0005e56c::t_90cf6b3d852449 95-97
+  s_aede2d0005e56c::t_fbe4f70d76fbdd 109-111
+  s_aede2d0005e56c::t_e44ff280b8bd28 117-121
+  s_aede2d0005e56c::t_367b1ee8c5a307 135-137
+  s_aede2d0005e56c::t_1f5186bdc700bf 139
+  s_aede2d0005e56c::t_7878e577093272 141-142
+  s_aede2d0005e56c::t_b9441981b4a83d 144-146
+  s_aede2d0005e56c::t_3482ac7dbc78dd 148-150
+  s_aede2d0005e56c::t_979fa6c566d3ed 152-154
+  s_aede2d0005e56c::t_920ec77c73a5c8 156-158
+  s_aede2d0005e56c::t_78bead45d2a2a7 1-2
+source/legs_rl_lab/legs_rl_lab/tasks/legs_task/task/nlegs/__init__.py
+  h_d698c05df35737 13-22
+  s_aede2d0005e56c::t_700244ea9e6c35 23
+source/legs_rl_lab/legs_rl_lab/tasks/amp_task/mdp/symmetry.py
+  s_aede2d0005e56c::t_40cc9147da0375 93
+  s_aede2d0005e56c::t_a521da111ab2fc 1-92,94-141
+source/legs_rl_lab/legs_rl_lab/tasks/amp_task/task/nlegs/__init__.py
+  s_aede2d0005e56c::t_f6af010f066c14 13
+  s_aede2d0005e56c::t_a521da111ab2fc 1-2,4-8,11-12
+  s_aede2d0005e56c::t_7e0cf4ed033879 3,9-10
+source/legs_rl_lab/legs_rl_lab/tasks/legs_task/task/nlegs/sim2sim.py
+  h_d698c05df35737 36
+deploy/sysid/src/plot_sim_real_ankle.py
+  s_1c282a56a9c63a::t_f0213057262be0 1-76
+source/legs_rl_lab/legs_rl_lab/amp/motion_loader.py
+  s_aede2d0005e56c::t_8e6358fac17fa5 1-131
+source/legs_rl_lab/legs_rl_lab/amp/discriminator.py
+  s_aede2d0005e56c::t_b26439cf268f51 1-66
+source/legs_rl_lab/legs_rl_lab/tasks/legs_task/task/legs/legs_dr_env_cfg.py
+  h_d698c05df35737 67
+source/legs_rl_lab/legs_rl_lab/assets/legs_narrow/nlegs.py
+  s_1c282a56a9c63a::t_a9cf40f9cc1da5 57
+  s_1c282a56a9c63a::t_a20d18a9c82e14 71
+  h_d698c05df35737 58-61,120-163,165-166
+  s_1c282a56a9c63a::t_cf77918a59d1b3 67,70,72-102
+  s_aede2d0005e56c::t_499d8a4ef24e7b 4,8,103-119
+source/legs_rl_lab/legs_rl_lab/tasks/legs_task/task/nlegs/nlegs_env_cfg.py
+  h_d698c05df35737 8,17,36
+deploy/rl_real_py/configs/common.yaml
+  h_d698c05df35737 9
+source/legs_rl_lab/legs_rl_lab/amp/replay_buffer.py
+  s_aede2d0005e56c::t_13fbed08cf3dd5 1-41
+source/legs_rl_lab/legs_rl_lab/amp/__init__.py
+  s_aede2d0005e56c::t_8f6d53cd87a370 1-18
+deploy/sysid/src/plot_ankle_amp.py
+  s_1c282a56a9c63a::t_2be2a4ea502883 1-59
+deploy/sysid/src/plot_ankle_tracking.py
+  s_1c282a56a9c63a::t_01d91087484b21 1-45
+source/legs_rl_lab/legs_rl_lab/tasks/amp_task/__init__.py
+  s_aede2d0005e56c::t_61b05171a6af71 1
+source/legs_rl_lab/legs_rl_lab/tasks/amp_task/datasets/motion_amp_expert/nlegs_walk.txt
+  s_aede2d0005e56c::t_35b69726ebc34d 1
+source/legs_rl_lab/legs_rl_lab/tasks/amp_task/mdp/__init__.py
+  s_aede2d0005e56c::t_11eea4206d235a 1-8
+source/legs_rl_lab/legs_rl_lab/tasks/amp_task/mdp/commands.py
+  s_aede2d0005e56c::t_76a0ab45d6dce5 1-11
+source/legs_rl_lab/legs_rl_lab/tasks/amp_task/mdp/curriculums.py
+  s_aede2d0005e56c::t_4bb6515063199f 1-61
+source/legs_rl_lab/legs_rl_lab/tasks/amp_task/mdp/events.py
+  s_aede2d0005e56c::t_aafeb563fcb6c6 1-34
+source/legs_rl_lab/legs_rl_lab/tasks/amp_task/mdp/gait.py
+  s_aede2d0005e56c::t_1d022eae48b9f7 1-18
+source/legs_rl_lab/legs_rl_lab/tasks/amp_task/mdp/observations.py
+  s_aede2d0005e56c::t_36a85a0b497490 1-71
+source/legs_rl_lab/legs_rl_lab/tasks/amp_task/mdp/terminations.py
+  s_aede2d0005e56c::t_b602844bc7f1fa 1-12
+deploy/control_ws/src/armcontrol/config/arm_control_node.yaml
+  s_aede2d0005e56c::t_027f6c26b9ebae 3
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.6.18",
+  "base_commit_sha": "9599e1ea592b6b5b3946b20509573f6e2854552a",
+  "prompts": {},
+  "humans": {
+    "h_d698c05df35737": {
+      "author": "woan <377801872@qq.com>"
+    }
+  },
+  "sessions": {
+    "s_1c282a56a9c63a": {
+      "agent_id": {
+        "tool": "claude",
+        "id": "e038b5d5-a23a-437e-8075-8a78e1995bbe",
+        "model": "claude-opus-4-8"
+      },
+      "human_author": "woan <377801872@qq.com>"
+    },
+    "s_aede2d0005e56c": {
+      "agent_id": {
+        "tool": "claude",
+        "id": "cdfd5184-d1e6-44c4-8105-792b029609d7",
+        "model": "claude-opus-4-8"
+      },
+      "human_author": "woan <377801872@qq.com>"
+    }
+  }
+}
