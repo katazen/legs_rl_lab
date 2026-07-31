@@ -6,7 +6,7 @@
 #  策略从 <logs_root>/<run>/exported/policy.onnx (优先) 或 policy.pt 读取;
 #  实机数据自动存到 <logs_root>/<run>/sim2real/<保存时间>.csv
 # ============================================================
-run: 2026-07-28_15-25-26
+run: 2026-07-30_18-18-58
 # 相对 legs_rl_lab 根(deploy 的上一级); 也可填绝对路径覆盖。代码自动解析。
 logs_root: logs/rsl_rl/nlegs
 
