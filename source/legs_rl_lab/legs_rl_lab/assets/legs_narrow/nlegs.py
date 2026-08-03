@@ -149,8 +149,8 @@ NLEGS_FIX_CFG = UnitreeArticulationCfg(
             velocity_limit=3.4,
             stiffness={
                 ".*1": 200.0,
-                ".*2": 200.0,
-                ".*3": 200.0,
+                ".*2": 100.0,
+                ".*3": 100.0,
                 ".*4": 250.0,
                 ".*5": 40.0
             },

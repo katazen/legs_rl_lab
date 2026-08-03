@@ -4,7 +4,7 @@ import torch
 from typing import TYPE_CHECKING
 
 from isaaclab.managers import SceneEntityCfg
-from isaaclab.utils.math import quat_rotate_inverse
+from isaaclab.utils.math import quat_apply_inverse
 
 if TYPE_CHECKING:
     from isaaclab.envs import ManagerBasedRLEnv
@@ -52,7 +52,7 @@ def amp_obs(
         [24:27] 右脚位置 (base 系 xyz)
         [27:30] 左脚位置 (base 系 xyz)
 
-    脚位置 = quat_rotate_inverse(root_quat_w, foot_pos_w - root_pos_w), 转到 base 系。
+    脚位置 = quat_apply_inverse(root_quat_w, foot_pos_w - root_pos_w), 转到 base 系。
     右脚在前、左脚在后, 顺序必须与转换脚本一致。脚体索引惰性缓存到 env 上, 避免每步正则匹配。
     """
     asset = env.scene[asset_cfg.name]
@@ -66,6 +66,6 @@ def amp_obs(
     joint_vel = asset.data.joint_vel[:, asset_cfg.joint_ids]  # [N,12]
     root_pos = asset.data.root_pos_w
     root_quat = asset.data.root_quat_w
-    r_foot = quat_rotate_inverse(root_quat, asset.data.body_pos_w[:, r_id, :] - root_pos)
-    l_foot = quat_rotate_inverse(root_quat, asset.data.body_pos_w[:, l_id, :] - root_pos)
+    r_foot = quat_apply_inverse(root_quat, asset.data.body_pos_w[:, r_id, :] - root_pos)
+    l_foot = quat_apply_inverse(root_quat, asset.data.body_pos_w[:, l_id, :] - root_pos)
     return torch.cat([joint_pos, joint_vel, r_foot, l_foot], dim=-1)
