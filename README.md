@@ -1,6 +1,6 @@
 # legs_rl_lab
 
-> 基于 [Isaac Lab](https://isaac-sim.github.io/IsaacLab/) 的双足腿式机器人强化学习工程：用 PPO（rsl_rl）在 GPU 并行仿真中训练 12-DOF 窄本体双足（nlegs）的速度跟踪 locomotion 策略，内置参数化步态时钟、左右对称数据增强、延迟执行器建模、rough 地形课程、MuJoCo sim2sim 验证，以及一套完整的 **ROS 2 实机部署栈**（IMU → 电机驱动 → RL 策略，键盘/手柄控速）。
+> 基于 [Isaac Lab](https://isaac-sim.github.io/IsaacLab/) 的 12-DOF 双足机器人（nlegs）强化学习工程，覆盖 rsl_rl PPO 训练 → MuJoCo sim2sim 验证 → ROS 2 实机部署的完整流程。
 
 ![Isaac Sim](https://img.shields.io/badge/Isaac%20Sim-4.5%20%7C%205.x-76b900)
 ![Python](https://img.shields.io/badge/Python-3.10%20%7C%203.11-blue)
@@ -8,24 +8,18 @@
 ![Deploy](https://img.shields.io/badge/Deploy-ROS%202%20Humble-22314e)
 [![Stars](https://img.shields.io/github/stars/katazen/legs_rl_lab?style=social)](https://github.com/katazen/legs_rl_lab)
 
-**适合谁用**：正在用 Isaac Lab / Isaac Sim 做腿足运动控制（locomotion）RL、并希望一路做到真机部署的研究者与工程师。训练需要一台带 NVIDIA GPU 的机器并装好 Isaac Lab；部署需要一台装了 ROS 2 Humble 的机器与目标本体（12-DOF 双足）。
+---
+
+## 📦 项目内容
+
+- **训练任务** `tasks/nlegs_task`：`nlegs_flat` 平地速度跟踪；`nlegs_rough` rough 地形（继承 flat，台阶 ≤12 cm、坡 ≤17°，带难度课程）。策略盲走（仅 IMU + 关节观测），可直接部署。
+- **机器人资产** `assets/nlegs`：MJCF / USD / STL 全部入库，`usd_path` 相对包内解析，克隆即用；执行器用自定义 `DelayedDCMotorCfg`（通信延迟 + 转矩-转速滚降，参数来自实机辨识）。
+- **sim2sim** `task/flat/sim2sim.py`：MuJoCo 独立回放训练好的策略做部署前验证，配置全部读训练 run 的 `deploy.yaml`。
+- **实机部署** `deploy/`：ROS 2 Humble 三节点（IMU / 电机驱动 / RL 策略），键盘/手柄控速；部署参数从训练 run 的 `params/deploy.yaml` 自动读取，通常只需填一个 `run` 目录名。
 
 ---
 
-## ✨ 项目亮点
-
-- **自包含任务包 `nlegs_task`**：平地任务 `nlegs_flat` 的场景 / 观测 / 奖励 / 事件 / 课程全部就地展开，不依赖任何外部任务基类，改哪看哪；rough 地形任务 `nlegs_rough` 在其上继承，只叠加地形与因地形而变的奖励项。
-- **自包含机器人资产 `assets/nlegs`**：MJCF / USD / STL 全部入库（`.gitignore` 有对应例外），`usd_path` 按 `__file__` 相对解析，克隆即用不需改路径；三组执行器参数（腿部 DC 电机 / 踝 pitch / 踝 roll）直接烘入 `nlegs.py` 的 `ArticulationCfg`。
-- **面向真机的执行器建模**：自定义 `DelayedDCMotorCfg`（通信延迟 + 转矩-转速滚降曲线，参数来自实机辨识），域随机化留在 event 项里——"该在什么地方就放什么地方"。
-- **参数化步态时钟**：步态周期 / 支撑相占比 / 左右相位偏移收敛到 `GaitCfg`，随 `env.yaml` 落盘，训练与部署逐位可复现（相位仅由 episode 时间与周期决定，不靠计数器堆积）。
-- **左右对称增强**：内置矢状面镜像数据增强 + 镜像损失（rsl_rl symmetry），提升步态对称性与样本效率。
-- **盲走 rough 地形课程**：`nlegs_rough` 按 0.58 m 小机身温和缩放地形（台阶 ≤12 cm、坡 ≤17°），策略保持盲走（仅 IMU + 关节，可直接上真机）；height_scanner 只用于地形相对高度奖励与"走得远升难度"课程。
-- **端到端 sim2sim → sim2real**：MuJoCo 独立回放脚本做部署前验证（配置全部读训练 run 的 `deploy.yaml`，带原点坐标轴与速度跟踪箭头可视化）；ROS 2 部署栈把导出的 `policy` 直接跑上真机。
-- **单一真源部署**：部署只需在一个 yaml 里填 `run` 目录名，模型的默认站姿 / 观测顺序与 scale / history / action_scale / 步态周期 / PD 增益 / 执行器延迟全部从训练 run 的 `params/deploy.yaml` 自动读取。
-
----
-
-## 📦 环境与安装
+## 🔧 环境与安装
 
 **前置依赖**（本项目不含 Isaac Lab / Isaac Sim 本体）：
 
@@ -41,8 +35,6 @@ cd legs_rl_lab
 # 若 Isaac Lab 不在 conda/venv 里，把 python 换成 'PATH_TO/isaaclab.sh -p'
 python -m pip install -e source/legs_rl_lab
 ```
-
-> 机器人资产（MJCF/USD/STL）已随 `assets/nlegs/` 整体入库，`usd_path` 相对包内解析，克隆到任何机器都无需改路径。
 
 ---
 
@@ -78,8 +70,8 @@ python scripts/random_agent.py --task nlegs_flat --num_envs 16
 python source/legs_rl_lab/legs_rl_lab/tasks/nlegs_task/task/flat/sim2sim.py [--run RUN] [--headless] [--save-data]
 ```
 
-- **配置零手填**：关节映射 / PD / 执行器力矩模型（含 DC 滚降与分组延迟）/ action scale / 观测历史 / 命令范围全部从 `<run>/params/deploy.yaml` 读取，需要自己改的只有脚本最前面一个标注块（run 目录、场景 xml、键盘绑定、可视化参数）。
-- **可视化**：世界原点画 RGB 三轴箭头（x红 y绿 z蓝）；机身上方画速度跟踪箭头——绿 = 命令速度、蓝 = 实际速度，两箭头重合即跟踪良好。
+- **配置**：关节映射 / PD / 力矩模型 / action scale / 观测历史 / 命令范围全部从 `<run>/params/deploy.yaml` 读取；需要手改的只有脚本最前面的标注块（run 目录、场景 xml、键盘绑定、可视化参数）。
+- **可视化**：世界原点画 RGB 三轴；机身上方画速度箭头（绿 = 命令、蓝 = 实际）。
 - **遥控**：小键盘 `8/2` 前后、`4/6` 左右、`7/9` 转向；`--save-data` 结束时输出关节跟踪 CSV 与 RMSE 图到 `<run>/sim2sim/<时间戳>/`。
 - 按文件路径直接运行（不要 `python -m` 走包导入，包初始化会拉起 Isaac Lab）。
 
@@ -173,30 +165,6 @@ legs_rl_lab/
     │       └── rough/             #   nlegs_rough: 继承 flat, 地形生成器 + 课程
     └── utils/                     # parser_cfg / export_deploy_cfg（生成 deploy.yaml）
 ```
-
----
-
-## 🧩 任务一览
-
-| Task id       | 说明 |
-|---------------|------|
-| `nlegs_flat`  | 平地速度跟踪：全量展开配置（场景 / 25 项奖励 / 域随机化事件 / 步态时钟 / 对称增强），三组延迟执行器烘入资产 |
-| `nlegs_rough` | rough 地形：继承 flat，7 种子地形按小机身温和缩放（台阶 ≤12 cm、坡 ≤17°）+ 地形难度课程 + 摔倒终止；盲走可直接部署 |
-
-两个任务分别落盘到 `logs/rsl_rl/nlegs_flat/` 与 `logs/rsl_rl/nlegs_rough/`。
-
----
-
-## 🛠️ 开发
-
-代码风格用 ruff（配置见根目录 `pyproject.toml`，line-length 120，目标 py310）。可选装 pre-commit 自动格式化：
-
-```bash
-pip install pre-commit
-pre-commit run --all-files
-```
-
-**VSCode 索引**：若 Pylance 找不到扩展模块，在 `.vscode/settings.json` 的 `python.analysis.extraPaths` 里加上 `source/legs_rl_lab` 的路径；若 Pylance 因索引过多崩溃，反过来注释掉一些用不到的 `omni.*` 包路径。
 
 ---
 
