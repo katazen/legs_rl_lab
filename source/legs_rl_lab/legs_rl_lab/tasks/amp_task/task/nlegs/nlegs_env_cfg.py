@@ -26,7 +26,7 @@ from isaaclab.utils import configclass
 from isaaclab.utils.assets import ISAAC_NUCLEUS_DIR, ISAACLAB_NUCLEUS_DIR
 from isaaclab.utils.noise import AdditiveUniformNoiseCfg as Unoise
 
-from legs_rl_lab.assets.legs_narrow.nlegs import NLEGS_FIX_CFG
+from legs_rl_lab.assets.legs_narrow.nlegs import NLEGS_CFG
 from legs_rl_lab.tasks.amp_task import mdp
 
 
@@ -62,7 +62,7 @@ class RobotSceneCfg(InteractiveSceneCfg):
         debug_vis=False,
     )
     # 窄本体机器人资产（脚间距 0.2）
-    robot: ArticulationCfg = NLEGS_FIX_CFG.replace(prim_path="{ENV_REGEX_NS}/Robot")
+    robot: ArticulationCfg = NLEGS_CFG.replace(prim_path="{ENV_REGEX_NS}/Robot")
 
     # sensors
     height_scanner = RayCasterCfg(
@@ -265,7 +265,7 @@ class AmpRewardsCfg:
     energy = RewTerm(func=mdp.energy, weight=-1e-3)
     dof_acc_l2 = RewTerm(func=mdp.joint_acc_l2, weight=-2.5e-7)
     action_rate_l2 = RewTerm(func=mdp.action_rate_l2, weight=-0.01)
-    action_acc = RewTerm(func=mdp.action_acc_l2, weight=-0.05)
+    action_acc = RewTerm(func=mdp.action_acc_l2, weight=-0.01)
     dof_pos_limits = RewTerm(func=mdp.joint_pos_limits, weight=-2.0)
 
     undesired_contacts = RewTerm(

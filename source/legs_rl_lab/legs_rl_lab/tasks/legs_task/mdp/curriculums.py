@@ -4,6 +4,10 @@ import torch
 from collections.abc import Sequence
 from typing import TYPE_CHECKING
 
+from isaaclab.assets import Articulation
+from isaaclab.managers import SceneEntityCfg
+from isaaclab.terrains import TerrainImporter
+
 if TYPE_CHECKING:
     from isaaclab.envs import ManagerBasedRLEnv
 
@@ -59,3 +63,25 @@ def ang_vel_cmd_levels(
             ).tolist()
 
     return torch.tensor(ranges.ang_vel_z[1], device=env.device)
+
+
+def terrain_levels_vel(
+    env: ManagerBasedRLEnv, env_ids: Sequence[int], asset_cfg: SceneEntityCfg = SceneEntityCfg("robot")
+) -> torch.Tensor:
+    """按机器人在期望速度命令下走过的距离调整地形难度（移植自 isaaclab_tasks velocity mdp）。
+
+    走得足够远（>地形块半宽）→ 升到更难地形；走不到期望距离一半 → 降到更简单地形。
+    仅当 terrain_type="generator" 时可用。返回当前所有环境的平均地形等级。
+    """
+    asset: Articulation = env.scene[asset_cfg.name]
+    terrain: TerrainImporter = env.scene.terrain
+    command = env.command_manager.get_command("base_velocity")
+    # 走过的距离（相对各自 env 原点）
+    distance = torch.norm(asset.data.root_pos_w[env_ids, :2] - env.scene.env_origins[env_ids, :2], dim=1)
+    # 走得远的升难度
+    move_up = distance > terrain.cfg.terrain_generator.size[0] / 2
+    # 走不到期望距离一半的降难度
+    move_down = distance < torch.norm(command[env_ids, :2], dim=1) * env.max_episode_length_s * 0.5
+    move_down *= ~move_up
+    terrain.update_env_origins(env_ids, move_up, move_down)
+    return torch.mean(terrain.terrain_levels.float())

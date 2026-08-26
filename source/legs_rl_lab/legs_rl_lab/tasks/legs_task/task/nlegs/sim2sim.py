@@ -33,7 +33,7 @@ _ASSETS_DIR = os.path.join(_REPO_ROOT, "source", "legs_rl_lab", "legs_rl_lab", "
 #  sim2sim 会据此自动读取
 #      logs/rsl_rl/<EXPERIMENT>/<RUN>/params/deploy.yaml   （所有模型参数）
 #      logs/rsl_rl/<EXPERIMENT>/<RUN>/exported/policy.pt   （策略，需先 play 导出）
-RUN = "2026-07-30_18-18-58"   # nlegs 训练 run（logs/rsl_rl/nlegs/<RUN>）
+RUN = "2026-08-25_20-27-40"  # nlegs 训练 run（logs/rsl_rl/nlegs/<RUN>）
 #  唯一可选变量：是否采集关节跟踪数据并出图
 SAVE_DATA = False
 # ============================================================================
@@ -115,18 +115,43 @@ def build_cfg(run: str, save_data: bool = False):
     armature = np.array(_req("armature"), dtype=np.float32)
     effort = np.array(_req("effort"), dtype=np.float32)
     gait_cycle = float(_req("gait_period"))
-    action_delay_range = tuple(int(x) for x in _req("action_delay"))
+
+    # actuators: 按组展开成 per-joint 执行器参数(sdk=mjc 序), 取代旧的硬编码 _DC 表。
+    #   dc_motor: 转矩-转速滚降用 (velocity_limit, saturation_effort)
+    #   ideal_pd: vlim=inf, sat=effort_limit_sim -> 在滚降公式里自然退化成 ±effort 平钳
+    # 延迟按组保留 (ids_isaac, min, max), 与训练侧按 actuator 组延迟一致(不再用全局 action_delay 抹平)。
+    dc_vlim = np.full(action_dim, np.inf, dtype=np.float32)
+    dc_sat = effort.copy()
+    delay_groups = []
+    for g in _req("actuators").values():
+        ids = np.asarray(g["joint_ids"], dtype=int)          # sdk(=mjc) 序索引
+        if g["torque_model"] == "dc_motor":
+            dc_vlim[ids] = np.asarray(g["velocity_limit"], dtype=np.float32)
+            dc_sat[ids] = float(g["saturation_effort"])
+        ids_isaac = np.asarray([ISAAC_JOINT.index(MJC_JOINT[i]) for i in ids], dtype=int)
+        dmin, dmax = (int(x) for x in g["delay"])
+        delay_groups.append((ids_isaac, dmin, dmax))
+
+    # 关节摩擦(与训练 PhysX 一致): 粘滞 -> dof_damping, 库伦 -> dof_frictionloss
+    viscous_friction = np.array(_req("viscous_friction"), dtype=np.float32)
+    dynamic_friction = np.array(_req("dynamic_friction"), dtype=np.float32)
+    # 训练 RslRlVecEnvWrapper 的 raw action clamp(null=不裁)
+    _clip = _req("policy_action_clip")
+    policy_action_clip = None if _clip is None else float(_clip)
 
     path = types.SimpleNamespace(pos_xml_path=SCENE_XML, tau_xml_path=SCENE_XML, model_path=model_path)
     sim = types.SimpleNamespace(
         sim_duration=SIM_DURATION, control_mode=CONTROL_MODE, action_dim=action_dim,
         state_dim=state_dim, dt=PHYS_DT, decimation=decimation, gait_cycle=gait_cycle,
-        action_delay_range=action_delay_range, his_lens=his_lens,
+        delay_groups=delay_groups, his_lens=his_lens,
         collect_data=save_data, collect_duration=COLLECT_DURATION, obs_slices=obs_slices,
     )
     robot = types.SimpleNamespace(
         default_dof_pos=default_mjc, reset_dof_pos=default_mjc.copy(),
         armature=armature, effort=effort, stiffness=stiffness, damping=damping,
+        dc_vlim=dc_vlim, dc_sat=dc_sat,
+        viscous_friction=viscous_friction, dynamic_friction=dynamic_friction,
+        policy_action_clip=policy_action_clip,
         action_scale=action_scale, cmd_range=cmd_range,
     )
     return types.SimpleNamespace(path=path, sim=sim, robot=robot)
@@ -136,27 +161,33 @@ class LatencySimulator:
     def __init__(self, action_dim: int):
         self.action_dim = action_dim
         self.action_buffer = None
-        self.action_delay_range = None
+        self.delay_groups = None
 
-    def reset(self, action_delay_range: tuple):
+    def reset(self, delay_groups: list):
         """
         在 Episode 重置时调用。
-        :param action_delay_range: (min, max) 动作延迟步数范围（含端点，与 isaaclab 一致）
+        :param delay_groups: [(joint_ids(isaac序), min, max), ...] 每个执行器组的延迟步数范围
+                             （含端点，来自 deploy.yaml actuators 段，与 isaaclab 按组延迟一致）
         """
-        self.action_delay_range = tuple(int(x) for x in action_delay_range)
-        self.action_buffer = deque(maxlen=self.action_delay_range[1] + 1)
-        print(f"[Latency] Action Delay Range: {self.action_delay_range} steps")
+        self.delay_groups = delay_groups
+        max_delay = max(int(hi) for _, _, hi in delay_groups)
+        self.action_buffer = deque(maxlen=max_delay + 1)
+        print("[Latency] Action Delay Groups: " +
+              ", ".join(f"joints{list(map(int, ids))}:[{lo},{hi}]" for ids, lo, hi in delay_groups))
 
     def process_action(self, new_action: np.ndarray) -> np.ndarray:
         """
         [在物理步调用]
-        输入策略产生的最新动作，推入队列，并返回延迟后的动作。
+        输入策略产生的最新动作，推入队列；每个执行器组独立采样延迟并返回延迟后的动作。
         reset 后历史不足时，将 delay clamp 到已有历史，避免先执行一段全零动作。
         """
         self.action_buffer.append(new_action.astype(np.float32, copy=True))
-        act_delay = np.random.randint(self.action_delay_range[0], self.action_delay_range[1] + 1)
-        valid_delay = min(act_delay, len(self.action_buffer) - 1)
-        return self.action_buffer[-1 - valid_delay].copy()
+        out = self.action_buffer[-1].copy()
+        for ids, lo, hi in self.delay_groups:
+            act_delay = np.random.randint(lo, hi + 1)
+            valid_delay = min(act_delay, len(self.action_buffer) - 1)
+            out[ids] = self.action_buffer[-1 - valid_delay][ids]
+        return out
 
 
 class MujocoRunner:
@@ -216,37 +247,32 @@ class MujocoRunner:
         self.joint_pos_max = np.where(joint_limited, joint_ranges[:, 1], np.inf).astype(np.float32)
 
         # ---- actuator config: position vs motor ----
+        # 关节摩擦来自 deploy.yaml(与训练 PhysX 一致): 粘滞 -> dof_damping(被动阻尼),
+        # 库伦(dynamic_friction) -> dof_frictionloss。此前两者都是 0, 与训练不符。
+        viscous = self.cfg.robot.viscous_friction
         if self.control_mode == "position":
             # MuJoCo内部计算PD: force = kp*(ctrl - qpos), damping由dof_damping提供
             self.model.actuator_gainprm[:, 0] = self.cfg.robot.stiffness
             self.model.actuator_biasprm[:, 1] = -self.cfg.robot.stiffness
-            self.model.dof_damping[-self.action_dim:] = self.cfg.robot.damping
+            self.model.dof_damping[-self.action_dim:] = self.cfg.robot.damping + viscous
         elif self.control_mode == "motor":
             # ctrl直接就是力矩，不经过任何增益
             self.model.actuator_gainprm[:, 0] = 1.0
             self.model.actuator_biasprm[:, 1] = 0.0
-            self.model.dof_damping[-self.action_dim:] = 0.0
+            self.model.dof_damping[-self.action_dim:] = viscous
         self.model.dof_armature[-self.action_dim:] = self.cfg.robot.armature
+        self.model.dof_frictionloss[-self.action_dim:] = self.cfg.robot.dynamic_friction
 
-        # ---- DCMotor 转矩-转速滚降参数(与 nlegs.py DelayedDCMotor 一致, mjc 序 R1..R6,L1..L6) ----
-        # 只有髋pitch(.*1)和膝(.*4)用 DCMotor: (velocity_limit, saturation_effort)
-        # nlegs.py: velocity_limit={.*1:2.2, joint_L4:2.3, joint_R4:3.0}, sat=effort=26
-        _DC = {"R1": (2.2, 26.0), "L1": (2.2, 26.0), "R4": (3.0, 26.0), "L4": (2.3, 26.0)}
-        _eff = np.asarray(self.cfg.robot.effort, dtype=np.float32)
-        _vlim, _sat = [], []
-        for j, name in enumerate(self.mjc_joint):
-            if name in _DC:
-                v, s = _DC[name]; _vlim.append(v); _sat.append(s)
-            else:                                  # 非 DCMotor: vlim=inf → 退化成普通 ±effort clip
-                _vlim.append(np.inf); _sat.append(float(_eff[j]))
-        self._dc_vlim = np.asarray(_vlim, dtype=np.float32)
-        self._dc_sat = np.asarray(_sat, dtype=np.float32)
+        # ---- DCMotor 转矩-转速滚降参数: build_cfg 从 deploy.yaml actuators 段展开(mjc 序), 不再硬编码 ----
+        self._dc_vlim = self.cfg.robot.dc_vlim
+        self._dc_sat = self.cfg.robot.dc_sat
+        self.policy_action_clip = self.cfg.robot.policy_action_clip
 
         mujoco.mj_resetData(self.model, self.data)
         self.data.qpos = np.concatenate([np.array([0, 0, 0.62], dtype=np.float32),
                                          np.array([1, 0, 0, 0], dtype=np.float32), self.reset_dof_pos])
         mujoco.mj_forward(self.model, self.data)
-        self.latency_sim.reset(self.cfg.sim.action_delay_range)
+        self.latency_sim.reset(self.cfg.sim.delay_groups)
         self.reset_obs_history()
         self.start_time = time.time()
         self.his_data = []
@@ -365,6 +391,9 @@ class MujocoRunner:
         while self.data.time < self.sim_duration:
             input_obs = self.get_obs().flatten()
             raw_policy_action = self.policy(torch.tensor(input_obs, dtype=torch.float32)).detach().numpy()
+            # 与训练 RslRlVecEnvWrapper 对齐: 进 env 前 clamp raw action(训练时 obs 回读的也是 clip 后值)
+            if self.policy_action_clip is not None:
+                raw_policy_action = np.clip(raw_policy_action, -self.policy_action_clip, self.policy_action_clip)
             # 与训练 A1Env.step 对齐：对 policy 输出做每步 ±action_rate_limit 增量裁剪
             # delta = np.clip(raw_policy_action - self.prev_action, -self.action_rate_limit, self.action_rate_limit)
             # clamped_action = (self.prev_action + delta).astype(np.float32)

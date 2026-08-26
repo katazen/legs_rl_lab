@@ -1,0 +1,125 @@
+<?xml version='1.0' encoding='utf-8'?>
+<mujoco model="nlegs_body">
+  <compiler angle="radian" meshdir="../meshes" />
+  <asset>
+    <mesh name="base_link" content_type="model/stl" file="base_link.STL" />
+    <mesh name="Link_R0" content_type="model/stl" file="Link_R0.STL" />
+    <mesh name="Link_R1" content_type="model/stl" file="Link_R1.STL" />
+    <mesh name="Link_R2" content_type="model/stl" file="Link_R2.STL" />
+    <mesh name="Link_R3" content_type="model/stl" file="Link_R3.STL" />
+    <mesh name="Link_R4" content_type="model/stl" file="Link_R4.STL" />
+    <mesh name="Link_R5" content_type="model/stl" file="Link_R5.STL" />
+    <mesh name="Link_R6" content_type="model/stl" file="Link_R6.STL" />
+    <mesh name="Link_L0" content_type="model/stl" file="Link_L0.STL" />
+    <mesh name="Link_L1" content_type="model/stl" file="Link_L1.STL" />
+    <mesh name="Link_L2" content_type="model/stl" file="Link_L2.STL" />
+    <mesh name="Link_L3" content_type="model/stl" file="Link_L3.STL" />
+    <mesh name="Link_L4" content_type="model/stl" file="Link_L4.STL" />
+    <mesh name="Link_L5" content_type="model/stl" file="Link_L5.STL" />
+    <mesh name="Link_L6" content_type="model/stl" file="Link_L6.STL" />
+  </asset>
+  <worldbody>
+    <body name="base">
+      <freejoint name="base_freejoint" />
+      <site name="imu" pos="0 0 0" quat="1 0 0 0" group="3" />
+      <inertial pos="-0.00291796 0.000561409 0.136465" quat="0.000898118 0.736869 -0.00072205 0.676035" mass="3.53222" diaginertia="0.0153399 0.0119074 0.00964596" />
+      <geom type="mesh" contype="0" conaffinity="0" group="1" density="0" rgba="0.866667 0.909804 1 1" mesh="base_link" />
+      <body name="Link_R0" pos="-1.72967e-05 -0.00725581 0.055" quat="1 0 0 0.000690649">
+        <inertial pos="-2.53606e-05 -0.0306482 2.59951e-05" quat="0.486707 0.511889 -0.499618 0.501466" mass="0.502308" diaginertia="0.000284369 0.000281148 0.000269266" />
+        <geom type="mesh" contype="0" conaffinity="0" group="1" density="0" rgba="0.866667 0.909804 1 1" mesh="Link_R0" />
+        <body name="Link_R1" pos="-8.2809e-05 -0.05995 0">
+          <inertial pos="-0.00182667 -0.0503464 0.00218791" quat="-0.194569 0.681091 0.186675 0.680742" mass="0.568547" diaginertia="0.00033498 0.000286769 0.000261828" />
+          <joint name="joint_R1" pos="0 0 0" axis="0 1 0" range="-3.14 1.05" limited="true" />
+          <geom type="mesh" contype="0" conaffinity="0" group="1" density="0" rgba="1 1 1 1" mesh="Link_R1" />
+          <body name="Link_R2" pos="-0.00107808 -0.0586429 0.00230332" quat="1 0 0 -0.000690649">
+            <inertial pos="0.00478542 -0.00135143 -0.0712154" quat="0.69793 0.115711 0.130765 0.694554" mass="0.645323" diaginertia="0.000708688 0.000527504 0.00043512" />
+            <joint name="joint_R2" pos="0 0 0" axis="1 0 0" range="-3.14 0.26" limited="true" />
+            <geom type="mesh" contype="0" conaffinity="0" group="1" density="0" rgba="0.866667 0.909804 1 1" mesh="Link_R2" />
+            <body name="Link_R3" pos="0.000918845 -0.00223913 -0.12148" quat="1 0 0 0.000690649">
+              <inertial pos="-4.84411e-05 6.59057e-05 -0.0923408" quat="0.992043 0.125895 -5.22802e-05 -0.000678179" mass="0.630476" diaginertia="0.000549093 0.00043747 0.000386794" />
+              <joint name="joint_R3" pos="0 0 0" axis="0 0 1" range="-2.75 2.75" limited="true" />
+              <geom type="mesh" contype="0" conaffinity="0" group="1" density="0" rgba="0.866667 0.909804 1 1" mesh="Link_R3" />
+              <body name="Link_R4" pos="-7.71372e-05 -0.00206349 -0.111981">
+                <inertial pos="-9.97954e-05 -0.0054083 -0.136871" quat="0.997535 0.0701612 0.000528313 -0.00120351" mass="1.00073" diaginertia="0.00065966 0.000647225 0.000476143" />
+                <joint name="joint_R4" pos="0 0 0" axis="0 1 0" range="0 1.92" limited="true" />
+                <geom type="mesh" contype="0" conaffinity="0" group="1" density="0" rgba="0.866667 0.909804 1 1" mesh="Link_R4" />
+                <body name="Link_R5" pos="-0.000153762 -0.00407261 -0.220962">
+                  <inertial pos="0.052946 0.00463158 -0.00683664" quat="0.894843 -0.00908941 0.315541 0.315606" mass="0.500957" diaginertia="0.000284785 0.000247712 0.000216351" />
+                  <joint name="joint_R5" pos="0 0 0" axis="0 1 0" range="-0.79 0.79" limited="true" />
+                  <geom type="mesh" contype="0" conaffinity="0" group="1" density="0" rgba="0.866667 0.909804 1 1" mesh="Link_R5" />
+                  <body name="Link_R6" pos="-0.00103467 -0.000920478 -0.0499908" quat="1 0 0 -0.000690649">
+                    <inertial pos="0.064423 0.000152418 0.00168866" quat="0.00756373 0.712416 0.00745504 0.701677" mass="0.534272" diaginertia="0.00157119 0.00129045 0.000537947" />
+                    <joint name="joint_R6" pos="0 0 0" axis="1 0 0" range="-0.35 0.35" limited="true" />
+                    <geom type="mesh" contype="0" conaffinity="0" group="1" density="0" rgba="0.866667 0.909804 1 1" mesh="Link_R6" />
+                    <geom type="capsule" fromto="-0.04 0.03 -0.0015 0.14 0.03 -0.0015" size="0.012" contype="1" conaffinity="1" group="3" rgba="0.9373 0.2667 0.2667 1" />
+                    <geom type="capsule" fromto="-0.04 0 -0.0015 0.14 0 -0.0015" size="0.012" contype="1" conaffinity="1" group="3" rgba="0.9373 0.2667 0.2667 1" />
+                    <geom type="capsule" fromto="-0.04 -0.03 -0.0015 0.14 -0.03 -0.0015" size="0.012" contype="1" conaffinity="1" group="3" rgba="0.9373 0.2667 0.2667 1" />
+                  </body>
+                </body>
+              </body>
+            </body>
+          </body>
+        </body>
+      </body>
+      <body name="Link_L0" pos="-1.72967e-05 0.00752419 0.0543733" quat="1 0 0 0.000690649">
+        <inertial pos="5.68382e-05 0.0288131 0.000600595" quat="0.502142 0.498908 -0.512594 0.485996" mass="0.500394" diaginertia="0.000284348 0.000281127 0.000269261" />
+        <geom type="mesh" contype="0" conaffinity="0" group="1" density="0" rgba="0.866667 0.909804 1 1" mesh="Link_L0" />
+        <body name="Link_L1" pos="7.97699e-05 0.0577499 0.00062669">
+          <inertial pos="-0.00187999 0.0523301 0.000927541" quat="0.195451 0.680365 -0.187848 0.680893" mass="0.564899" diaginertia="0.000334941 0.000286742 0.000261821" />
+          <joint name="joint_L1" pos="0 0 0" axis="0 1 0" range="-3.14 1.04" limited="true" />
+          <geom type="mesh" contype="0" conaffinity="0" group="1" density="0" rgba="0.866667 0.909804 1 1" mesh="Link_L1" />
+          <body name="Link_L2" pos="-0.00101704 0.0606458 0.000769713">
+            <inertial pos="0.00478532 0.000667644 -0.0714793" quat="0.695765 0.12684 0.118262 0.69702" mass="0.642942" diaginertia="0.000708645 0.000527471 0.000435091" />
+            <joint name="joint_L2" pos="0 0 0" axis="1 0 0" range="-0.26 3.14" limited="true" />
+            <geom type="mesh" contype="0" conaffinity="0" group="1" density="0" rgba="1 1 1 1" mesh="Link_L2" />
+            <body name="Link_L3" pos="0.00112943 0.00107818 -0.121494">
+              <inertial pos="8.30689e-05 -0.000946804 -0.092336" quat="0.991431 -0.130627 -0.000130029 -0.0007394" mass="0.630476" diaginertia="0.000549093 0.00043747 0.000386794" />
+              <joint name="joint_L3" pos="0 0 0" axis="0 0 1" range="-2.75 2.75" limited="true" />
+              <geom type="mesh" contype="0" conaffinity="0" group="1" density="0" rgba="0.866667 0.909804 1 1" mesh="Link_L3" />
+              <body name="Link_L4" pos="0.000119312 0.000995147 -0.111996">
+                <inertial pos="0.000150394 0.00410138 -0.136916" quat="0.997188 -0.0749212 -0.000716673 -0.00125247" mass="1.00074" diaginertia="0.000659656 0.000647221 0.000476143" />
+                <joint name="joint_L4" pos="0 0 0" axis="0 1 0" range="0 1.92" limited="true" />
+                <geom type="mesh" contype="0" conaffinity="0" group="1" density="0" rgba="0.866667 0.909804 1 1" mesh="Link_L4" />
+                <body name="Link_L5" pos="0.000235429 0.00196364 -0.220991">
+                  <inertial pos="0.0529266 -0.00534692 -0.00630584" quat="0.89443 0.00533565 0.313898 -0.318489" mass="0.500956" diaginertia="0.000284772 0.000247707 0.000216367" />
+                  <joint name="joint_L5" pos="0 0 0" axis="0 1 0" range="-0.79 0.79" limited="true" />
+                  <geom type="mesh" contype="0" conaffinity="0" group="1" density="0" rgba="0.866667 0.909804 1 1" mesh="Link_L5" />
+                  <body name="Link_L6" pos="-0.00094815 0.00043388 -0.048668">
+                    <inertial pos="0.0642417 -0.000802657 0.000413848" quat="-0.00265414 0.71184 -0.00363343 0.702327" mass="0.532943" diaginertia="0.00157116 0.00129043 0.000537937" />
+                    <joint name="joint_L6" pos="0 0 0" axis="1 0 0" range="-0.35 0.35" limited="true" />
+                    <geom type="mesh" contype="0" conaffinity="0" group="1" density="0" rgba="0.866667 0.909804 1 1" mesh="Link_L6" />
+                    <geom type="capsule" fromto="-0.04 0.03 -0.0015 0.14 0.03 -0.0015" size="0.012" contype="1" conaffinity="1" group="3" rgba="0.9373 0.2667 0.2667 1" />
+                    <geom type="capsule" fromto="-0.04 0 -0.0015 0.14 0 -0.0015" size="0.012" contype="1" conaffinity="1" group="3" rgba="0.9373 0.2667 0.2667 1" />
+                    <geom type="capsule" fromto="-0.04 -0.03 -0.0015 0.14 -0.03 -0.0015" size="0.012" contype="1" conaffinity="1" group="3" rgba="0.9373 0.2667 0.2667 1" />
+                  </body>
+                </body>
+              </body>
+            </body>
+          </body>
+        </body>
+      </body>
+    </body>
+  </worldbody>
+  <actuator>
+    <!-- 数值由训练配置/deploy.yaml 提供；这里只保留 sim2sim 需要的执行器名称和关节映射。 -->
+    <position name="joint_R1_servo" joint="joint_R1" />
+    <position name="joint_R2_servo" joint="joint_R2" />
+    <position name="joint_R3_servo" joint="joint_R3" />
+    <position name="joint_R4_servo" joint="joint_R4" />
+    <position name="joint_R5_servo" joint="joint_R5" />
+    <position name="joint_R6_servo" joint="joint_R6" />
+    <position name="joint_L1_servo" joint="joint_L1" />
+    <position name="joint_L2_servo" joint="joint_L2" />
+    <position name="joint_L3_servo" joint="joint_L3" />
+    <position name="joint_L4_servo" joint="joint_L4" />
+    <position name="joint_L5_servo" joint="joint_L5" />
+    <position name="joint_L6_servo" joint="joint_L6" />
+  </actuator>
+  <sensor>
+    <framequat name="imu_quat" objtype="site" objname="imu" />
+    <gyro name="imu_gyro" site="imu" />
+    <accelerometer name="imu_acc" site="imu" />
+    <framepos name="frame_pos" objtype="site" objname="imu" />
+    <framelinvel name="frame_vel" objtype="site" objname="imu" />
+  </sensor>
+</mujoco>

@@ -27,10 +27,11 @@ def load():
     kps = [float(x) for x in p["kps"]]
     kds = [float(x) for x in p["kds"]]
     max_vel = p.get("max_vel", 0.0)
-    return kps, kds, max_vel
+    enable_diag = p.get("enable_dual_leg_diag", False)
+    return kps, kds, max_vel, enable_diag
 
 
-def write(kps, kds, max_vel, note):
+def write(kps, kds, max_vel, enable_diag, note):
     text = (
         "armcontrol_node:\n"
         "  ros__parameters:\n"
@@ -38,6 +39,7 @@ def write(kps, kds, max_vel, note):
         f"    kps: {kps}\n"
         f"    kds: {kds}\n"
         f"    max_vel: {max_vel}\n"
+        f"    enable_dual_leg_diag: {str(enable_diag).lower()}\n"
     )
     for pth in (ARM_SRC, ARM_INSTALL):
         if os.path.isdir(os.path.dirname(pth)):
@@ -54,9 +56,9 @@ def main():
     ap.add_argument("--show", action="store_true", help="只打印当前 PD")
     a = ap.parse_args()
 
-    kps, kds, max_vel = load()
+    kps, kds, max_vel, enable_diag = load()
     if a.show:
-        print(f"kps={kps}\nkds={kds}\nmax_vel={max_vel}")
+        print(f"kps={kps}\nkds={kds}\nmax_vel={max_vel}\nenable_dual_leg_diag={enable_diag}")
         return
     assert a.joint is not None and a.kp is not None and a.kd is not None, "需 --joint --kp --kd"
     js = [a.joint]
@@ -65,7 +67,8 @@ def main():
     for j in js:
         kps[j] = a.kp
         kds[j] = a.kd
-    write(kps, kds, max_vel, f"PD辨识手动设定 joint={js} kp={a.kp} kd={a.kd}(勿用于部署, 恢复用 sync_pd.py)")
+    write(kps, kds, max_vel, enable_diag,
+          f"PD辨识手动设定 joint={js} kp={a.kp} kd={a.kd}(勿用于部署, 恢复用 sync_pd.py)")
     print(f"[set_pd] 已设 joint {js}: kp={a.kp} kd={a.kd}  → 重启 armcontrol 生效")
 
 

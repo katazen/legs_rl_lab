@@ -19,14 +19,22 @@ def format_value(x):
         return x
 
 
-def export_deploy_cfg(env: ManagerBasedRLEnv, log_dir):
+def export_deploy_cfg(env: ManagerBasedRLEnv, log_dir, policy_action_clip=None):
     asset: Articulation = env.scene["robot"]
     joint_sdk_names = env.cfg.scene.robot.joint_sdk_names
     joint_ids_map, _ = resolve_matching_names(asset.data.joint_names, joint_sdk_names, preserve_order=True)
 
     cfg = {}  # noqa: SIM904
+    cfg["format_version"] = 2
+    cfg["joint_names"] = list(joint_sdk_names)
     cfg["joint_ids_map"] = joint_ids_map
+    cfg["physics_dt"] = env.cfg.sim.dt
     cfg["step_dt"] = env.cfg.sim.dt * env.cfg.decimation
+    cfg["policy_action_clip"] = policy_action_clip
+    cfg["base_init_state"] = {
+        "pos": list(env.cfg.scene.robot.init_state.pos),
+        "rot": list(env.cfg.scene.robot.init_state.rot),
+    }
     stiffness = np.zeros(len(joint_sdk_names))
     stiffness[joint_ids_map] = asset.data.default_joint_stiffness[0].detach().cpu().numpy().tolist()
     cfg["stiffness"] = stiffness.tolist()
@@ -44,6 +52,32 @@ def export_deploy_cfg(env: ManagerBasedRLEnv, log_dir):
     effort = np.zeros(len(joint_sdk_names))
     effort[joint_ids_map] = asset.data.joint_effort_limits[0].detach().cpu().numpy().tolist()
     cfg["effort"] = effort.tolist()
+
+    for key in ["friction", "dynamic_friction", "viscous_friction"]:
+        values = np.zeros(len(joint_sdk_names))
+        tensor = getattr(asset.data, f"default_joint_{key}_coeff")
+        values[joint_ids_map] = tensor[0].detach().cpu().numpy().tolist()
+        cfg[key] = values.tolist()
+
+    cfg["actuators"] = {}
+    for name, actuator in asset.actuators.items():
+        policy_ids = actuator.joint_indices
+        if policy_ids == slice(None):
+            policy_ids = list(range(len(asset.data.joint_names)))
+        elif hasattr(policy_ids, "detach"):
+            policy_ids = policy_ids.detach().cpu().tolist()
+        sdk_ids = [joint_ids_map[i] for i in policy_ids]
+        group = {
+            "joint_ids": sdk_ids,
+            "torque_model": "dc_motor" if hasattr(actuator, "_saturation_effort") else "ideal_pd",
+            "effort_limit": actuator.effort_limit[0].detach().cpu().tolist(),
+            "effort_limit_sim": actuator.effort_limit_sim[0].detach().cpu().tolist(),
+            "velocity_limit": actuator.velocity_limit[0].detach().cpu().tolist(),
+            "velocity_limit_sim": actuator.velocity_limit_sim[0].detach().cpu().tolist(),
+            "saturation_effort": getattr(actuator, "_saturation_effort", None),
+            "delay": [int(getattr(actuator.cfg, "min_delay", 0)), int(getattr(actuator.cfg, "max_delay", 0))],
+        }
+        cfg["actuators"][name] = group
 
     # --- gait clock period (nlegs GaitCfg, or a custom env with .period) ---
     gait_cfg = getattr(env.cfg, "gait", None)

@@ -17,6 +17,8 @@
 
 # 例外: nlegs 窄本体资产 USD 需入库 (sim 依赖, nlegs.py 加载 mjcf/legs_narrow/legs_narrow.usd)
 !source/legs_rl_lab/legs_rl_lab/assets/legs_narrow/mjcf/legs_narrow/**/*.usd
+# 例外: nlegs 自包含资产包 USD 需入库 (assets/nlegs/nlegs.py 加载 mjcf/nlegs/nlegs.usd)
+!source/legs_rl_lab/legs_rl_lab/assets/nlegs/mjcf/nlegs/**/*.usd
 
 # Python
 .DS_Store
@@ -34,6 +36,10 @@ docker/.container.cfg
 # IDE
 **/.idea/
 **/.vscode/
+.qoder/
+
+# MuJoCo 崩溃日志
+MUJOCO_LOG.TXT
 
 # Outputs
 **/output/*

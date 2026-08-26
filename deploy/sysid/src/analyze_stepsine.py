@@ -7,7 +7,8 @@
 
 用法:
   python3 analyze_stepsine.py <joint_idx> <freqs逗号> <cycles> <out.png> \
-        real=<cmd.csv>,<state.csv>  [sim=<sim_state.csv>,<sim_target_col>] [skip=2]
+        real=<cmd.csv>,<state.csv>  [real:r2=<cmd.csv>,<state.csv>] \
+        [sim=<sim_state.csv>,<sim_target_col>] [skip=2] [csv=<summary.csv>]
 
   - real: excite_record 产出的 <..._cmd.csv>,<..._state.csv> 一对
   - sim (可选): isaac chirp_replay --replay_csv 回放产出的 csv (含 t,target,q), 只给这一个文件
@@ -62,7 +63,7 @@ def frf_stepsine(t_tgt, tgt, t_resp, resp, freqs, cycles, skip, t0_tgt, t0_resp)
             continue
         H = Hr / Ht
         fc.append(f); gain.append(abs(H)); lag.append(-np.degrees(np.angle(H)))
-    return np.array(fc), np.array(gain), np.array(lag)
+    return np.array(fc), np.array(gain), np.degrees(np.unwrap(np.radians(lag)))
 
 
 def excite_start(t, phase):
@@ -71,6 +72,15 @@ def excite_start(t, phase):
         return t[0]
     m = phase == "excite"
     return t[m][0] if m.any() else t[0]
+
+
+def report_timing(label, t):
+    dt = np.diff(t)
+    dt = dt[np.isfinite(dt) & (dt > 0)]
+    if len(dt):
+        print(f"[timing {label}] n={len(t)}  rate~{1 / np.median(dt):.2f}Hz  "
+              f"dt mean/std/p99/max={dt.mean()*1e3:.3f}/{dt.std()*1e3:.3f}/"
+              f"{np.percentile(dt, 99)*1e3:.3f}/{dt.max()*1e3:.3f}ms")
 
 
 def report(label, fc, g, lag):
@@ -127,7 +137,8 @@ def main():
     kp = None
     fitmin = 0.0
     fitmax = 1e9
-    curves = []  # (label, cmd_or_state_paths)
+    summary_csv = None
+    curves = []  # (kind, label, cmd_or_state_paths)
     for a in sys.argv[5:]:
         if a.startswith("skip="):
             skip = float(a.split("=", 1)[1])
@@ -137,22 +148,28 @@ def main():
             fitmin = float(a.split("=", 1)[1])
         elif a.startswith("fitmax="):
             fitmax = float(a.split("=", 1)[1])
-        elif a.startswith("real="):
-            curves.append(("real", a.split("=", 1)[1].split(",")))
+        elif a.startswith("csv="):
+            summary_csv = a.split("=", 1)[1]
+        elif a.startswith("real=") or a.startswith("real:"):
+            key, value = a.split("=", 1)
+            curves.append(("real", key.split(":", 1)[-1], value.split(",")))
         elif a.startswith("sim="):
-            curves.append(("sim", a.split("=", 1)[1].split(",")))
+            curves.append(("sim", "sim", a.split("=", 1)[1].split(",")))
 
     fig, ax = plt.subplots(2, 1, figsize=(11, 8), sharex=True)
-    cols = {"real": "tab:red", "sim": "tab:blue"}
-    for label, paths in curves:
-        if label == "real":
+    summaries = []
+    for kind, label, paths in curves:
+        if kind == "real":
             cmd_csv, state_csv = paths
             c = _read_cols(cmd_csv, [f"qd{j}", "t"])
             s = _read_cols(state_csv, [f"q{j}", "t"])
+            report_timing("cmd/excite", c["t"][c["phase"] == "excite"])
+            report_timing("state/excite", s["t"][s["phase"] == "excite"])
+            # 两份 CSV 在同一进程内使用同一个 monotonic 起点；必须共用命令流的
+            # 激励起点，否则分别归零会人为抹掉命令/反馈之间的真实相位差。
             t0t = excite_start(c["t"], c.get("phase"))
-            t0r = excite_start(s["t"], s.get("phase"))
             fc, g, lag = frf_stepsine(c["t"], c[f"qd{j}"], s["t"], s[f"q{j}"],
-                                      freqs, cycles, skip, t0t, t0r)
+                                      freqs, cycles, skip, t0t, t0t)
         else:  # sim: 单文件, 列名 target,q
             sim_csv = paths[0]
             d = _read_cols(sim_csv, ["t", "target", "q"])
@@ -160,8 +177,9 @@ def main():
             fc, g, lag = frf_stepsine(d["t"], d["target"], d["t"], d["q"],
                                       freqs, cycles, skip, t0, t0)
         report(label, fc, g, lag)
-        col = cols.get(label, "tab:green")
-        ax[0].semilogx(fc, g, "-o", ms=4, color=col, label=label)
+        summaries.extend((label, f, gg, ll) for f, gg, ll in zip(fc, g, lag))
+        line = ax[0].semilogx(fc, g, "-o", ms=4, label=label)
+        col = line[0].get_color()
         ax[1].semilogx(fc, lag, "-o", ms=4, color=col, label=label)
 
         # 在离散点上拟合二阶+延迟模型, 叠加平滑模型曲线(可限拟合频段, 避开次模态/高频噪声)
@@ -185,6 +203,11 @@ def main():
     ax[1].axhline(0, color="k", lw=0.5); ax[1].set_ylabel("phase lag [deg]")
     ax[1].set_xlabel("frequency [Hz]"); ax[1].grid(alpha=.3, which="both"); ax[1].legend()
     fig.tight_layout(); fig.savefig(out, dpi=120); print("saved", out)
+    if summary_csv:
+        with open(summary_csv, "w", newline="") as f:
+            w = csv.writer(f); w.writerow(["run", "freq_hz", "gain", "lag_deg"])
+            w.writerows(summaries)
+        print("saved", summary_csv)
 
 
 if __name__ == "__main__":

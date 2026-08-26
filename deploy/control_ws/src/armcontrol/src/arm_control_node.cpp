@@ -135,6 +135,7 @@ public:
     auto right_arm_can_name = this->declare_parameter<std::string>(
         "right_arm_can_name", "can1");
     dual_leg_ = this->declare_parameter<bool>("dual_leg", true);
+    enable_dual_leg_diag_ = this->declare_parameter<bool>("enable_dual_leg_diag", false);
 
     config_max_vel_ = this->declare_parameter<double>("max_vel", MAX_VEL);
     config_max_acc_ = this->declare_parameter<double>("max_acc", MAX_ACC);
@@ -826,7 +827,7 @@ private:
       // 诊断：双腿模式下把每关节状态(q/v/tau/err)+loop 计时写入本地 CSV（终端不再刷 perf）
       // 文件：dual_leg_diag/dual_leg_state_<时间戳>.csv —— 列：时间、loop 周期、refresh 耗时、loop 锁等待、12 关节(q,v,tau,err)
       // 关节顺序：j0..5=左腿 left_arm_motors_[0..5]，j6..11=右腿 right_arm_motors_[0..5]
-      if (DTOF == 12 && dual_leg_) {
+      if (DTOF == 12 && dual_leg_ && enable_dual_leg_diag_) {
         static std::ofstream state_log = [] {
           std::ofstream f(diag_dir() + "dual_leg_state_" + diag_run_tag() + ".csv", std::ios::out | std::ios::trunc);
           f << "t_ns,loop_dt_ms,refresh_us,loop_lock_wait_us";
@@ -838,7 +839,8 @@ private:
         const auto iter_now = std::chrono::steady_clock::now();
         const double loop_dt_ms = std::chrono::duration<double, std::milli>(iter_now - last_iter).count();
         last_iter = iter_now;
-        if (state_log.is_open()) {
+        static long state_rows = 0;  // 诊断CSV总行数上限, 满即停止写入(防长跑写满磁盘; 200Hz下~16min, ~90MB封顶)
+        if (state_log.is_open() && state_rows < 200000) {
           state_log.precision(6);
           state_log << this->now().nanoseconds()
                     << "," << loop_dt_ms << "," << refresh_us << "," << loop_lock_wait_us;
@@ -850,11 +852,12 @@ private:
                       << "," << static_cast<unsigned>(m.GetErrCode());
           }
           state_log << "\n";
-          state_log.flush();
+          if (++state_rows == 200000)
+            RCLCPP_WARN(this->get_logger(), "dual_leg state 诊断CSV达20万行上限, 停止写入(防写满磁盘)");
         }
       }
       // usleep(500000); // Sleep for 500 milliseconds
-      usleep(10000); // Sleep for 10 milliseconds //SLAM要求不能低于100HZ频率发布
+      usleep(4700); // ~4.7ms sleep + ~0.3ms 工作 ≈ 5ms 周期 -> 反馈~200Hz (辨识stage③需要; 原10ms=100Hz, SLAM要求≥100Hz仍满足)
       // if(!start_)
       // {
       //   for (int i = 0; i < DTOF; i++) {
@@ -1010,7 +1013,7 @@ private:
 
     // 诊断：命令路径每帧写入本地 CSV（终端不再刷 perf，原 dual_leg cmd 行保留）
     // 文件：dual_leg_diag/dual_leg_cmd_<时间戳>.csv —— 列：时间、到达间隔、锁等待、左右下发耗时、12 个命令位置 q、12 个下发速度 dq
-    {
+    if (enable_dual_leg_diag_) {
       static std::ofstream cmd_log = [] {
         std::ofstream f(diag_dir() + "dual_leg_cmd_" + diag_run_tag() + ".csv", std::ios::out | std::ios::trunc);
         f << "t_ns,inter_arrival_ms,lock_wait_us,left_send_us,right_send_us";
@@ -1022,7 +1025,8 @@ private:
       static steady_clock::time_point last_enter = cb_enter;
       const double gap_ms = std::chrono::duration<double, std::milli>(cb_enter - last_enter).count();
       last_enter = cb_enter;
-      if (cmd_log.is_open()) {
+      static long cmd_rows = 0;  // 诊断CSV总行数上限, 满即停止写入(防长跑写满磁盘; 250Hz下~13min, ~90MB封顶)
+      if (cmd_log.is_open() && cmd_rows < 200000) {
         cmd_log.precision(6);
         cmd_log << this->now().nanoseconds()
                 << "," << gap_ms << "," << lock_wait_us
@@ -1030,14 +1034,17 @@ private:
         for (int i = 0; i < 12; ++i) cmd_log << "," << msg->data[i];
         for (int i = 0; i < 12; ++i) cmd_log << "," << std::clamp(vel_cmd[i], -config_max_vel_, config_max_vel_);
         cmd_log << "\n";
-        cmd_log.flush();
+        if (++cmd_rows == 200000)
+          RCLCPP_WARN(this->get_logger(), "dual_leg cmd 诊断CSV达20万行上限, 停止写入(防写满磁盘)");
       }
     }
 
-    RCLCPP_INFO_THROTTLE(this->get_logger(), *this->get_clock(), 1000,
-        "dual_leg cmd L[0..5]=%.3f,%.3f,%.3f,%.3f,%.3f,%.3f R[0..5]=%.3f,%.3f,%.3f,%.3f,%.3f,%.3f",
-        msg->data[0], msg->data[1], msg->data[2], msg->data[3], msg->data[4], msg->data[5],
-        msg->data[6], msg->data[7], msg->data[8], msg->data[9], msg->data[10], msg->data[11]);
+    if (enable_dual_leg_diag_) {
+      RCLCPP_INFO_THROTTLE(this->get_logger(), *this->get_clock(), 1000,
+          "dual_leg cmd L[0..5]=%.3f,%.3f,%.3f,%.3f,%.3f,%.3f R[0..5]=%.3f,%.3f,%.3f,%.3f,%.3f,%.3f",
+          msg->data[0], msg->data[1], msg->data[2], msg->data[3], msg->data[4], msg->data[5],
+          msg->data[6], msg->data[7], msg->data[8], msg->data[9], msg->data[10], msg->data[11]);
+    }
   }
 
   // 双腿模式 JointState 发布：12 维，前 6 = 左腿，后 6 = 右腿
@@ -1376,6 +1383,7 @@ private:
   bool dog_joint_pos_has_last_ = false;
   bool dog_joint_pos_enabled_ = false;
   bool dual_leg_{true};
+  bool enable_dual_leg_diag_{false};
   mutable std::mutex mutexPosition_left_;
   mutable std::mutex mutexPosition_right_;
   mutable std::mutex writeLocker_;  // 夹爪控制锁

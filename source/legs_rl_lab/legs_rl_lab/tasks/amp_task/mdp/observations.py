@@ -69,3 +69,22 @@ def amp_obs(
     r_foot = quat_apply_inverse(root_quat, asset.data.body_pos_w[:, r_id, :] - root_pos)
     l_foot = quat_apply_inverse(root_quat, asset.data.body_pos_w[:, l_id, :] - root_pos)
     return torch.cat([joint_pos, joint_vel, r_foot, l_foot], dim=-1)
+
+
+def amp_obs_engineai(
+    env: ManagerBasedRLEnv,
+    asset_cfg: SceneEntityCfg = SceneEntityCfg("robot"),
+) -> torch.Tensor:
+    """EngineAI 风格单帧 AMP 观测 (15 维), 与 amp_engineai 的专家 loader 完全对齐:
+
+        [0:12]  关节位置 (绝对角, Isaac DOF 序) * 9
+        [12:15] base 系线速度 (root_lin_vel_b) * 7
+
+    *9 / *7 的缩放与 data_loader.gather_frame_features 一致(两侧都缩放, 判别器才可比)。
+    单帧 15 维, 由 AMP 观测组的 history_length=5 堆成 75 维 obs["amp"] 喂判别器。
+    nlegs 无腰关节, 故无需像 PM01 那样对 WAIST_YAW 置零。
+    """
+    asset = env.scene[asset_cfg.name]
+    joint_pos = asset.data.joint_pos[:, asset_cfg.joint_ids]  # [N,12] 绝对角, Isaac 序
+    base_lin_vel = asset.data.root_lin_vel_b                  # [N,3] base 系线速度
+    return torch.cat([joint_pos * 9.0, base_lin_vel * 7.0], dim=-1)

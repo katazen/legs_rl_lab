@@ -4,7 +4,8 @@
 每个频率取稳态若干周期(丢前1周期暂态), 叠 target(黑)/real(红)/sim(蓝), 标各自跟踪幅值比。
 用法:
   python3 plot_sine_tracking.py <joint_idx> <freqs逗号> <cycles> <out.png> \
-      real_cmd=<cmd.csv> real_state=<state.csv> sim=<sim_replay.csv> [show_cycles=3]
+      real_cmd=<cmd.csv> real_state=<state.csv> \
+      sim=<旧target,q格式.csv>|sim_state=<本轮q0..q11格式.csv> [show_cycles=3]
 """
 import sys, csv
 import numpy as np
@@ -51,9 +52,16 @@ def main():
         else: P[k] = v
 
     rc = rd(P["real_cmd"], [f"qd{j}", "t"]); rc_t0 = excite_t0(rc)
-    rs = rd(P["real_state"], [f"q{j}", "t"]); rs_t0 = excite_t0(rs)
-    sm = rd(P["sim"], ["t", "target", "q"]); sm_t0 = excite_t0(sm)
-    lt_c = rc["t"] - rc_t0; lt_s = rs["t"] - rs_t0; lt_m = sm["t"] - sm_t0
+    rs = rd(P["real_state"], [f"q{j}", "t"])
+    if "sim_state" in P:
+        sm = rd(P["sim_state"], ["t", f"q{j}"])
+        sim_q, sm_t0 = f"q{j}", rc_t0
+    else:
+        sm = rd(P["sim"], ["t", "target", "q"])
+        sim_q, sm_t0 = "q", excite_t0(sm)
+    # 实机 cmd/state 使用同一个 monotonic 起点；本轮仿真输出也沿用命令时间轴。
+    # 分别按各自 excite 首帧归零会人为抹掉命令到响应的真实相位差。
+    lt_c = rc["t"] - rc_t0; lt_s = rs["t"] - rc_t0; lt_m = sm["t"] - sm_t0
 
     bounds = seg_bounds(freqs, cycles)
     n = len(freqs)
@@ -68,13 +76,13 @@ def main():
         # target 用实机命令
         ax.plot(lt_c[mc], rc[f"qd{j}"][mc], "k-", lw=1.2, label="target")
         ax.plot(lt_s[ms], rs[f"q{j}"][ms], "r-", lw=1.6, label="real")
-        ax.plot(lt_m[mm], sm["q"][mm], "b--", lw=1.6, label="sim")
+        ax.plot(lt_m[mm], sm[sim_q][mm], "b--", lw=1.6, label="sim")
         # 幅值比(整段稳态, 不只展示窗)
         segc = (lt_c >= w0) & (lt_c < hi); segs = (lt_s >= w0) & (lt_s < hi); segm = (lt_m >= w0) & (lt_m < hi)
         At = amp_of(lt_c[segc], rc[f"qd{j}"][segc], f)
         Ar = amp_of(lt_s[segs], rs[f"q{j}"][segs], f)
-        Am = amp_of(lt_m[segm], sm["q"][segm], f)
-        ax.set_title(f"{f:g} Hz   跟踪幅值比  real={Ar/At:.3f}  sim={Am/At:.3f}   (target幅值 {At:.3f}rad)",
+        Am = amp_of(lt_m[segm], sm[sim_q][segm], f)
+        ax.set_title(f"{f:g} Hz   gain: real={Ar/At:.3f}  sim={Am/At:.3f}   (target amp {At:.3f} rad)",
                      fontsize=10)
         ax.set_ylabel("angle [rad]"); ax.grid(alpha=.3)
         if i == 0: ax.legend(loc="upper right", ncol=3, fontsize=9)

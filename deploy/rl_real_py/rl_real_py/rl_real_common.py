@@ -14,6 +14,8 @@ import sys
 import time
 import csv
 import datetime
+import queue
+import threading
 import termios
 import tty
 import fcntl
@@ -26,6 +28,8 @@ from rclpy.qos import QoSProfile
 from std_msgs.msg import Float64MultiArray
 from sensor_msgs.msg import JointState, Imu, Joy
 from ament_index_python.packages import get_package_share_directory
+
+from .cmd_ramp import limit_command_acceleration
 
 
 def gravity_from_quat(q):
@@ -52,14 +56,6 @@ class TermGroupedHistory:
                 buf[-1] = obs
         self.ready = True
         return np.concatenate([b.flatten() for b in self.buffers])
-
-
-# 终端设为非阻塞 cbreak, 用于读键盘
-_fd = sys.stdin.fileno()
-_old_term = termios.tcgetattr(_fd)
-tty.setcbreak(_fd)
-_old_flags = fcntl.fcntl(_fd, fcntl.F_GETFL)
-fcntl.fcntl(_fd, fcntl.F_SETFL, _old_flags | os.O_NONBLOCK)
 
 
 class RL_real(Node):
@@ -90,12 +86,23 @@ class RL_real(Node):
         # ---------- 读训练导出的 deploy.yaml (所有模型参数) ----------
         with open(os.path.join(run_dir, "params", "deploy.yaml")) as f:
             dep = yaml.safe_load(f)
+        with open(os.path.join(run_dir, "params", "agent.yaml")) as f:
+            agent = yaml.safe_load(f)
 
         self.default_sim = np.array(dep["default_joint_pos"], np.float32)   # 策略序
         self.num_actions = len(self.default_sim)
-        self.action_scale = float(dep["actions"]["JointPositionAction"]["scale"][0])
+        self.action_scale = np.asarray(dep["actions"]["JointPositionAction"]["scale"], np.float32)
+        if self.action_scale.size != self.num_actions:
+            raise ValueError(f"action scale 数量 {self.action_scale.size} != 动作维度 {self.num_actions}")
+        self.action_clip = agent.get("clip_actions")
         self.gait_period = float(dep["gait_period"])
         step_dt = float(dep["step_dt"])
+        command_ranges = dep["commands"]["base_velocity"]["ranges"]
+        command_names = ("lin_vel_x", "lin_vel_y", "ang_vel_z")
+        self.cmd_min = np.array([command_ranges[name][0] for name in command_names], np.float32)
+        self.cmd_max = np.array([command_ranges[name][1] for name in command_names], np.float32)
+        if np.any(self.cmd_min > 0) or np.any(self.cmd_max < 0):
+            raise ValueError("训练速度范围必须包含零速度")
 
         # 观测项: 顺序 / scale / history 全来自 deploy.yaml
         obs = dep["observations"]
@@ -127,7 +134,9 @@ class RL_real(Node):
         self.vel_alpha = float(cfg.get("vel_ema_alpha", 0.5))
         self.prepare_time = float(cfg.get("prepare_time", 4.0))
         self.state_timeout = float(cfg.get("state_timeout", 0.2))
-        self.cmd_clip = np.array(cfg.get("cmd_clip", [0.5, 0.3, 0.3]), np.float32)
+        self.cmd_accel_limit = np.array(cfg.get("cmd_accel_limit", [0.5, 0.5, 1.0]), np.float32)
+        if self.cmd_accel_limit.shape != (3,) or np.any(self.cmd_accel_limit <= 0):
+            raise ValueError("cmd_accel_limit 必须是 3 个正数 [vx, vy, yaw]")
         # 指令零偏修正: 实机零指令下若持续漂移, 给策略一个反向的常量速度指令抵消。
         # [vx, vy, wz], 单位 m/s & rad/s (与 operator 指令同单位, 未经 scale/clip)。
         # 只加到喂给策略的观测上; 日志/clip 仍是 operator 原始指令。全 0 = 不修正。
@@ -142,8 +151,6 @@ class RL_real(Node):
         self.deadzone = float(cfg.get("deadzone", 0.12))
         kb = cfg.get("keyboard", {})
         self.kb_step = float(kb.get("step", 0.1))
-        self.kb_max = np.array([kb.get("vx_max", 0.5), kb.get("vy_max", 0.3),
-                                kb.get("wz_max", 0.3)], np.float32)
 
         # ---------- 策略 (onnx 优先, 否则 pt) ----------
         self._load_policy(os.path.join(run_dir, "exported"))
@@ -178,7 +185,8 @@ class RL_real(Node):
         self._last_joy_rx = -1e9
         self._kb_cmd = np.zeros(3, np.float32)          # 键盘累加指令(空格清零)
         self._cmd_print = np.full(3, np.nan, np.float32)  # 上次打印的指令(仅变化时打印)
-        self._log_f = self._log_w = self._log_path = None
+        self._log_queue = self._log_path = None
+        self._log_threads = []
 
         # ---------- 通信 ----------
         self.create_subscription(JointState, "/left_joint_states", self._on_joint, 5)
@@ -290,7 +298,9 @@ class RL_real(Node):
                 else:
                     terms = self._build_terms()
                     x = np.clip(self.hist.update(terms), -100.0, 100.0)
-                    self.last_action = np.clip(self._infer(x), -100.0, 100.0)
+                    self.last_action = self._infer(x)
+                    if self.action_clip is not None:
+                        self.last_action = np.clip(self.last_action, -self.action_clip, self.action_clip)
                     target_sim = self.default_sim + self.last_action * self.action_scale
                     self.target_real = np.clip(target_sim[self.sim2real], self.lo, self.hi)
                     self._log_row(terms)
@@ -349,8 +359,10 @@ class RL_real(Node):
         self._last_joint_rx = time.monotonic()
 
     def _on_imu(self, msg):
-        self.obs_raw[0:3] = [msg.angular_velocity.x, msg.angular_velocity.y, msg.angular_velocity.z]
-        self.obs_raw[3:7] = [msg.orientation.w, msg.orientation.x, msg.orientation.y, msg.orientation.z]
+        # IMU 相对机体绕前进方向 x 轴旋转 180°: x 不变, y/z 反向。
+        self.obs_raw[0:3] = [msg.angular_velocity.x, -msg.angular_velocity.y, -msg.angular_velocity.z]
+        w, x, y, z = msg.orientation.w, msg.orientation.x, msg.orientation.y, msg.orientation.z
+        self.obs_raw[3:7] = [x, -w, -z, y]  # q_body = q_imu ⊗ q_x(-180°)
         self._last_imu_rx = time.monotonic()
 
     def _on_joy(self, msg):
@@ -358,9 +370,8 @@ class RL_real(Node):
             v = msg.axes[i] if i < len(msg.axes) else 0.0
             return v if abs(v) > self.deadzone else 0.0
         # 比例式(回中即0); 写入 _joy_cmd + 记时间戳, 由 _update_cmd 合成(超时=/joy停发时归零)
-        self._joy_cmd[0] = ax(1) * self.cmd_clip[0]  # 左摇杆纵 = vx
-        self._joy_cmd[1] = ax(0) * self.cmd_clip[1]  # 左摇杆横 = vy
-        self._joy_cmd[2] = ax(2) * self.cmd_clip[2]  # 右摇杆横 = yaw
+        axes = np.array([ax(1), ax(0), ax(2)], np.float32)
+        self._joy_cmd[:] = axes * np.where(axes >= 0.0, self.cmd_max, -self.cmd_min)
         self._last_joy_rx = time.monotonic()
 
         def pressed(i):
@@ -376,10 +387,11 @@ class RL_real(Node):
         self._prev_buttons = list(msg.buttons)
 
     def _update_cmd(self):
-        """合成键盘(累加式, 原逻辑) + 手柄(比例式, 带看门狗)指令; 指令变化时实时打印。每 tick 调。"""
+        """合成键盘/手柄指令；只限制幅值增加，回零和减速立即生效。每 tick 调。"""
         now = time.monotonic()
         joy = self._joy_cmd if (now - self._last_joy_rx < self.ctrl_timeout) else np.zeros(3, np.float32)
-        new = np.clip(self._kb_cmd + joy, -self.cmd_clip, self.cmd_clip).astype(np.float32)
+        target = np.clip(self._kb_cmd + joy, self.cmd_min, self.cmd_max).astype(np.float32)
+        new = limit_command_acceleration(self.cmd, target, self.cmd_accel_limit, self.pub_dt)
         if np.isnan(self._cmd_print[0]) or np.abs(new - self._cmd_print).max() > 0.02:
             print(f"[cmd] vx={new[0]:+.2f}  vy={new[1]:+.2f}  yaw={new[2]:+.2f}")
             self._cmd_print = new.copy()
@@ -394,17 +406,17 @@ class RL_real(Node):
             if not ch:
                 break
             if ch in "wW":
-                self._kb_cmd[0] = min(self.kb_max[0], self._kb_cmd[0] + self.kb_step)
+                self._kb_cmd[0] = min(self.cmd_max[0], self._kb_cmd[0] + self.kb_step)
             elif ch in "sS":
-                self._kb_cmd[0] = max(-self.kb_max[0], self._kb_cmd[0] - self.kb_step)
+                self._kb_cmd[0] = max(self.cmd_min[0], self._kb_cmd[0] - self.kb_step)
             elif ch in "aA":
-                self._kb_cmd[1] = min(self.kb_max[1], self._kb_cmd[1] + self.kb_step)
+                self._kb_cmd[1] = min(self.cmd_max[1], self._kb_cmd[1] + self.kb_step)
             elif ch in "dD":
-                self._kb_cmd[1] = max(-self.kb_max[1], self._kb_cmd[1] - self.kb_step)
+                self._kb_cmd[1] = max(self.cmd_min[1], self._kb_cmd[1] - self.kb_step)
             elif ch in "qQ":
-                self._kb_cmd[2] = min(self.kb_max[2], self._kb_cmd[2] + self.kb_step)
+                self._kb_cmd[2] = min(self.cmd_max[2], self._kb_cmd[2] + self.kb_step)
             elif ch in "eE":
-                self._kb_cmd[2] = max(-self.kb_max[2], self._kb_cmd[2] - self.kb_step)
+                self._kb_cmd[2] = max(self.cmd_min[2], self._kb_cmd[2] - self.kb_step)
             elif ch == " ":
                 self._kb_cmd[:] = 0.0
             elif ch in "pP":
@@ -413,15 +425,22 @@ class RL_real(Node):
                 self._reset()
 
     # ------------------------------------------------------------------ 记录
+    @staticmethod
+    def _write_log(path, header, rows):
+        with open(path, "w", newline="") as log_f:
+            writer = csv.writer(log_f)
+            writer.writerow(header)
+            for i, row in enumerate(iter(rows.get, None), 1):
+                writer.writerow(row)
+                if i % 50 == 0:
+                    log_f.flush()
+
     def _open_log(self):
         os.makedirs(self.log_dir, exist_ok=True)
         ts = datetime.datetime.now().strftime("%Y%m%d_%H%M%S")
         self._log_path = os.path.join(self.log_dir, f"{ts}.csv")
-        self._log_f = open(self._log_path, "w", newline="")
-        self._log_w = csv.writer(self._log_f)
-        self._log_w.writerow(
-            ["t", "cmd_vx", "cmd_vy", "cmd_yaw", "wx", "wy", "wz",
-             "qw", "qx", "qy", "qz", "gx", "gy", "gz"]
+        header = (["t", "cmd_vx", "cmd_vy", "cmd_yaw", "wx", "wy", "wz",
+                   "qw", "qx", "qy", "qz", "gx", "gy", "gz"]
             + [f"q{i}" for i in range(12)]                     # 关节位置(实机序)
             + [f"qd{i}" for i in range(12)]                    # obs 用的关节速度(实机序; derived 或电机)
             + [f"mvel{i}" for i in range(12)]                  # 电机上报原始速度 msg.velocity(实机序)
@@ -429,10 +448,16 @@ class RL_real(Node):
             + [f"obs{i}" for i in range(self.num_obs)]         # 单帧观测(仿真序)
             + [f"act{i}" for i in range(self.num_actions)]     # 策略动作(仿真序)
             + [f"cmd{i}" for i in range(self.num_actions)])    # 下发目标角(实机序)
+        # ponytail: 不设上限，保证控制线程绝不等待磁盘；持续数小时部署时再改成有界丢行队列。
+        self._log_queue = queue.SimpleQueue()
+        thread = threading.Thread(
+            target=self._write_log, args=(self._log_path, header, self._log_queue), daemon=True)
+        self._log_threads.append(thread)
+        thread.start()
         print(f"\n记录 -> {self._log_path}")
 
     def _log_row(self, terms):
-        if self._log_w is None:
+        if self._log_queue is None:
             return
         g = gravity_from_quat(self.obs_raw[3:7])
         row = ([time.monotonic() - self.run_t0, *self.cmd,
@@ -440,17 +465,26 @@ class RL_real(Node):
                 *self.obs_raw[7:19], *self.obs_raw[19:31],
                 *self._motor_vel, *self._motor_tau,
                 *np.concatenate(terms), *self.last_action, *self.target_real])
-        self._log_w.writerow([round(float(v), 6) for v in row])
-        self._log_f.flush()
+        self._log_queue.put([round(float(v), 6) for v in row])
 
     def _close_log(self):
-        if self._log_f is not None:
-            self._log_f.close()
+        if self._log_queue is not None:
+            self._log_queue.put(None)
             print(f"\n已保存 -> {self._log_path}")
-            self._log_f = self._log_w = None
+            self._log_queue = self._log_path = None
+
+    def _join_logs(self):
+        for thread in self._log_threads:
+            thread.join(timeout=2.0)
 
 
 def main(args=None):
+    # 终端设为非阻塞 cbreak, 用于读键盘。放在入口而不是模块导入阶段，便于复用和测试。
+    fd = sys.stdin.fileno()
+    old_term = termios.tcgetattr(fd)
+    old_flags = fcntl.fcntl(fd, fcntl.F_GETFL)
+    tty.setcbreak(fd)
+    fcntl.fcntl(fd, fcntl.F_SETFL, old_flags | os.O_NONBLOCK)
     rclpy.init(args=args)
     node = None
     try:
@@ -461,8 +495,9 @@ def main(args=None):
     finally:
         if node is not None:
             node._close_log()
-        termios.tcsetattr(_fd, termios.TCSADRAIN, _old_term)
-        fcntl.fcntl(_fd, fcntl.F_SETFL, _old_flags)
+            node._join_logs()
+        termios.tcsetattr(fd, termios.TCSADRAIN, old_term)
+        fcntl.fcntl(fd, fcntl.F_SETFL, old_flags)
         if rclpy.ok():
             rclpy.shutdown()
 

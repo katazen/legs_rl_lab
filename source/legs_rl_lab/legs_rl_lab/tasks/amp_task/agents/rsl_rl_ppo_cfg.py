@@ -118,3 +118,64 @@ class NlegsAmpPPORunnerCfg(BasePPORunnerCfg):
         amp_discr_hidden_dims=[1024, 512, 256],
         amp_data_dir=_AMP_MOTION_DIR,
     )
+
+
+# EngineAI 风格 AMP 专家数据 (convert_pm01_motion.py 的输出)
+_AMP_ENGINEAI_NPZ = os.path.join(
+    os.path.dirname(os.path.dirname(os.path.abspath(__file__))),
+    "datasets", "motion_amp_engineai", "nlegs_locomotion.npz",
+)
+
+
+@configclass
+class NlegsAmpEngineaiPPORunnerCfg(BasePPORunnerCfg):
+    """nlegs + EngineAI 风格 AMP (history-window)。
+
+    完全照搬 EngineAI 的接线: amp 专属参数放在 RunnerCfg 顶层(to_dict 后成为 cfg 顶层键),
+    由 amp_engineai.amp_ppo.AMPPPO.construct_algorithm 读取并构造判别器/专家数据, 再注入
+    cfg["algorithm"] 传给 __init__。算法本身是干净的 PPO cfg, 只把 class_name 指向 AMPPPO。
+
+    frame_dim=15 = joint_pos(12) + base_lin_vel_b(3); frame_length=5 -> 判别器输入 75 维。
+    style reward 为加性: total = task + 0.01*style_reward_weight*disc_reward。
+    """
+
+    experiment_name = "nlegs_amp_engineai"
+    max_iterations = 50000
+    save_interval = 100
+
+    # ---- EngineAI amp 顶层参数(construct_algorithm 从 cfg 顶层读取) ----
+    style_reward_weight: float = 2.0
+    frame_length: int = 5                       # history-window 帧数 (= AMP 观测组 history_length)
+    frame_dim: int = 15                         # 单帧维度: joint_pos(12) + base_lin_vel_b(3)
+    frame_normalization: bool = True            # 判别器内置 EmpiricalNormalization 逐帧归一化
+    discriminator_hidden_dims: list = None
+    dataset_path: str = _AMP_ENGINEAI_NPZ
+
+    # 算法: 干净 PPO cfg, class_name 指向移植的 EngineAI AMPPPO
+    algorithm = RslRlPpoAlgorithmCfg(
+        class_name="legs_rl_lab.amp_engineai.amp_ppo.AMPPPO",
+        value_loss_coef=1.0,
+        use_clipped_value_loss=True,
+        clip_param=0.2,
+        entropy_coef=0.008,            # 对齐 EngineAI (原 0.01)
+        num_learning_epochs=5,
+        num_mini_batches=4,
+        learning_rate=1.0e-3,
+        schedule="adaptive",
+        gamma=0.99,
+        lam=0.95,
+        desired_kl=0.01,
+        max_grad_norm=1.0,
+        symmetry_cfg=RslRlSymmetryCfg(
+            use_data_augmentation=True,
+            use_mirror_loss=True,
+            mirror_loss_coeff=1.0,
+            data_augmentation_func=compute_symmetric_states,
+        ),
+    )
+
+    def __post_init__(self):
+        if hasattr(super(), "__post_init__"):
+            super().__post_init__()
+        # EngineAI 判别器隐藏层
+        self.discriminator_hidden_dims = [512, 256, 128]

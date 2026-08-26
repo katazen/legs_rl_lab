@@ -38,7 +38,7 @@ class UnitreeUsdFileCfg(sim_utils.UsdFileCfg):
 
 NLEGS_CFG = UnitreeArticulationCfg(
     spawn=UnitreeUsdFileCfg(
-        usd_path=os.path.join(_ASSET_DIR, "mjcf/legs_narrow/legs_narrow.usd"),
+        usd_path=os.path.join(_ASSET_DIR, "mjcf/nlegs/nlegs.usd"),
     ),
     # In A1_legs_V2_mjcf.usd the articulation root (PhysicsArticulationRootAPI) is on the
     # `base` body at /<defaultPrim>/base/base, so relative to the spawned Robot prim it is /base/base.
@@ -60,7 +60,7 @@ NLEGS_CFG = UnitreeArticulationCfg(
             armature=0.00219,
             effort_limit_sim=5.8,
             velocity_limit_sim=14.0,
-            min_delay=4,
+            min_delay=1,
             max_delay=6,
         ),
         "delayed_dcmotor": DelayedDCMotorCfg(
@@ -89,18 +89,16 @@ NLEGS_CFG = UnitreeArticulationCfg(
                 ".*2": 0.0,
                 ".*3": 0.0,
                 ".*4": 0.0,
-                "joint_L5": 0.4,
-                "joint_R5": 0.6
+                ".*5": 0.5,
             },
             dynamic_friction={
                 ".*1": 0.0,
                 ".*2": 0.0,
                 ".*3": 0.0,
                 ".*4": 0.0,
-                "joint_L5": 0.4,
-                "joint_R5": 0.6
+                ".*5": 0.5,
             },
-            min_delay=4,
+            min_delay=1,
             max_delay=6,
         ),
     },
@@ -117,6 +115,7 @@ NLEGS_CFG = UnitreeArticulationCfg(
                      'joint_L5',
                      'joint_L6'],
 )
+
 NLEGS_FIX_CFG = UnitreeArticulationCfg(
     spawn=UnitreeUsdFileCfg(
         usd_path=os.path.join(_ASSET_DIR, "mjcf/legs_narrow/legs_narrow.usd"),
@@ -139,6 +138,7 @@ NLEGS_FIX_CFG = UnitreeArticulationCfg(
             armature=0.00219,
             effort_limit_sim=5.8,
             velocity_limit_sim=14.0,
+            viscous_friction=0.54,  # 踝roll 粘滞摩擦, Stage3B 回放验证(RMSE 0.19->0.05)
             min_delay=4,
             max_delay=6,
         ),
@@ -146,7 +146,7 @@ NLEGS_FIX_CFG = UnitreeArticulationCfg(
             joint_names_expr=[".*1", ".*2", ".*3", ".*4", ".*5"],
             effort_limit=26.0,
             saturation_effort=26.0,
-            velocity_limit=3.4,
+            velocity_limit=7.0,
             stiffness={
                 ".*1": 200.0,
                 ".*2": 100.0,

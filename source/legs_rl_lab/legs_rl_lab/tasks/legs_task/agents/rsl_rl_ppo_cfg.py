@@ -32,6 +32,7 @@ class BasePPORunnerCfg(RslRlOnPolicyRunnerCfg):
     num_steps_per_env = 24
     max_iterations = 50000
     save_interval = 100
+    clip_actions = 5.0
     experiment_name = "legs"
     actor = MLPActorCfg(
         hidden_dims=[512, 256, 128],
@@ -68,3 +69,21 @@ class BasePPORunnerCfg(RslRlOnPolicyRunnerCfg):
 class NlegsPPORunnerCfg(BasePPORunnerCfg):
     """窄本体变体，仅日志实验名不同（其余复用 Base）。"""
     experiment_name = "nlegs"
+
+
+@configclass
+class NlegsRoughPPORunnerCfg(BasePPORunnerCfg):
+    """窄本体 rough 地形变体，仅日志实验名不同（其余复用 Base）。"""
+    experiment_name = "nlegs_rough"
+
+
+@configclass
+class NlegsTestPPORunnerCfg(BasePPORunnerCfg):
+    """窄本体理想执行器测试。"""
+    experiment_name = "nlegs_test"
+
+
+@configclass
+class NlegsBodyPPORunnerCfg(BasePPORunnerCfg):
+    """新本体任务，仅使用独立的实验名。"""
+    experiment_name = "nlegs_body"

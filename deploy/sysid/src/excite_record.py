@@ -7,7 +7,8 @@
 订阅 /left_joint_states 记录 q/v/tau。对指定关节叠加 阶跃/正弦/扫频 激励,
 其余关节保持起始姿态。同步把 命令 与 状态 写入两份带时间戳的 CSV, 供仿真回放对齐。
 
-安全: 所有命令对被测关节做硬限幅 (base ± max_dev); 起始先缓升到 base。
+安全: 命令对被测关节做硬限幅 (base ± max_dev); 可用 response_max_dev 监控实际反馈越界;
+起始先缓升到 base。
 坏帧检测: 按电机型号的 Q/DQ/TAU 量程判断 railing, 跑完报告坏帧率。
 
 用法示例 (先 source ROS2 与 control_ws):
@@ -19,6 +20,7 @@
   python3 excite_record.py --joint 3 --mode sine --freqs 0.5,1,2,3 --amp 0.15 --cycles 6
 """
 import argparse
+import csv
 import math
 import os
 import time
@@ -83,6 +85,38 @@ def build_excitation(args):
             return args.amp * math.sin(phase)
         return fn, T
 
+    if args.mode == "replay":
+        if not args.source_csv:
+            raise ValueError("replay 模式必须提供 --source-csv")
+        rows = list(csv.DictReader(open(args.source_csv)))
+        col = f"cmd{args.joint}"
+        if not rows or col not in rows[0]:
+            raise ValueError(f"{args.source_csv} 中没有 {col}")
+        src_t = np.array([float(r["t"]) for r in rows])
+        src = np.array([float(r[col]) for r in rows])
+        keep = (src_t >= args.source_start) & (src_t <= args.source_end)
+        if keep.sum() < 2:
+            raise ValueError("--source-start/--source-end 选中的回放点不足 2 个")
+        src_t, src = src_t[keep], src[keep]
+        src_t -= src_t[0]
+
+        # 重建部署链: 50Hz 原始策略目标 ZOH -> 200Hz target EMA。
+        grid = np.arange(0.0, src_t[-1] + 0.5 / args.rate, 1.0 / args.rate)
+        raw = src[np.maximum(0, np.searchsorted(src_t, grid, side="right") - 1)]
+        base_j = float(args.base[args.joint]) if args.base is not None else 0.0
+        filt = np.empty_like(raw)
+        prev = base_j
+        for i, value in enumerate(raw):
+            prev += args.ema_alpha * (value - prev)
+            filt[i] = prev
+        offset = filt - base_j
+        print(f"[replay] {col}: {src_t[-1]:.2f}s, raw=[{src.min():.3f},{src.max():.3f}]rad, "
+              f"EMA alpha={args.ema_alpha:g}, publish={args.rate:g}Hz")
+
+        def fn(t):
+            return float(np.interp(min(t, grid[-1]), grid, offset))
+        return fn, float(grid[-1])
+
     raise ValueError(f"未知 mode: {args.mode}")
 
 
@@ -97,6 +131,31 @@ def read_joint_limit(j, urdf_dir):
             lim = jt.find("limit")
             return name, float(lim.get("lower")), float(lim.get("upper"))
     raise ValueError(f"URDF 中未找到关节 {name}")
+
+
+def response_limit_exceeded(q, base, limit):
+    """反馈看门狗判定。0 表示关闭。
+
+    >>> response_limit_exceeded(0.061, 0.0, 0.06)
+    True
+    >>> response_limit_exceeded(1.0, 0.0, 0.0)
+    False
+    """
+    return limit > 0 and abs(q - base) > limit
+
+
+def held_joint_limit_violation(q, base, tested, limit):
+    """返回越界的非测试关节 ``(idx, deviation)``，关闭时返回 None。
+
+    >>> held_joint_limit_violation(np.array([.09, .2]), np.zeros(2), 1, .08)
+    (0, 0.09)
+    >>> held_joint_limit_violation(np.ones(2), np.zeros(2), 0, 0)
+    """
+    if limit <= 0:
+        return None
+    dev = np.abs(q - base); dev[tested] = 0.0
+    k = int(np.argmax(dev))
+    return (k, float(dev[k])) if dev[k] > limit else None
 
 
 class ExciteRecorder(Node):
@@ -131,7 +190,7 @@ class ExciteRecorder(Node):
                 sc = self.safe_amp / mx
                 args.levels = ",".join(f"{v*sc:.4f}" for v in levels)
                 self.get_logger().warn(f"step 幅值 {mx:.3f} 超安全值, 整体×{sc:.2f} → 最大 {self.safe_amp:.3f}")
-        elif args.amp > self.safe_amp:   # sine / chirp
+        elif args.mode in ("sine", "chirp") and args.amp > self.safe_amp:
             self.get_logger().warn(f"amp {args.amp:.3f} 超安全值, 收紧到 {self.safe_amp:.3f}")
             args.amp = self.safe_amp
         args.max_dev = min(args.max_dev, self.safe_amp)   # 硬限幅 backstop
@@ -143,6 +202,7 @@ class ExciteRecorder(Node):
         self.state_log = []           # (t, phase, q[12], v[12], tau[12])
         self.bad = 0
         self.nframe = 0
+        self.abort_reason = None
 
         self.phase = "wait"
         self.done = False
@@ -202,6 +262,22 @@ class ExciteRecorder(Node):
         if self.t0 is not None:
             self.state_log.append((time.monotonic() - self.t0, self.phase, q, v, tau))
 
+        limit = self.args.response_max_dev
+        if self.phase == "excite" and response_limit_exceeded(q[self.j], self.base[self.j], limit):
+            self.abort_reason = (f"反馈越界: |q[{self.j}]-base|="
+                                 f"{abs(q[self.j] - self.base[self.j]):.4f}rad > {limit:.4f}rad")
+            self.get_logger().error(self.abort_reason + "; 返回基准位并停止")
+            self._goto("abort", time.monotonic())
+        elif self.phase == "excite":
+            violation = held_joint_limit_violation(
+                q, self.base, self.j, self.args.hold_max_dev)
+            if violation:
+                k, dev = violation
+                self.abort_reason = (f"保持关节越界: |q[{k}]-base|="
+                                     f"{dev:.4f}rad > {self.args.hold_max_dev:.4f}rad")
+                self.get_logger().error(self.abort_reason + "; 返回基准位并停止")
+                self._goto("abort", time.monotonic())
+
     # ---- 控制循环: 状态机 + 发布命令 ----
     def _tick(self):
         if self.base is None:
@@ -231,6 +307,10 @@ class ExciteRecorder(Node):
             if a >= 1.0:
                 self._finish()
                 return
+        elif self.phase == "abort":
+            if tph >= 1.0:
+                self._finish()
+                return
 
         m = Float64MultiArray()
         m.data = cmd.tolist()
@@ -251,8 +331,9 @@ class ExciteRecorder(Node):
         self.phase = "done"
         self._save()
         rate = 100.0 * self.bad / max(self.nframe, 1)
-        self.get_logger().info(f"完成。状态帧={self.nframe}  坏帧率={rate:.2f}%  "
-                               f"({'数据可信' if rate < 1 else '坏帧偏高, 数据需谨慎(疑似串口后端)'})")
+        status = f"中止({self.abort_reason})" if self.abort_reason else "完成"
+        self.get_logger().info(f"{status}。状态帧={self.nframe}  坏帧率={rate:.2f}%  "
+                               f"({'数据可信' if rate < 1 and not self.abort_reason else '数据不完整或需谨慎'})")
         self.done = True   # 通知 main 循环退出(不在回调里直接 shutdown, 否则 spin 不干净返回)
 
     def _save(self):
@@ -277,11 +358,15 @@ class ExciteRecorder(Node):
 def main():
     p = argparse.ArgumentParser()
     p.add_argument("--joint", type=int, required=True, help="被测关节 idx 0-11 (实机序 L1..L6,R1..R6)")
-    p.add_argument("--mode", choices=["step", "sine", "chirp"], required=True)
+    p.add_argument("--mode", choices=["step", "sine", "chirp", "replay"], required=True)
     p.add_argument("--node-name", type=str, default="armcontrol_node", help="被查询增益的控制节点名")
     p.add_argument("--param-timeout", type=float, default=5.0, help="读取节点 kps/kds 参数的超时(秒)")
-    p.add_argument("--rate", type=float, default=200.0, help="命令发布频率 Hz")
-    p.add_argument("--max-dev", type=float, default=0.4, help="被测关节相对 base 的硬限幅 (rad)")
+    p.add_argument("--rate", type=float, default=200.0, help="命令发布频率 Hz (当前辨识基线与部署下发频率均为 200Hz)")
+    p.add_argument("--max-dev", type=float, default=0.4, help="被测关节命令相对 base 的硬限幅 (rad)")
+    p.add_argument("--response-max-dev", type=float, default=0.0,
+                   help="实际反馈相对 base 的停止阈值(rad); 0=关闭")
+    p.add_argument("--hold-max-dev", type=float, default=0.0,
+                   help="非测试关节实际反馈相对 base 的停止阈值(rad); 0=关闭")
     p.add_argument("--ramp", type=float, default=2.0, help="起始缓升时长 s")
     p.add_argument("--settle", type=float, default=1.0, help="缓升后静置 s")
     p.add_argument("--base", type=str, default=None, help="可选: 12 维 base 姿态, 逗号分隔; 缺省=首帧实测")
@@ -292,7 +377,7 @@ def main():
     p.add_argument("--suffix", type=str, default="", help="文件名后缀(区分同关节同模式的多次实验,如 fwd/rev)")
     p.add_argument("--limit-frac", type=float, default=0.5, help="激励幅度上限占 base 两侧余量的比例(默认0.5)")
     p.add_argument("--urdf-dir", type=str,
-                   default="control_ws/install/armcontrol/share/armcontrol/urdf/v3.2",
+                   default="deploy/control_ws/src/armcontrol/urdf/v3.2",
                    help="读关节限位的 URDF 目录")
     # step
     p.add_argument("--levels", type=str, default="0.1,0.2,0.3,-0.1,-0.2,-0.3")
@@ -310,7 +395,14 @@ def main():
     p.add_argument("--f0", type=float, default=0.3)
     p.add_argument("--f1", type=float, default=5.0)
     p.add_argument("--dur", type=float, default=20.0)
+    # replay: 从部署 CSV 读取当前关节 cmdN，并重建部署端 200Hz EMA。
+    p.add_argument("--source-csv", type=str, default=None)
+    p.add_argument("--source-start", type=float, default=-float("inf"))
+    p.add_argument("--source-end", type=float, default=float("inf"))
+    p.add_argument("--ema-alpha", type=float, default=0.5)
     args = p.parse_args()
+    if not 0 < args.ema_alpha <= 1:
+        p.error("--ema-alpha 必须在 (0, 1] 内")
     if args.base is not None:
         args.base = [float(x) for x in args.base.split(",")]
         assert len(args.base) == 12

@@ -7,7 +7,7 @@
 - 顺序换算: deploy.yaml 为 SDK/mjc 序 [R1..R6, L1..L6];
   armcontrol 双腿为 [L1..L6, R1..R6] -> 交换两个 6 元块。
 - 写入 armcontrol yaml 的【源】与【install】两份 (armcontrol 运行时读 install)。
-  max_vel 保留原值 (部署侧选择, 不在 deploy.yaml)。
+  max_vel 与 enable_dual_leg_diag 保留原值 (部署侧选择, 不在 deploy.yaml)。
 
 在 start_real.sh 启动 armcontrol 之前调用。
 """
@@ -36,11 +36,14 @@ def main():
     kps = st[6:12] + st[0:6]
     kds = dm[6:12] + dm[0:6]
 
-    # 保留原 max_vel
+    # 保留部署侧参数
     max_vel = 0.0
+    enable_diag = False
     if os.path.exists(ARM_SRC):
         prev = yaml.safe_load(open(ARM_SRC)) or {}
-        max_vel = prev.get("armcontrol_node", {}).get("ros__parameters", {}).get("max_vel", 0.0)
+        params = prev.get("armcontrol_node", {}).get("ros__parameters", {})
+        max_vel = params.get("max_vel", 0.0)
+        enable_diag = params.get("enable_dual_leg_diag", False)
 
     text = (
         "armcontrol_node:\n"
@@ -49,6 +52,7 @@ def main():
         f"    kps: {kps}\n"
         f"    kds: {kds}\n"
         f"    max_vel: {max_vel}\n"
+        f"    enable_dual_leg_diag: {str(enable_diag).lower()}\n"
     )
     for p in (ARM_SRC, ARM_INSTALL):
         if os.path.isdir(os.path.dirname(p)):
@@ -57,7 +61,7 @@ def main():
             print(f"[sync_pd] 写入 {p}")
     print(f"[sync_pd] run={cfg['run']}")
     print(f"[sync_pd] kps={kps}")
-    print(f"[sync_pd] kds={kds}  max_vel={max_vel}")
+    print(f"[sync_pd] kds={kds}  max_vel={max_vel}  enable_dual_leg_diag={enable_diag}")
 
 
 if __name__ == "__main__":

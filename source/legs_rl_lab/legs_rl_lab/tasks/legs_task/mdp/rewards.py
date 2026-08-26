@@ -49,6 +49,14 @@ def ang_vel_y(env: ManagerBasedRLEnv, asset_cfg: SceneEntityCfg = SceneEntityCfg
     asset: RigidObject = env.scene[asset_cfg.name]
     return torch.square(asset.data.root_ang_vel_b[:, 1])
 
+def base_lateral_move_l2(env: ManagerBasedRLEnv, asset_cfg: SceneEntityCfg = SceneEntityCfg("robot")) -> torch.Tensor:
+    """无 y 速度命令时惩罚 base 体系左右(y)线速度, 抑制身体左右平移/漂移。
+    体系 y 速度对纯前进/转向都应≈0, 故用 base 体系而非世界系; 有横移命令(|cmd_y|>=0.1)时自动关闭, 不干扰主动横移。"""
+    asset: RigidObject = env.scene[asset_cfg.name]
+    lateral_vel_sq = torch.square(asset.data.root_lin_vel_b[:, 1])
+    y_vel_flag = torch.abs(env.command_manager.get_command("base_velocity")[:, 1]) < 0.1
+    return lateral_vel_sq * y_vel_flag
+
 def joint_vel_l2(env: ManagerBasedRLEnv, asset_cfg: SceneEntityCfg = SceneEntityCfg("robot")) -> torch.Tensor:
     asset: Articulation = env.scene[asset_cfg.name]
     return torch.sum(torch.square(asset.data.joint_vel[:, asset_cfg.joint_ids]), dim=1)
@@ -295,6 +303,57 @@ def feet_flat(env: ManagerBasedRLEnv, asset_cfg: SceneEntityCfg = SceneEntityCfg
 #     gravity_dir_w = torch.tensor([0.0, 0.0, -1.0], device=env.device)
 #     gravity = quat_apply_inverse(foot_quat, gravity_dir_w.repeat(env.num_envs, 2, 1))
 #     return torch.sum(torch.square(gravity[:, :, :2]), dim=(1, 2))
+
+
+def feet_flat_on_contact(
+    env: ManagerBasedRLEnv,
+    sensor_cfg: SceneEntityCfg,
+    asset_cfg: SceneEntityCfg = SceneEntityCfg("robot"),
+    roll_weight: float = 1.0,
+    pitch_weight: float = 0.3,
+    contact_threshold: float = 1.0,
+) -> torch.Tensor:
+    """脚触地时惩罚脚底相对地面的倾斜, 使脚底 3 根碰撞胶囊均匀受力、完全贴平。
+
+    脚底碰撞模型是 3 根平行胶囊, 同属一个刚体 Link_*6:
+      - 沿脚的 X 轴(前后, 脚跟->脚尖)延伸;
+      - 在 Y 轴(左右)排布于 +0.03 / 0 / -0.03。
+    接触传感器只能读整只脚的净力、读不到单根胶囊, 故用姿态等价刻画"均匀受力":
+      - roll  (绕脚长轴 X 的侧倾, = 世界重力在脚系的 Y 分量): 侧倾会把一侧胶囊抬离地面、
+              只剩另一侧受力 -> 主项, 管"左右三根均匀受力";
+      - pitch (绕 Y 的前后倾, = 世界重力在脚系的 X 分量): 前后倾让每根胶囊只有脚跟或
+              脚尖着地 -> 管"每根胶囊前后均匀受力"。
+    只在脚**触地**(净接触力 > contact_threshold)时惩罚, 摆动腿姿态不管(不与抬脚/步态冲突)。
+
+    注意:
+      - roll_weight 应显著大于 pitch_weight —— 蹬地末期(toe-off)脚会自然前后倾一下,
+        pitch 罚太重会压制正常蹬地推进; 而着地期侧倾(roll)几乎总是坏的(崴脚/单侧受力)。
+      - 用世界重力方向 => 目标是"平行世界水平面"。仅平地正确; 斜坡/台阶(nlegs_rough)上应改成
+        相对地形表面法线(需地形/接触法线), 届时可另写地形相对版或在坡上调低权重。
+    返回每个环境两脚的倾斜惩罚之和(在 cfg 里配负权重)。
+    """
+    asset: RigidObject = env.scene[asset_cfg.name]
+    contact_sensor: ContactSensor = env.scene.sensors[sensor_cfg.name]
+
+    # 触地掩码: 该脚净接触力历史最大值 > 阈值(与 feet_slide 同款) -> [envs, feet]
+    in_contact = (
+        contact_sensor.data.net_forces_w_history[:, :, sensor_cfg.body_ids, :]
+        .norm(dim=-1)
+        .max(dim=1)[0]
+        > contact_threshold
+    )
+
+    # 脚底相对世界水平面的倾斜: 把世界重力方向转到脚体坐标系
+    num_feet = len(asset_cfg.body_ids)
+    foot_quat = asset.data.body_quat_w[:, asset_cfg.body_ids, :]  # [envs, feet, 4]
+    gravity_dir_w = torch.tensor([0.0, 0.0, -1.0], device=env.device).repeat(env.num_envs, num_feet, 1)
+    gravity_b = quat_apply_inverse(foot_quat, gravity_dir_w)  # [envs, feet, 3]
+
+    pitch_error = torch.square(gravity_b[:, :, 0])  # X 分量 -> 前后倾(脚跟/脚尖)
+    roll_error = torch.square(gravity_b[:, :, 1])   # Y 分量 -> 侧倾(左右三根)
+    tilt = roll_weight * roll_error + pitch_weight * pitch_error
+
+    return torch.sum(tilt * in_contact.float(), dim=1)
 
 
 def feet_stumble(env: ManagerBasedRLEnv, sensor_cfg: SceneEntityCfg) -> torch.Tensor:
