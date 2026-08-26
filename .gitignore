@@ -15,8 +15,6 @@
 **/*.usdz
 **/*.usd.bak
 
-# 例外: nlegs 窄本体资产 USD 需入库 (sim 依赖, nlegs.py 加载 mjcf/legs_narrow/legs_narrow.usd)
-!source/legs_rl_lab/legs_rl_lab/assets/legs_narrow/mjcf/legs_narrow/**/*.usd
 # 例外: nlegs 自包含资产包 USD 需入库 (assets/nlegs/nlegs.py 加载 mjcf/nlegs/nlegs.usd)
 !source/legs_rl_lab/legs_rl_lab/assets/nlegs/mjcf/nlegs/**/*.usd
 
@@ -80,3 +78,18 @@ tests/
 # TacSL sensor
 **/tactile_record/*
 **/gelsight_r15_data/*
+
+# ===== 只同步 nlegs 主线: tasks 只留 nlegs_task, assets 只留 nlegs;
+# amp/amp_engineai/sysid 及其脚本不再入库 (本地文件保留) =====
+source/legs_rl_lab/legs_rl_lab/tasks/*
+!source/legs_rl_lab/legs_rl_lab/tasks/__init__.py
+!source/legs_rl_lab/legs_rl_lab/tasks/nlegs_task/
+source/legs_rl_lab/legs_rl_lab/assets/*
+!source/legs_rl_lab/legs_rl_lab/assets/__init__.py
+!source/legs_rl_lab/legs_rl_lab/assets/nlegs/
+source/legs_rl_lab/legs_rl_lab/amp/
+source/legs_rl_lab/legs_rl_lab/amp_engineai/
+scripts/amp/
+scripts/amp_engineai/
+deploy/sysid/
+deploy/SYSID_HANDOFF.md

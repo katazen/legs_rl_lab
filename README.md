@@ -1,10 +1,10 @@
 # legs_rl_lab
 
-> 基于 [Isaac Lab](https://isaac-sim.github.io/IsaacLab/) 的双足腿式机器人强化学习工程：用 PPO / AMP（rsl_rl）在 GPU 并行仿真中训练腿式本体的速度跟踪 locomotion 策略，内置参数化步态时钟、左右对称数据增强、MuJoCo sim2sim 验证，以及一套完整的 **ROS 2 实机部署栈**（IMU → 电机驱动 → RL 策略，键盘/手柄控速）。
+> 基于 [Isaac Lab](https://isaac-sim.github.io/IsaacLab/) 的双足腿式机器人强化学习工程：用 PPO（rsl_rl）在 GPU 并行仿真中训练 12-DOF 窄本体双足（nlegs）的速度跟踪 locomotion 策略，内置参数化步态时钟、左右对称数据增强、延迟执行器建模、rough 地形课程、MuJoCo sim2sim 验证，以及一套完整的 **ROS 2 实机部署栈**（IMU → 电机驱动 → RL 策略，键盘/手柄控速）。
 
 ![Isaac Sim](https://img.shields.io/badge/Isaac%20Sim-4.5%20%7C%205.x-76b900)
 ![Python](https://img.shields.io/badge/Python-3.10%20%7C%203.11-blue)
-![RL](https://img.shields.io/badge/RL-rsl__rl%20PPO%20%2F%20AMP-orange)
+![RL](https://img.shields.io/badge/RL-rsl__rl%20PPO-orange)
 ![Deploy](https://img.shields.io/badge/Deploy-ROS%202%20Humble-22314e)
 [![Stars](https://img.shields.io/github/stars/katazen/legs_rl_lab?style=social)](https://github.com/katazen/legs_rl_lab)
 
@@ -14,12 +14,14 @@
 
 ## ✨ 项目亮点
 
-- **两种训练范式**：常规 PPO 速度跟踪（`legs` / `nlegs`），以及 **AMP（对抗式动作先验）** 走路任务 `nlegs_amp`——专家动作由 TienKung-Lab 的 walk 轨迹重定向到窄本体，判别器提供风格奖励。
+- **自包含任务包 `nlegs_task`**：平地任务 `nlegs_flat` 的场景 / 观测 / 奖励 / 事件 / 课程全部就地展开，不依赖任何外部任务基类，改哪看哪；rough 地形任务 `nlegs_rough` 在其上继承，只叠加地形与因地形而变的奖励项。
+- **自包含机器人资产 `assets/nlegs`**：MJCF / USD / STL 全部入库（`.gitignore` 有对应例外），`usd_path` 按 `__file__` 相对解析，克隆即用不需改路径；三组执行器参数（腿部 DC 电机 / 踝 pitch / 踝 roll）直接烘入 `nlegs.py` 的 `ArticulationCfg`。
+- **面向真机的执行器建模**：自定义 `DelayedDCMotorCfg`（通信延迟 + 转矩-转速滚降曲线，参数来自实机辨识），域随机化留在 event 项里——"该在什么地方就放什么地方"。
 - **参数化步态时钟**：步态周期 / 支撑相占比 / 左右相位偏移收敛到 `GaitCfg`，随 `env.yaml` 落盘，训练与部署逐位可复现（相位仅由 episode 时间与周期决定，不靠计数器堆积）。
-- **面向真机的奖励设计**：速度跟踪 + 姿态 + 足部间距 / 打滑 / 接触力 / 触地相位匹配等成套奖励，AMP 任务另移植了 TienKung 的相位步态（frc/spd/support）与接触力子步平均。
-- **左右对称增强**：内置矢状面镜像数据增强（rsl_rl symmetry），提升步态对称性与样本效率。
-- **端到端 sim2sim → sim2real**：MuJoCo 独立回放脚本做部署前验证；ROS 2 部署栈把导出的 `policy` 直接跑上真机，训练/仿真/实机三方相位对齐。
-- **单一真源部署**：部署只需在一个 yaml 里填 `run` 目录名，模型的默认站姿 / 观测顺序与 scale / history / action_scale / 步态周期 / PD 增益全部从训练 run 的 `params/deploy.yaml` 自动读取。
+- **左右对称增强**：内置矢状面镜像数据增强 + 镜像损失（rsl_rl symmetry），提升步态对称性与样本效率。
+- **盲走 rough 地形课程**：`nlegs_rough` 按 0.58 m 小机身温和缩放地形（台阶 ≤12 cm、坡 ≤17°），策略保持盲走（仅 IMU + 关节，可直接上真机）；height_scanner 只用于地形相对高度奖励与"走得远升难度"课程。
+- **端到端 sim2sim → sim2real**：MuJoCo 独立回放脚本做部署前验证（配置全部读训练 run 的 `deploy.yaml`，带原点坐标轴与速度跟踪箭头可视化）；ROS 2 部署栈把导出的 `policy` 直接跑上真机。
+- **单一真源部署**：部署只需在一个 yaml 里填 `run` 目录名，模型的默认站姿 / 观测顺序与 scale / history / action_scale / 步态周期 / PD 增益 / 执行器延迟全部从训练 run 的 `params/deploy.yaml` 自动读取。
 
 ---
 
@@ -40,53 +42,46 @@ cd legs_rl_lab
 python -m pip install -e source/legs_rl_lab
 ```
 
-> ⚠️ 机器人 USD 不入库（见 `.gitignore`，`nlegs` 的 MJCF/USD 资产有例外已入库）。`legs` 需在本地先由 MJCF 生成 USD（`assets/legs_URDF/`）；`nlegs` 资产在 `assets/legs_narrow/`。资产配置里的 `usd_path` 为绝对路径，克隆到别的机器后请改成本机实际路径。
+> 机器人资产（MJCF/USD/STL）已随 `assets/nlegs/` 整体入库，`usd_path` 相对包内解析，克隆到任何机器都无需改路径。
 
 ---
 
 ## 🚀 快速开始（训练 / 回放）
 
-> 下面命令里的 `python` 均指“装有 Isaac Lab 的解释器”。若不在 conda/venv，请替换为 `FULL_PATH_TO/isaaclab.sh -p`。
+> 下面命令里的 `python` 均指"装有 Isaac Lab 的解释器"。若不在 conda/venv，请替换为 `FULL_PATH_TO/isaaclab.sh -p`。
 
 ```bash
-# 训练：窄本体速度跟踪，4096 环境，无头模式
-python scripts/rsl_rl/train.py --task nlegs --headless --num_envs 4096
+# 训练：平地速度跟踪，4096 环境，无头模式
+python scripts/rsl_rl/train.py --task nlegs_flat --headless --num_envs 4096
 
-# 训练：AMP 走路（判别器 + 专家数据自动加载）
-python scripts/rsl_rl/train.py --task nlegs_amp --headless --num_envs 4096
+# 训练：rough 地形（生成器地形 + 难度课程，奖励已按地形调整）
+python scripts/rsl_rl/train.py --task nlegs_rough --headless --num_envs 4096
 
-# 回放 / 评估已训练策略（少量环境、可实时观看）
-python scripts/rsl_rl/play.py --task nlegs --num_envs 32 --real-time
+# 回放 / 评估已训练策略（少量环境、可实时观看，同时导出 exported/policy.pt）
+python scripts/rsl_rl/play.py --task nlegs_flat --num_envs 32 --real-time
 
 # 冒烟测试：确认环境能正常起（零动作 / 随机动作）
-python scripts/zero_agent.py --task nlegs --num_envs 16
-python scripts/random_agent.py --task nlegs --num_envs 16
+python scripts/zero_agent.py --task nlegs_flat --num_envs 16
+python scripts/random_agent.py --task nlegs_flat --num_envs 16
 ```
 
-常用训练参数：`--task {legs,legs_dr,nlegs,nlegs_amp,g1qie}`、`--num_envs`、`--max_iterations`、`--seed`、`--headless`、`--video`（录制训练视频）。
+常用训练参数：`--task {nlegs_flat,nlegs_rough}`、`--num_envs`、`--max_iterations`、`--seed`、`--headless`、`--video`（录制训练视频）。
 
-训练产物默认写到 `logs/rsl_rl/<experiment_name>/<时间戳>/`：
+训练产物默认写到 `logs/rsl_rl/<experiment_name>/<时间戳>/`（`nlegs_flat` / `nlegs_rough`）：
 - `params/env.yaml` —— 完整环境配置（含 `gait` 步态参数）。
-- `params/deploy.yaml` —— 部署单一真源（默认站姿 / 观测规格 / action_scale / 步态周期 / PD 增益）。
+- `params/deploy.yaml` —— 部署单一真源（默认站姿 / 观测规格 / action_scale / 步态周期 / PD 增益 / 执行器分组与延迟）。
 - `exported/policy.pt`（及 `policy.onnx`，若导出）—— 推理模型。
-
-### AMP 走路（`nlegs_amp`）
-
-AMP 相关约定见项目记忆与代码，核心：
-- **数据**：`scripts/amp/convert_tienkung_motion.py` 把 TienKung `walk.txt` 转成 30 维专家轨迹
-  （关节位置 12 + 关节速度 12 + 左右脚 base 系 xyz 6），存到 `tasks/amp_task/datasets/motion_amp_expert/nlegs_walk.txt`；
-  `scripts/amp/replay_amp_motion.py` 可在 MuJoCo 里回放校验。
-- **算法**：`source/legs_rl_lab/legs_rl_lab/amp/` 里的 `AMPPPO` 最小化继承 rsl_rl 5.0.1 的 PPO，判别器用独立 Adam；
-  AMP 观测走名为 `"amp"` 的观测组，靠 `obs["amp"]` 取用，不改 `train.py`。
-- **任务**：`tasks/amp_task/task/nlegs/nlegs_env_cfg.py` 自包含（scene / 三组观测 policy+critic+amp / 奖励移植自 TienKung walk_cfg）。
 
 ### sim2sim（MuJoCo 部署前验证）
 
 ```bash
-python source/legs_rl_lab/legs_rl_lab/tasks/legs_task/task/nlegs/sim2sim.py
+python source/legs_rl_lab/legs_rl_lab/tasks/nlegs_task/task/flat/sim2sim.py [--run RUN] [--headless] [--save-data]
 ```
 
-> sim2sim 需要窄本体的 scene xml 与 nlegs 导出的 `policy`，脚本顶部 `SimToSimCfg` 里配置模型/网络路径。相位按 `elapsed_time / period` 推进，与实机部署节点逐位对齐。
+- **配置零手填**：关节映射 / PD / 执行器力矩模型（含 DC 滚降与分组延迟）/ action scale / 观测历史 / 命令范围全部从 `<run>/params/deploy.yaml` 读取，需要自己改的只有脚本最前面一个标注块（run 目录、场景 xml、键盘绑定、可视化参数）。
+- **可视化**：世界原点画 RGB 三轴箭头（x红 y绿 z蓝）；机身上方画速度跟踪箭头——绿 = 命令速度、蓝 = 实际速度，两箭头重合即跟踪良好。
+- **遥控**：小键盘 `8/2` 前后、`4/6` 左右、`7/9` 转向；`--save-data` 结束时输出关节跟踪 CSV 与 RMSE 图到 `<run>/sim2sim/<时间戳>/`。
+- 按文件路径直接运行（不要 `python -m` 走包导入，包初始化会拉起 Isaac Lab）。
 
 ---
 
@@ -105,8 +100,8 @@ python source/legs_rl_lab/legs_rl_lab/tasks/legs_task/task/nlegs/sim2sim.py
 部署时**通常只改** `deploy/rl_real_py/configs/common.yaml` 里的 `run`（训练时间戳目录名）与 `logs_root`：
 
 ```yaml
-run: 2026-07-30_18-18-58
-logs_root: logs/rsl_rl/nlegs
+run: 2026-08-26_13-57-34
+logs_root: logs/rsl_rl/nlegs_flat
 ```
 
 模型侧参数（默认站姿、观测顺序+scale、history、action_scale、步态周期、step_dt、PD 增益）全部从 `<logs_root>/<run>/params/deploy.yaml` 自动读取；策略从 `<run>/exported/policy.onnx`（优先）或 `policy.pt` 加载；实机数据自动存到 `<run>/sim2real/<时间>.csv`。`common.yaml` 里其余项是**硬件相关**部署参数（下发率、EMA 平滑、关节顺序映射、安全限位、看门狗、指令零偏、键盘/手柄配置）。
@@ -150,10 +145,6 @@ cd deploy && ./stop_real.sh
 
 安全机制：数据新鲜度看门狗（关节/IMU 超 `state_timeout` 没更新则冻结指令，不拿过期观测推理）、发布安全限位、下发目标 EMA 平滑（`target_ema_alpha`，抑制推理 50Hz 与发布 200Hz 之间的阶梯抖动）。若零指令下持续漂移，可用 `cmd_bias` 做指令零偏修正。
 
-### 系统辨识（`deploy/sysid`）
-
-电机/关节的激励-辨识与 sim2real 对比工具：`excite_record.py`（激励采数）、`fit_actuator.py`（拟合电机模型）、`analyze_stepsine.py` / `bode.py`（阶跃/正弦/频响分析）、`static_zero_check.py`（静态零位/倾斜检查）、`goto_zero.py`（平滑回零）、以及 `src/plot_*` 一组踝关节 sim/real 对比绘图脚本。背景与结论见 `deploy/SYSID_HANDOFF.md`。
-
 ---
 
 ## 📁 项目结构
@@ -161,46 +152,38 @@ cd deploy && ./stop_real.sh
 ```
 legs_rl_lab/
 ├── scripts/
-│   ├── rsl_rl/               # train.py / play.py / cli_args.py
-│   ├── amp/                  # AMP 数据转换与 MuJoCo 回放
+│   ├── rsl_rl/                    # train.py / play.py / cli_args.py
 │   └── list_envs.py  zero_agent.py  random_agent.py
-├── deploy/                   # ROS 2 实机部署栈
-│   ├── imu_ws/               # IMU 驱动工作区
-│   ├── control_ws/           # armcontrol 电机驱动工作区
-│   ├── rl_real_py/           # RL 策略节点 + configs/common.yaml
-│   ├── sysid/                # 系统辨识与 sim/real 对比
-│   ├── sync_pd.py            # 从 deploy.yaml 同步 PD 到 armcontrol
+├── deploy/                        # ROS 2 实机部署栈
+│   ├── imu_ws/                    # IMU 驱动工作区
+│   ├── control_ws/                # armcontrol 电机驱动工作区
+│   ├── rl_real_py/                # RL 策略节点 + configs/common.yaml
+│   ├── sync_pd.py                 # 从 deploy.yaml 同步 PD 到 armcontrol
 │   └── start_real.sh  stop_real.sh
 └── source/legs_rl_lab/legs_rl_lab/
-    ├── amp/                  # in-repo AMPPPO（继承 rsl_rl 5.0.1）+ 判别器
-    ├── assets/
-    │   ├── legs_URDF/        # legs（A1 双腿）MJCF/STL/资产配置
-    │   └── legs_narrow/      # nlegs（窄本体）MJCF/URDF/资产配置(nlegs.py)
-    └── tasks/
-        ├── legs_task/        # 速度跟踪任务集（legs / legs_dr / nlegs …）
-        │   ├── mdp/          # rewards / observations / gait / symmetry ...
-        │   ├── agents/       # rsl_rl PPO 配置
-        │   └── task/{legs,nlegs}/
-        ├── amp_task/         # AMP 走路任务（自包含 nlegs_amp）
-        │   ├── mdp/  agents/  datasets/  task/nlegs/
-        └── g1_task/          # 任务 "g1qie"
+    ├── actuators/                 # DelayedDCMotorCfg（延迟 + 转矩-转速滚降）
+    ├── assets/nlegs/              # 自包含资产: nlegs.py(ArticulationCfg) + mjcf/ + meshes/
+    │   ├── mjcf/nlegs.xml         #   MJCF 源（nlegs_scene.xml 供 sim2sim）
+    │   └── mjcf/nlegs/nlegs.usd   #   Isaac 用 USD（已入库, 相对路径加载）
+    ├── tasks/nlegs_task/          # 自包含任务包
+    │   ├── agents/                #   rsl_rl PPO 配置（flat / rough）
+    │   ├── mdp/                   #   rewards / observations / events / gait / symmetry ...
+    │   └── task/
+    │       ├── flat/              #   nlegs_flat: 全量展开 env cfg + sim2sim.py
+    │       └── rough/             #   nlegs_rough: 继承 flat, 地形生成器 + 课程
+    └── utils/                     # parser_cfg / export_deploy_cfg（生成 deploy.yaml）
 ```
 
 ---
 
 ## 🧩 任务一览
 
-| Task id       | 机器人 | 说明 |
-|---------------|--------|------|
-| `legs`        | A1 双腿原型 | 速度跟踪 locomotion，脚间距 0.36 m |
-| `legs_dr`     | A1 双腿原型 | `legs` + 加强域随机化（质量/COM/PD/关节参数） |
-| `legs_static` | A1 双腿原型 | 站立保持变体 |
-| `nlegs`       | A1 窄本体 | 与 `legs` 共用全部 mdp/agents 与 env 配置，仅机器人资产（脚间距 ~0.22 m）和 `feet_y_distance` 目标间距不同（env_cfg 子类化继承 legs） |
-| `nlegs_static`| A1 窄本体 | 窄本体站立保持变体 |
-| `nlegs_amp`   | A1 窄本体 | **AMP 走路**：自包含 env_cfg（policy/critic/amp 三组观测），奖励移植 TienKung walk_cfg |
-| `g1qie`       | G1 | G1 相关任务 |
+| Task id       | 说明 |
+|---------------|------|
+| `nlegs_flat`  | 平地速度跟踪：全量展开配置（场景 / 25 项奖励 / 域随机化事件 / 步态时钟 / 对称增强），三组延迟执行器烘入资产 |
+| `nlegs_rough` | rough 地形：继承 flat，7 种子地形按小机身温和缩放（台阶 ≤12 cm、坡 ≤17°）+ 地形难度课程 + 摔倒终止；盲走可直接部署 |
 
-> 实机部署当前以 **nlegs** 系为主（`common.yaml` 的 `logs_root: logs/rsl_rl/nlegs`）。
+两个任务分别落盘到 `logs/rsl_rl/nlegs_flat/` 与 `logs/rsl_rl/nlegs_rough/`。
 
 ---
 
@@ -217,9 +200,6 @@ pre-commit run --all-files
 
 ---
 
-## 📝 License / 致谢
+## 📝 License
 
-- 训练框架基于 [Isaac Lab](https://github.com/isaac-sim/IsaacLab) 扩展模板，源码文件头部保留其 SPDX 许可声明，Python 包在 `setup.py` 中声明为 Apache-2.0。
-- AMP 走路的专家动作来自 [TienKung-Lab](https://github.com/) 的 walk 轨迹重定向。
-
-使用前请以各源码/数据中的实际许可声明为准。
+训练框架基于 [Isaac Lab](https://github.com/isaac-sim/IsaacLab) 扩展模板，源码文件头部保留其 SPDX 许可声明，Python 包在 `setup.py` 中声明为 Apache-2.0。使用前请以各源码/数据中的实际许可声明为准。
