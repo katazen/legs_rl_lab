@@ -25,7 +25,7 @@ import yaml
 import rclpy
 from rclpy.node import Node
 from rclpy.qos import QoSProfile
-from std_msgs.msg import Float64MultiArray
+from std_msgs.msg import Float64MultiArray, String
 from sensor_msgs.msg import JointState, Imu, Joy
 from ament_index_python.packages import get_package_share_directory
 
@@ -128,11 +128,36 @@ class RL_real(Node):
         self.default_real = self.default_sim[self.sim2real].astype(np.float32)
         self.lo = np.array(cfg["joint_lower_limits"], np.float32)
         self.hi = np.array(cfg["joint_upper_limits"], np.float32)
+        # 关节 kp: 用于把"补偿量"折算成"额外力矩", 使补偿逐关节受限而不是一个统一角度。
+        # 注意 deploy.yaml 的 stiffness 是按腿分组序(髋pitch/髋roll/髋yaw/膝/踝pitch/踝roll),
+        # 与 default_joint_pos 的 sim 交错序不同; 但左右两半数值相同, 故按实机序直接取用等价。
+        self.kp_real = np.array(dep["stiffness"], np.float32)
+        if self.kp_real.size != 12:
+            raise ValueError(f"stiffness 数量 {self.kp_real.size} != 12")
 
         # ---------- 速度来源 / 交互 / 安全 ----------
         self.use_derived_vel = bool(cfg.get("use_derived_vel", False))
         self.vel_alpha = float(cfg.get("vel_ema_alpha", 0.5))
         self.prepare_time = float(cfg.get("prepare_time", 4.0))
+        # ---------- 到位补偿 (settle): 消除静摩擦死区留下的稳态残差 ----------
+        # 背景: 踝 kp=40, 残差 0.05 rad 只产生 2 N·m, 低于实测静摩擦门槛(2~3 N·m) -> 误差就地冻结
+        # 无力自纠; 且左右残差互不相同 -> 两脚一前一后错开几 cm。原来 prepare 只按时间到点切 hold,
+        # 既不补偿也发现不了(只比"目标 vs 实测"看不出左右错位, 必须比左右镜像残差)。
+        self.settle_time = float(cfg.get("settle_time", 3.0))      # 补偿阶段最长时间 (秒)
+        self.settle_ki = float(cfg.get("settle_ki", 0.01))         # 残差积分增益 (每 tick)
+        self.settle_tol = float(cfg.get("settle_tol", 0.01))       # 残差达标阈值 (rad)
+        self.settle_tau_max = float(cfg.get("settle_tau_max", 5.0))  # 补偿引入的额外力矩上限 (N·m)
+        self.mirror_tol = float(cfg.get("mirror_tol", 0.02))       # 左右镜像残差告警阈值 (rad)
+        # 补偿上限逐关节折算: 髋pitch(kp200)->0.025, 髋roll/yaw(kp100)->0.05,
+        # 膝(kp250)->0.02, 踝pitch(kp40)->0.125 rad。踝拿到的余量最大, 正好是最需要补偿的关节。
+        # 但踝roll 的 effort 上限只有 5.8 N·m(其余 sim 侧写 1e9, 实际受电机物理上限 26 约束),
+        # 直接给 5 N·m 会吃掉它 86% 的出力余量, 叠加基础 PD 可能饱和
+        # -> 再按 0.3*effort 封一层, 踝roll 实际得到 1.74 N·m / 0.0435 rad。
+        # 序同 stiffness: effort 跟 joint_names 一样是按腿分组序[R1..R6,L1..L6], 而非
+        # default_joint_pos 的 sim 交错序; 左右两半数值相同, 故按实机序直接取用等价。
+        eff = np.minimum(np.array(dep["effort"], np.float32), 26.0)
+        tau_cap = np.minimum(self.settle_tau_max, 0.3 * eff)
+        self.settle_bias_max = (tau_cap / self.kp_real).astype(np.float32)
         self.state_timeout = float(cfg.get("state_timeout", 0.2))
         self.cmd_accel_limit = np.array(cfg.get("cmd_accel_limit", [0.5, 0.5, 1.0]), np.float32)
         if self.cmd_accel_limit.shape != (3,) or np.any(self.cmd_accel_limit <= 0):
@@ -167,8 +192,10 @@ class RL_real(Node):
         self.target_pub = self.default_real.copy()   # EMA 平滑后的实际下发值
         self.tick = 0
 
-        self.mode = "prepare"          # prepare -> hold -> run
+        self.mode = "prepare"          # prepare -> settle -> hold -> run
         self.prepare_t0 = None
+        self.settle_t0 = None
+        self.settle_bias = np.zeros(12, np.float32)   # 到位补偿偏置, hold 阶段保留, run 阶段不用
         self.q_start_real = None
         self.run_t0 = None             # run 起始墙钟时间 (相位基准)
 
@@ -192,6 +219,10 @@ class RL_real(Node):
         self.create_subscription(JointState, "/left_joint_states", self._on_joint, 5)
         self.create_subscription(Imu, "/imu", self._on_imu, 5)
         self.create_subscription(Joy, "/joy", self._on_joy, 5)
+        # armcontrol 在主循环逐帧检查 12 个电机的 err_code(0x0=失能 0x1=使能 0xD=通讯丢失
+        # 0xE=过载...), 并在状态跳变时往 /motor_warn 发 JSON。而 err_code 不在 JointState 里,
+        # 只看位置/力矩发现不了电机失能(只会看到读数“安静”地偏掉) -> 此处订阅并告警。
+        self.create_subscription(String, "/motor_warn", self._on_motor_warn, 20)
         self.pub = self.create_publisher(Float64MultiArray, "/dog_joint_pos", QoSProfile(depth=1))
         self.create_timer(self.pub_dt, self._tick)
 
@@ -278,11 +309,33 @@ class RL_real(Node):
             self.target_real = ((1 - s) * self.q_start_real + s * self.default_real).astype(np.float32)
             self.target_pub = self.target_real.copy()   # prepare 已平滑, 同步滤波器(避免进 run 时跳变)
             if a >= 1.0:
+                self.mode = "settle"
+                self.settle_t0 = time.monotonic()
+                print("\n缓入完成, 开始到位补偿 (消除静摩擦残差) ...")
+
+        elif self.mode == "settle":
+            # 把残差积分累加成目标偏置, 使力矩越过静摩擦门槛; 关节一旦挣脱摩擦开始移动,
+            # 残差随即减小、bias 停止增长 -> 自收敛, 不会一直加到上限。
+            q = self.obs_raw[7:19]
+            err = self.default_real - q
+            self.settle_bias = np.clip(self.settle_bias + self.settle_ki * err,
+                                       -self.settle_bias_max, self.settle_bias_max)
+            self.target_real = np.clip(self.default_real + self.settle_bias,
+                                       self.lo, self.hi).astype(np.float32)
+            self.target_pub = self.target_real.copy()
+            done = bool(np.all(np.abs(err) < self.settle_tol))
+            if done or time.monotonic() - self.settle_t0 >= self.settle_time:
+                print(f"\n到位补偿结束 ({'残差达标' if done else '超时'}): "
+                      f"|残差|max={np.abs(err).max():.4f} rad, "
+                      f"|补偿|max={np.abs(self.settle_bias).max():.4f} rad")
+                self._mirror_report(q)
                 self.mode = "hold"
                 print("\n准备姿态到位, 站立保持 (P/手柄A 开始行走)")
 
         elif self.mode == "hold":
-            self.target_real = self.default_real.copy()
+            # 必须保留 settle 偏置: 一旦回到裸 default_real, 静摩擦残差会立刻掉回来。
+            self.target_real = np.clip(self.default_real + self.settle_bias,
+                                       self.lo, self.hi).astype(np.float32)
             self.target_pub = self.target_real.copy()   # 保持: 常量, 同步滤波器
 
         else:  # run
@@ -312,6 +365,31 @@ class RL_real(Node):
         self.pub.publish(m)
 
     # ------------------------------------------------------------------ 模式切换
+    def _mirror_report(self, q):
+        """左右镜像残差检查 —— prepare 的正确验收标准。
+
+        只比"目标 vs 实测"发现不了两脚错位: 两条腿可以各自都在容差内, 却一前一后差几 cm。
+        镜像关系: 关节1髋pitch/4膝/5踝pitch 左右同号 -> 看差; 关节2髋roll/3髋yaw/6踝roll
+        左右反号 -> 看和。返回最大镜像残差 (rad)。
+        """
+        names = ["髋pitch", "髋roll", "髋yaw", "膝", "踝pitch", "踝roll"]
+        same_sign = (0, 3, 4)          # 实机序 idx: 关节1,4,5 左右同号
+        worst = 0.0
+        print(f"\n左右镜像残差 (容差 {self.mirror_tol:.3f} rad):")
+        for j in range(6):
+            l, r = float(q[j]), float(q[j + 6])
+            same = j in same_sign
+            res = (l - r) if same else (l + r)
+            worst = max(worst, abs(res))
+            print(f"  关节{j+1} {names[j]:<7} L{l:+.4f} R{r:+.4f} "
+                  f"{'差' if same else '和'}={res:+.4f}"
+                  f"{'   <-- 超差' if abs(res) > self.mirror_tol else ''}")
+        if worst > self.mirror_tol:
+            print(f"  !! 最大镜像残差 {worst:.4f} rad: 两脚可能一前一后, 不建议起跑")
+        else:
+            print(f"  OK: 最大镜像残差 {worst:.4f} rad")
+        return worst
+
     def _start_run(self):
         if self.mode == "hold":                      # 只允许站稳后开跑
             self._clear_cmd_sources()                # 进 run 清残留, 防上一轮指令带入
@@ -326,6 +404,8 @@ class RL_real(Node):
     def _reset(self):
         self.mode = "prepare"
         self.prepare_t0 = None
+        self.settle_t0 = None
+        self.settle_bias[:] = 0.0
         self.run_t0 = None
         self._clear_cmd_sources()
         self._close_log()
@@ -339,6 +419,14 @@ class RL_real(Node):
         self._last_joy_rx = -1e9
 
     # ------------------------------------------------------------------ 回调
+    def _on_motor_warn(self, msg):
+        """电机使能/故障状态跳变 —— 用 error 级别输出, 必须能在终端里一眼看到。
+
+        失能后电机不会报错, 只是 effort 变 0 、腿往下塌; 而位置读数依旧正常发布。
+        不盯这个话题就只能事后猜。不自动停机: 自动停发会让还活的电机也跟着失能。
+        """
+        self.get_logger().error(f"/motor_warn: {msg.data}")
+
     def _on_joint(self, msg):
         q = np.array(msg.position[:12], np.float32)
         self.obs_raw[7:19] = q

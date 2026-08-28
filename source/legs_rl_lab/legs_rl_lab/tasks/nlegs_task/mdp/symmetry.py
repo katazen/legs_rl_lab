@@ -18,6 +18,11 @@ Layout assumptions (validated against this task's config):
   therefore applied per-frame within each term block.
 - gait_phase mirrors by shifting the gait clock half a cycle (legs swap roles),
   i.e. sin/cos both negate.
+- The critic group may end with a height_scan term (rough task only). The scan is a
+  17(x) x 11(y) grid in the base-yaw frame (GridPatternCfg size=[1.6, 1.0], res=0.1,
+  ordering="xy" -> flattened as idx = iy*17 + ix); its mirror flips the grid along y
+  (iy -> 10-iy), heights keep their sign. ``_mirror_maps`` picks the layout (with or
+  without the tail term) by the observation dimension.
 """
 
 from __future__ import annotations
@@ -51,6 +56,14 @@ _CMD = ([0, 1, 2], [1.0, -1.0, -1.0])   # [vx, vy, wz]: vy and yaw-rate flip
 _JNT = (_J_PERM, _J_SIGN)               # any per-joint quantity
 _GAIT = ([0, 1], [-1.0, -1.0])          # [sin, cos] of phase -> phase + 0.5
 
+# critic 特权观测 height_scan (仅 rough): 17(x)x11(y) 网格, 展平序 idx = iy*17 + ix。
+# 镜像 = 网格沿 y 翻转(iy -> 10-iy), 高度标量不变号。
+_HSCAN_X, _HSCAN_Y = 17, 11
+_HSCAN = (
+    [(_HSCAN_Y - 1 - iy) * _HSCAN_X + ix for iy in range(_HSCAN_Y) for ix in range(_HSCAN_X)],
+    [1.0] * (_HSCAN_X * _HSCAN_Y),
+)
+
 # term layout per observation group: list of (dim, perm, sign), in declaration order
 _TERMS = {
     "policy": [
@@ -83,15 +96,18 @@ def _mirror_maps(obs_type: str, obs_dim: int, device: torch.device):
     key = (obs_type, obs_dim, device)
     if key in _CACHE:
         return _CACHE[key]
-    terms = _TERMS[obs_type]
-    frame_dim = sum(d for d, _, _ in terms)
-    expected = frame_dim * _HISTORY
-    if obs_dim != expected:
+    # critic 末尾可能带 height_scan 尾项(rough 有/flat 无), 按观测维度自动匹配布局
+    candidates = [_TERMS[obs_type]]
+    if obs_type == "critic":
+        candidates.append(_TERMS[obs_type] + [(_HSCAN_X * _HSCAN_Y, *_HSCAN)])
+    expected = [sum(d for d, _, _ in t) * _HISTORY for t in candidates]
+    if obs_dim not in expected:
         raise ValueError(
-            f"symmetry: {obs_type} obs dim {obs_dim} != expected {expected} "
-            f"(frame_dim {frame_dim} x history {_HISTORY}). Observation layout changed; "
+            f"symmetry: {obs_type} obs dim {obs_dim} not in expected {expected} "
+            f"(frame_dim x history {_HISTORY}). Observation layout changed; "
             f"update tasks/nlegs_task/mdp/symmetry.py."
         )
+    terms = candidates[expected.index(obs_dim)]
     perm = []
     sign = []
     off = 0

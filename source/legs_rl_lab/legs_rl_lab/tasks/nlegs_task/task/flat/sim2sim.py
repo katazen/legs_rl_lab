@@ -329,7 +329,7 @@ class MujocoRunner:
         self.cfg = cfg
         if not os.path.isfile(cfg.model_path):
             raise FileNotFoundError(f"没有导出的策略 {cfg.model_path}")
-        self.model = mujoco.MjModel.from_xml_path(cfg.scene_xml)
+        self.model = self._make_model(cfg)
         self.model.opt.timestep = cfg.physics_dt
         self.data = mujoco.MjData(self.model)
         self.policy = torch.jit.load(cfg.model_path, map_location="cpu").eval()
@@ -401,6 +401,10 @@ class MujocoRunner:
         if object_id < 0:
             raise ValueError(f"{self.cfg.scene_xml} 缺少 {name}")
         return object_id
+
+    def _make_model(self, cfg):
+        """构建 MuJoCo 模型；子类可覆写以在场景上叠加地形等(如 rough 版 sim2sim)。"""
+        return mujoco.MjModel.from_xml_path(cfg.scene_xml)
 
     # ------------------------------ 可视化标记 ------------------------------
 

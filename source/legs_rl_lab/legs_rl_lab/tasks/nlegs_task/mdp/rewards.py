@@ -171,9 +171,16 @@ def feet_slide(env, sensor_cfg: SceneEntityCfg, asset_cfg: SceneEntityCfg = Scen
     return reward
 
 
-def feet_clearance(env: ManagerBasedRLEnv, asset_cfg: SceneEntityCfg, target_height: float = 0.1, moving_only: bool = False) -> torch.Tensor:
+def feet_clearance(env: ManagerBasedRLEnv, asset_cfg: SceneEntityCfg, target_height: float = 0.1, moving_only: bool = False, sensor_cfg: SceneEntityCfg | None = None) -> torch.Tensor:
     asset = env.scene[asset_cfg.name]
-    feet_pos_z = asset.data.body_pos_w[:, asset_cfg.body_ids, 2] - 0.0135
+    feet_pos = asset.data.body_pos_w[:, asset_cfg.body_ids, :]
+    feet_pos_z = feet_pos[:, :, 2] - 0.0135
+    if sensor_cfg is not None:
+        # 地形相对化: 每只脚取 height_scanner 中水平距离最近的命中点作为脚下地面高度(rough 用)
+        ray_hits = env.scene.sensors[sensor_cfg.name].data.ray_hits_w  # (N, R, 3), 未命中为 inf
+        dist = torch.cdist(feet_pos[:, :, :2], ray_hits[:, :, :2])  # (N, feet, R), inf 命中点不会被选中
+        ground_z = torch.gather(ray_hits[:, :, 2], 1, dist.argmin(dim=-1))
+        feet_pos_z = feet_pos_z - torch.nan_to_num(ground_z, nan=0.0, posinf=0.0, neginf=0.0)
     leg_phases = _get_leg_phases(env)
     swing_duration = 1.0 - env.cfg.gait.stance_ratio
     in_swing = leg_phases > env.cfg.gait.stance_ratio
@@ -186,6 +193,24 @@ def feet_clearance(env: ManagerBasedRLEnv, asset_cfg: SceneEntityCfg, target_hei
     if moving_only:  # 速度开关: 零速命令时不奖励抬脚(用于静止站立任务)
         reward = reward * (torch.norm(env.command_manager.get_command("base_velocity"), dim=1) >= 0.1)
     return reward
+
+
+def feet_drag(env: ManagerBasedRLEnv, asset_cfg: SceneEntityCfg, height_threshold: float = 0.06, sensor_cfg: SceneEntityCfg | None = None) -> torch.Tensor:
+    """摆动相低空拖脚惩罚: 脚底离地 < height_threshold 时惩罚脚的水平速度(rough 用)。
+    逼策略"先抬后挥、抬着落"——上台阶失败多是摆动前期脚尖踢到立面, 而非最高点不够高。"""
+    asset = env.scene[asset_cfg.name]
+    feet_pos = asset.data.body_pos_w[:, asset_cfg.body_ids, :]
+    feet_pos_z = feet_pos[:, :, 2] - 0.0135
+    if sensor_cfg is not None:
+        # 地形相对化: 同 feet_clearance, 每只脚取 height_scanner 中水平最近命中点作脚下地面高度
+        ray_hits = env.scene.sensors[sensor_cfg.name].data.ray_hits_w
+        dist = torch.cdist(feet_pos[:, :, :2], ray_hits[:, :, :2])
+        ground_z = torch.gather(ray_hits[:, :, 2], 1, dist.argmin(dim=-1))
+        feet_pos_z = feet_pos_z - torch.nan_to_num(ground_z, nan=0.0, posinf=0.0, neginf=0.0)
+    in_swing = _get_leg_phases(env) > env.cfg.gait.stance_ratio
+    feet_vel_xy = asset.data.body_lin_vel_w[:, asset_cfg.body_ids, :2].norm(dim=-1)
+    dragging = in_swing & (feet_pos_z < height_threshold)
+    return torch.sum(feet_vel_xy * dragging, dim=1)
 
 
 def contact_forces(env: ManagerBasedRLEnv, threshold: float, sensor_cfg: SceneEntityCfg) -> torch.Tensor:

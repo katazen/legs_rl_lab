@@ -1,10 +1,11 @@
-"""nlegs rough —— 在 nlegs_flat(平地)基础上换成生成器 rough 地形 + 地形课程，并按地形调整奖励/终止。
+"""nlegs rough —— 在 nlegs_flat(平地)基础上换成生成器 rough 地形 + 地形课程，并按地形调整奖励/观测/终止。
 
 地形与奖励调整照搬 legs_task 旧版 nlegs_rough（已迁移至此并删除旧注册）：
 子地形按 0.58m 小机身**温和缩放**，不照搬 g1/IsaacLab 默认的 0.23m 台阶、0.4 坡度：
   台阶 ≤0.12m、坡 ≤0.3、方块 0.02~0.08m、随机起伏 0.02~0.06m，并保留 20% 平地。
-策略保持**盲走**（仅 IMU+关节，可直接部署到真机；真机无地形传感器），
-height_scanner 只用于 base_height 奖励（地形相对高度）和地形课程 terrain_levels_vel。
+actor 保持**盲走**（仅 IMU+关节，可直接部署到真机；真机无地形传感器）；
+height_scanner 用于 critic 特权观测 height_scan（非对称 actor-critic，降价值估计方差）
+和 base_height / feet_clearance 奖励（地形相对高度），不进 actor 观测。
 
 因地形改动的奖励（相对 nlegs_flat）：
   - base_height          : 加 height_scanner 传感器 -> 地形相对高度；权重 -5 -> -2
@@ -12,15 +13,22 @@ height_scanner 只用于 base_height 奖励（地形相对高度）和地形课�
   - flat_orientation     : -4.0 -> -1.0   （上坡时身体自然倾斜，重罚会与爬坡冲突）
   - base_linear_velocity : -2.0 -> -0.5   （爬台阶/坡需要竖直方向速度，别罚太狠）
   - feet_flat            : -1.0 -> -0.3   （坡/台阶上脚无法始终贴平地面）
-  - feet_clearance       : target 0.1 -> 0.12（抬高摆动腿以跨越起伏/矮台阶）
+  - feet_clearance       : 加 height_scanner 传感器 -> 脚高地形相对化（否则凸起地形自动
+                           满分/凹陷地形恒零分）；target 0.1 -> 0.12（抬高摆动腿跨越起伏）
   - lateral_move         : -5.0 -> -2.0   （地形上需要一定横向调整来平衡，别压死）
 新增：
   - curriculum.terrain_levels  （走得远 -> 升难度；走不动 -> 降难度）
+  - rewards.feet_drag（摆动相低空拖脚惩罚：脚底离地 <6cm 还水平挥就罚，逼"先抬后挥"，
+                       针对上台阶时脚尖踢立面的失败模式；同样地形相对化）
+  - observations.critic.height_scan（187 点局部高度图，仅训练用；镜像增强见 mdp/symmetry.py）
   - terminations.bad_orientation（摔倒即终止，平地版里没有）
+注：flat 的 base_height 终止项已是相对量 base_z - min(feet_z)，与地形无关，这里直接继承。
 """
 
 import isaaclab.terrains as terrain_gen
 from isaaclab.managers import CurriculumTermCfg as CurrTerm
+from isaaclab.managers import ObservationTermCfg as ObsTerm
+from isaaclab.managers import RewardTermCfg as RewTerm
 from isaaclab.managers import SceneEntityCfg
 from isaaclab.managers import TerminationTermCfg as DoneTerm
 from isaaclab.terrains import TerrainGeneratorCfg
@@ -81,7 +89,7 @@ NLEGS_ROUGH_TERRAINS_CFG = TerrainGeneratorCfg(
 
 
 def _apply_rough(cfg) -> None:
-    """把 nlegs_flat 平地配置改成生成器 rough 地形 + 地形课程 + 因地形调整奖励/终止。"""
+    """把 nlegs_flat 平地配置改成生成器 rough 地形 + 地形课程 + 因地形调整奖励/观测/终止。"""
     # --- 地形: plane -> generator(rough) ---
     # 用 .replace() 拿独立副本，避免 play/train 两个 env cfg 共享并互相改写同一个地形对象
     cfg.scene.terrain.terrain_type = "generator"
@@ -92,6 +100,14 @@ def _apply_rough(cfg) -> None:
     # --- 地形课程: 走得远升难度、走不动降难度 ---
     cfg.curriculum.terrain_levels = CurrTerm(func=mdp.terrain_levels_vel)
 
+    # --- critic 特权观测: 187 点局部高度图(非对称 actor-critic, actor 仍盲走) ---
+    # offset=0.58(名义 base 高度)使数值围绕 0; clip 兜住未命中射线的 inf
+    cfg.observations.critic.height_scan = ObsTerm(
+        func=mdp.height_scan,
+        params={"sensor_cfg": SceneEntityCfg("height_scanner"), "offset": 0.58},
+        clip=(-1.0, 1.0),
+    )
+
     # --- 因地形调整的奖励 ---
     # base_height 用高度扫描做地形相对(否则起伏地形上 base 世界系绝对高度恒被罚)
     cfg.rewards.base_height.params["sensor_cfg"] = SceneEntityCfg("height_scanner")
@@ -99,8 +115,21 @@ def _apply_rough(cfg) -> None:
     cfg.rewards.flat_orientation.weight = -1.0
     cfg.rewards.base_linear_velocity.weight = -0.5
     cfg.rewards.feet_flat.weight = -0.3
+    # feet_clearance 同样地形相对化(每只脚取扫描点中水平最近命中点作脚下地面高度)
+    cfg.rewards.feet_clearance.params["sensor_cfg"] = SceneEntityCfg("height_scanner")
     cfg.rewards.feet_clearance.params["target_height"] = 0.12
     cfg.rewards.lateral_move.weight = -2.0
+
+    # --- 低空拖脚惩罚: 摆动相脚底离地 <6cm 还水平挥就罚, 逼"先抬后挥"(防上台阶踢立面) ---
+    cfg.rewards.feet_drag = RewTerm(
+        func=mdp.feet_drag,
+        weight=-1.0,
+        params={
+            "asset_cfg": SceneEntityCfg("robot", body_names=".*6"),
+            "sensor_cfg": SceneEntityCfg("height_scanner"),
+            "height_threshold": 0.06,
+        },
+    )
 
     # --- 终止: 摔倒(躯干严重倾斜)即终止 ---
     cfg.terminations.bad_orientation = DoneTerm(

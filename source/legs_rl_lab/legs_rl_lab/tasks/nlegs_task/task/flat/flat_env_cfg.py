@@ -35,7 +35,7 @@ from legs_rl_lab.tasks.nlegs_task import mdp
 class GaitCfg:
     """步态时钟参数, 会被 dump 到 env.yaml; reward / observation 通过 env.cfg.gait.* 读取。"""
 
-    period: float = 0.6             # 步态周期 (s)
+    period: float = 0.8             # 步态周期 (s)
     stance_ratio: float = 0.55      # 支撑相占比
     feet_offset: list = [0.0, 0.5]  # 左右腿相位偏移
 
@@ -353,7 +353,11 @@ class TerminationsCfg:
     """Termination terms for the MDP."""
 
     time_out = DoneTerm(func=mdp.time_out, time_out=True)
-    base_height = DoneTerm(func=mdp.root_height_below_minimum, params={"minimum_height": 0.2})
+    # 相对量 base_z - min(feet_z) < 0.2m 即终止(身体塌到脚边), 与地形绝对高度无关, rough 可直接继承
+    base_height = DoneTerm(
+        func=mdp.base_height_below_feet,
+        params={"minimum_height": 0.2, "asset_cfg": SceneEntityCfg("robot", body_names=".*6")},
+    )
 
 
 @configclass

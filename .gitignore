@@ -63,6 +63,9 @@ _build
 **/logs/*
 **/recordings/*
 
+# 实机姿态工具的逐帧记录 (每次运行一个 CSV)
+deploy/pose_logs/
+
 # Pre-Trained Checkpoints
 /.pretrained_checkpoints/
 
