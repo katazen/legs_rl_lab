@@ -17,6 +17,7 @@
 
 # 例外: nlegs 自包含资产包 USD 需入库 (assets/nlegs/nlegs.py 加载 mjcf/nlegs/nlegs.usd)
 !source/legs_rl_lab/legs_rl_lab/assets/nlegs/mjcf/nlegs/**/*.usd
+!source/legs_rl_lab/legs_rl_lab/assets/nlegs/mjcf/nlegs_limit/**/*.usd
 
 # Python
 .DS_Store

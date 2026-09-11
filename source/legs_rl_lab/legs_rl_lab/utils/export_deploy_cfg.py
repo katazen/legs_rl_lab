@@ -19,6 +19,24 @@ def format_value(x):
         return x
 
 
+def yaml_safe(x):
+    """把导出内容变成 yaml.safe_load 能读回来的形式。
+
+    yaml.dump 遇到 tuple / slice / configclass 实例会写成 !!python/... 标签, 而 sim2sim 与
+    实机部署都用 safe_load 读, 一碰到就直接报 ConstructorError。典型触发点: commands 的
+    ranges.heading(tuple), 观测项 params 里的 SceneEntityCfg(含 joint_ids=slice(None))。
+    """
+    if isinstance(x, np.generic):  # np.int64 不是 int 子类, 必须先拆
+        return x.item()
+    if isinstance(x, dict):
+        return {k: yaml_safe(v) for k, v in x.items()}
+    if isinstance(x, (list, tuple)):
+        return [yaml_safe(v) for v in x]
+    if x is None or isinstance(x, (str, bool, int, float)):
+        return x
+    return str(x)
+
+
 def export_deploy_cfg(env: ManagerBasedRLEnv, log_dir, policy_action_clip=None):
     asset: Articulation = env.scene["robot"]
     joint_sdk_names = env.cfg.scene.robot.joint_sdk_names
@@ -100,9 +118,17 @@ def export_deploy_cfg(env: ManagerBasedRLEnv, log_dir, policy_action_clip=None):
             ranges = env.cfg.commands.base_velocity.limit_ranges.to_dict()
         else:
             ranges = env.cfg.commands.base_velocity.ranges.to_dict()
-        for item_name in ["lin_vel_x", "lin_vel_y", "ang_vel_z"]:
-            ranges[item_name] = list(ranges[item_name])
+        # 所有 tuple 都要转 list: yaml.safe_dump 会把 tuple 写成 !!python/tuple, safe_load 读不回来
+        # (heading 只在 heading_command=True 时非 None, 漏转会让 deploy.yaml 直接 load 失败)
+        ranges = {
+            key: list(value) if isinstance(value, tuple) else value for key, value in ranges.items()
+        }
         cfg["commands"]["base_velocity"]["ranges"] = ranges
+
+    if hasattr(env.cfg.commands, "crouch_progress"):
+        command_cfg = env.cfg.commands.crouch_progress.to_dict()
+        command_cfg.pop("class_type")
+        cfg["commands"]["crouch_progress"] = command_cfg
 
     # --- actions ---
     action_names = env.action_manager.active_terms
@@ -135,6 +161,18 @@ def export_deploy_cfg(env: ManagerBasedRLEnv, log_dir, policy_action_clip=None):
             cfg["actions"][action_name]["joint_ids"] = None
         else:
             cfg["actions"][action_name]["joint_ids"] = action_term._joint_ids
+
+    # --- height scanner geometry (sim2sim / 实机建图需要知道采样网格长什么样) ---
+    # 只有 actor 吃高度图时这些参数才是部署必需的; critic 用不影响部署, 导了也无害。
+    scanner_cfg = getattr(env.cfg.scene, "height_scanner", None)
+    if scanner_cfg is not None:
+        cfg["height_scanner"] = {
+            "offset": list(scanner_cfg.offset.pos),
+            "ray_alignment": scanner_cfg.ray_alignment,
+            "resolution": scanner_cfg.pattern_cfg.resolution,
+            "size": list(scanner_cfg.pattern_cfg.size),
+            "ordering": scanner_cfg.pattern_cfg.ordering,
+        }
 
     # --- observations ---
     obs_names = env.observation_manager.active_terms["policy"]
@@ -169,6 +207,6 @@ def export_deploy_cfg(env: ManagerBasedRLEnv, log_dir, policy_action_clip=None):
         os.makedirs(os.path.dirname(filename), exist_ok=True)
     if not isinstance(cfg, dict):
         cfg = class_to_dict(cfg)
-    cfg = format_value(cfg)
+    cfg = format_value(yaml_safe(cfg))
     with open(filename, "w") as f:
         yaml.dump(cfg, f, default_flow_style=None, sort_keys=False)

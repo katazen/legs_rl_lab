@@ -75,3 +75,23 @@ class NlegsFlatPPORunnerCfg(RslRlOnPolicyRunnerCfg):
 class NlegsRoughPPORunnerCfg(NlegsFlatPPORunnerCfg):
     """rough 地形变体，仅日志实验名不同。"""
     experiment_name = "nlegs_rough"
+
+
+@configclass
+class NlegsRoughStepPPORunnerCfg(NlegsFlatPPORunnerCfg):
+    """专用上台阶变体，仅日志实验名不同。
+
+    critic 的 height_scan 只用当前帧（观测维度 807），镜像布局由 mdp/symmetry.py
+    按维度自动匹配，故算法配置与 flat/rough 完全一致。
+    """
+    experiment_name = "nlegs_rough_step"
+
+
+@configclass
+class NlegsRoughInfoPPORunnerCfg(NlegsFlatPPORunnerCfg):
+    """非盲走变体：actor 也吃 176 点高度图（观测维度 646，critic 796）。
+
+    网络结构刻意与 flat/rough 保持一致（512-256-128），这样和 nlegs_rough 的对比里
+    唯一变量就是"有没有地形信息"；镜像布局由 mdp/symmetry.py 按维度自动匹配。
+    """
+    experiment_name = "nlegs_rough_info"

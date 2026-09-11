@@ -213,6 +213,56 @@ def feet_drag(env: ManagerBasedRLEnv, asset_cfg: SceneEntityCfg, height_threshol
     return torch.sum(feet_vel_xy * dragging, dim=1)
 
 
+def feet_kick(
+    env: ManagerBasedRLEnv,
+    asset_cfg: SceneEntityCfg,
+    sensor_cfg: SceneEntityCfg,
+    cone_ratio: float = 4.0,
+    saturation: float = 50.0,
+) -> torch.Tensor:
+    """惩罚脚踢台阶立面: feet_stumble 的按撞击功率加权版(0/1 -> 连续, 并补上历史窗口)。
+
+    两级判据, 各管一件事:
+
+    1) 摩擦锥门控 |F_xy| > cone_ratio * |F_z| —— 判"这是不是立面"。
+       平地上物理引擎强制 |F_xy| <= mu*|F_z|, 本项目 mu 随机化上界 1.3(events 的
+       static_friction_range), 叠上 rough 最陡 16.7° 坡面也只到 tan(16.7+atan(1.3))~2.6,
+       所以 cone_ratio=4 在平地/坡面不可能误触发; 而脚尖平踢立面时法向是水平的、既不承重
+       也没有竖向滑移来产生竖向摩擦, F_z~0 使比值趋于很大。这一级与 feet_stumble 同判据。
+
+    2) 水平负功率 relu(-F_xy . v_xy) —— 判"撞得多狠"。
+       feet_stumble 是 torch.any 二值化: 轻擦与猛撞同分, 两脚齐踢与单脚同分, 策略只能学
+       "踢/不踢"两档。改成力与脚速的负功率(W)后惩罚随撞击强度连续增长, 且天然把"脚尖静静
+       抵着立面"(v~0, 无害)与"0.6m/s 撞上去"区分开。
+
+    另外 feet_stumble 只读 net_forces_w 最新一帧, 而撞击是几毫秒的脉冲(物理 200Hz /
+    控制 50Hz), 很容易整个落在没被采样的子步里被漏掉; 这里改读 net_forces_w_history。
+
+    已知局限(与 feet_stumble 相同, 受限于净接触力传感): net_forces_w 是整个脚 body 上所有
+    接触点的合力, 若脚已踩在踏面上(F_z 大)同时脚尖抵着立面, 摩擦锥门控会被踏面的 F_z 压住
+    而漏判。这属于"已落地后顶住立面", 比摆动相踢击危害小, 暂不处理。
+
+    saturation 把每只脚压到 [0,1): 撞击是脉冲, 不饱和会让尖峰主导梯度、价值函数震荡。
+    50.0 是按 nlegs 标定的: 整机 8.48kg -> 单脚支撑 F_z~83N; 摆动腿 ~1.5kg 以 0.5m/s 在
+    毫秒级内被止住 -> 峰值力 ~150N、功率 ~75W。故有效区间大约 2~100W, 取 50 能把轻擦
+    (~5W -> 0.10)到猛撞(~100W -> 0.86)铺满; 取得太小会提前饱和、轻重不分。
+    调法: 看 Episode_Reward/feet_kick, 平地(课程低 level)阶段应恒为 0(门控保证), 上台阶
+    阶段若长期贴近每脚 1.0 说明 saturation 取小了。
+
+    asset_cfg 与 sensor_cfg 的 body_names 必须写同一个模式, 否则两边 body 顺序对不上。
+    """
+    asset: RigidObject = env.scene[asset_cfg.name]
+    contact_sensor: ContactSensor = env.scene.sensors[sensor_cfg.name]
+    forces = contact_sensor.data.net_forces_w_history[:, :, sensor_cfg.body_ids, :]  # (N,T,F,3)
+    forces_xy, forces_z = forces[..., :2], forces[..., 2].abs()
+    # 窗口只有 4 个物理步(20ms), 脚速变化很小, 用当前速度近似整个窗口
+    feet_vel_xy = asset.data.body_lin_vel_w[:, asset_cfg.body_ids, :2].unsqueeze(1)  # (N,1,F,2)
+    power = -(forces_xy * feet_vel_xy).sum(dim=-1)          # (N,T,F), >0 表示力在阻碍脚的运动
+    on_riser = forces_xy.norm(dim=-1) > cone_ratio * forces_z
+    power = (power * on_riser).clamp(min=0.0).amax(dim=1)   # (N,F), 取窗口内最狠的一帧
+    return torch.sum(1.0 - torch.exp(-power / saturation), dim=1)
+
+
 def contact_forces(env: ManagerBasedRLEnv, threshold: float, sensor_cfg: SceneEntityCfg) -> torch.Tensor:
     contact_sensor: ContactSensor = env.scene.sensors[sensor_cfg.name]
     net_contact_forces = contact_sensor.data.net_forces_w_history
@@ -220,7 +270,16 @@ def contact_forces(env: ManagerBasedRLEnv, threshold: float, sensor_cfg: SceneEn
     return torch.sum(violation.clip(min=0.0), dim=1)
 
 
-def feet_flat(env: ManagerBasedRLEnv, asset_cfg: SceneEntityCfg = SceneEntityCfg("robot")) -> torch.Tensor:
+def feet_flat(
+    env: ManagerBasedRLEnv,
+    asset_cfg: SceneEntityCfg = SceneEntityCfg("robot"),
+    pitch_scale: float = 0.1,
+) -> torch.Tensor:
+    """罚脚底板偏离水平：把重力方向转到脚坐标系，其水平分量即 sin(倾角)。
+
+    pitch_scale 单独缩放俯仰项，因为俯仰受踝 pitch ±0.4rad 限位制约（支撑末期存在
+    降不到 0 的运动学地板值），默认 0.1 只做弱约束；需要强调脚掌全程水平时上调。
+    """
     asset: RigidObject = env.scene[asset_cfg.name]
     foot_quat = asset.data.body_quat_w[:, asset_cfg.body_ids, :]
     gravity_dir_w = torch.tensor([0.0, 0.0, -1.0], device=env.device)
@@ -228,7 +287,7 @@ def feet_flat(env: ManagerBasedRLEnv, asset_cfg: SceneEntityCfg = SceneEntityCfg
     gravity_b = quat_apply_inverse(foot_quat, gravity_dir_w)
     roll_error = torch.square(gravity_b[:, :, 1])
     pitch_error = torch.square(gravity_b[:, :, 0])
-    return torch.sum(roll_error + 0.1 * pitch_error, dim=1)
+    return torch.sum(roll_error + pitch_scale * pitch_error, dim=1)
 
 
 def feet_stumble(env: ManagerBasedRLEnv, sensor_cfg: SceneEntityCfg) -> torch.Tensor:

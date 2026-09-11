@@ -35,7 +35,7 @@ from legs_rl_lab.tasks.nlegs_task import mdp
 class GaitCfg:
     """步态时钟参数, 会被 dump 到 env.yaml; reward / observation 通过 env.cfg.gait.* 读取。"""
 
-    period: float = 0.8             # 步态周期 (s)
+    period: float = 0.6             # 步态周期 (s)
     stance_ratio: float = 0.55      # 支撑相占比
     feet_offset: list = [0.0, 0.5]  # 左右腿相位偏移
 
