@@ -61,6 +61,7 @@ class TermGroupedHistory:
 class RL_real(Node):
     def __init__(self):
         super().__init__("rl_real")
+        self.start_from_current = self.declare_parameter("start_from_current", False).value
 
         # ---------- 读部署配置 (硬件相关) ----------
         pkg = get_package_share_directory("rl_real_py")
@@ -122,6 +123,7 @@ class RL_real(Node):
 
         # ---------- 关节序映射 (按名, 硬件事实) ----------
         real = cfg["joint_index_in_real"]
+        self.real_joint_names = real
         sim = cfg["joint_index_in_sim"]
         self.real2sim = [real.index(n) for n in sim]                        # x_sim = x_real[real2sim]
         self.sim2real = [sim.index(n) for n in real]                        # x_real = x_sim[sim2real]
@@ -192,7 +194,7 @@ class RL_real(Node):
         self.target_pub = self.default_real.copy()   # EMA 平滑后的实际下发值
         self.tick = 0
 
-        self.mode = "prepare"          # prepare -> settle -> hold -> run
+        self.mode = "wait_current" if self.start_from_current else "prepare"
         self.prepare_t0 = None
         self.settle_t0 = None
         self.settle_bias = np.zeros(12, np.float32)   # 到位补偿偏置, hold 阶段保留, run 阶段不用
@@ -230,7 +232,10 @@ class RL_real(Node):
             f"run={run}  obs={self.num_obs}x{self.num_history}  "
             f"pub={1/self.pub_dt:.0f}Hz  policy={1/(self.pub_dt*self.decimation):.0f}Hz  "
             f"period={self.gait_period}s")
-        print("上电自动缓入准备姿态 -> 站立保持; P/手柄A=行走  B=停  R/X=复位")
+        if self.start_from_current:
+            print("等待有效关节/IMU -> 保持当前姿态; P/手柄A=行走  B=停  R/X=重新锁定当前姿态")
+        else:
+            print("上电自动缓入准备姿态 -> 站立保持; P/手柄A=行走  B=停  R/X=复位")
 
     # ------------------------------------------------------------------ 策略
     def _load_policy(self, exported):
@@ -291,13 +296,49 @@ class RL_real(Node):
         return (self._last_joint_rx is not None and now - self._last_joint_rx < self.state_timeout
                 and self._last_imu_rx is not None and now - self._last_imu_rx < self.state_timeout)
 
+    def _current_state_ready(self):
+        """当前姿态入口的最低检查；话题新鲜不等于每台电机反馈都新鲜。"""
+        reason = None
+        quat_norm = np.linalg.norm(self.obs_raw[3:7].astype(np.float64))
+        if not self._fresh():
+            reason = "关节或 IMU 缺失/超时"
+        elif not np.all(np.isfinite(self.obs_raw)):
+            reason = "关节/速度/IMU 含 NaN 或 Inf"
+        elif not np.isfinite(quat_norm) or abs(quat_norm - 1.0) > 0.1:
+            reason = f"IMU 四元数无效（范数 {quat_norm:.5f}，应接近 1）"
+        else:
+            q = self.obs_raw[7:19]
+            outside = np.flatnonzero((q < self.lo) | (q > self.hi))
+            if len(outside):
+                i = int(outside[0])
+                reason = (f"{self.real_joint_names[i]}={q[i]:.5f} rad 超出限位 "
+                          f"[{self.lo[i]:.5f}, {self.hi[i]:.5f}]，不会裁剪后拉回")
+        if reason is not None:
+            self.get_logger().warn(f"当前姿态不可接管: {reason}", throttle_duration_sec=1.0)
+            return False
+        return True
+
+    def _capture_current_target(self):
+        if not self._current_state_ready():
+            return False
+        self.target_real = self.obs_raw[7:19].copy()
+        self.target_pub = self.target_real.copy()
+        return True
+
     # ------------------------------------------------------------------ 主循环
     def _tick(self):
         self.tick += 1
         self._read_keys()
         self._update_cmd()
 
-        if self.mode == "prepare":
+        if self.mode == "wait_current":
+            if not self._capture_current_target():
+                return
+            self._clear_cmd_sources()
+            self.mode = "hold"
+            print("\n已锁定当前姿态，跳过准备/到位补偿；P/手柄A 开始 RL")
+
+        elif self.mode == "prepare":
             if self._last_joint_rx is None:          # 没收到关节反馈: 无起点, 不发布
                 return
             if self.prepare_t0 is None:
@@ -334,19 +375,27 @@ class RL_real(Node):
 
         elif self.mode == "hold":
             # 必须保留 settle 偏置: 一旦回到裸 default_real, 静摩擦残差会立刻掉回来。
-            self.target_real = np.clip(self.default_real + self.settle_bias,
-                                       self.lo, self.hi).astype(np.float32)
+            if not self.start_from_current:
+                self.target_real = np.clip(self.default_real + self.settle_bias,
+                                           self.lo, self.hi).astype(np.float32)
             self.target_pub = self.target_real.copy()   # 保持: 常量, 同步滤波器
 
         else:  # run
+            just_started = self.run_t0 is None
+            if just_started and self.start_from_current and not self._capture_current_target():
+                return
             if self.run_t0 is None:                  # 刚进 run: 起时钟 + 清策略 + 开记录
                 self.run_t0 = time.monotonic()
                 self.last_action[:] = 0.0
                 self.hist = TermGroupedHistory(self.term_dims, self.num_history)
                 self.target_pub = self.target_real.copy()   # 从当前保持位起步平滑
                 self._open_log()
-            if self.tick % self.decimation == 0:
-                if not self._fresh():                # 数据陈旧: 冻结指令, 不拿旧观测推理
+            # 当前姿态入口先完整发布一拍实测目标，下一拍起才允许策略改变它。
+            if self.tick % self.decimation == 0 and not (self.start_from_current and just_started):
+                ready = self._current_state_ready() if self.start_from_current else self._fresh()
+                if not ready:                       # 数据陈旧: 冻结指令, 不拿旧观测推理
+                    if self.start_from_current:
+                        self.target_real = self.target_pub.copy()
                     self.get_logger().warn("state stale -> freeze", throttle_duration_sec=1.0)
                 else:
                     terms = self._build_terms()
@@ -392,24 +441,31 @@ class RL_real(Node):
 
     def _start_run(self):
         if self.mode == "hold":                      # 只允许站稳后开跑
+            if self.start_from_current and not self._capture_current_target():
+                return
             self._clear_cmd_sources()                # 进 run 清残留, 防上一轮指令带入
             self.mode = "run"
 
     def _stop_run(self):
         if self.mode == "run":
+            if self.start_from_current:
+                if not self._capture_current_target():
+                    self.target_real = self.target_pub.copy()
+                self._clear_cmd_sources()
             self.mode = "hold"
             self.run_t0 = None
             self._close_log()
 
     def _reset(self):
-        self.mode = "prepare"
+        self.mode = "wait_current" if self.start_from_current else "prepare"
         self.prepare_t0 = None
         self.settle_t0 = None
         self.settle_bias[:] = 0.0
         self.run_t0 = None
         self._clear_cmd_sources()
         self._close_log()
-        print("\nreset -> 重新进准备姿态")
+        print("\nreset -> " + ("等待有效状态后重新锁定当前姿态（按 P 开跑）"
+                              if self.start_from_current else "重新进准备姿态"))
 
     def _clear_cmd_sources(self):
         """清空手柄/键盘残留 + self.cmd。"""
@@ -428,6 +484,10 @@ class RL_real(Node):
         self.get_logger().error(f"/motor_warn: {msg.data}")
 
     def _on_joint(self, msg):
+        if self.start_from_current and (len(msg.position) < 12 or len(msg.velocity) < 12):
+            self._last_joint_rx = None
+            self.get_logger().warn("当前姿态需要完整的 12 关节位置和速度", throttle_duration_sec=1.0)
+            return
         q = np.array(msg.position[:12], np.float32)
         self.obs_raw[7:19] = q
         # 电机上报的原始速度/力矩(始终记录, 用于验证解码与反推电机能力)

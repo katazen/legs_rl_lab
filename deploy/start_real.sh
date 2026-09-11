@@ -9,8 +9,28 @@ set -e
 ROS=/opt/ros/humble/setup.bash
 H1="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"   # deploy 目录(脚本所在)
 RL_NODE=rl_real_common   # 要测 wan 就改成 rl_real_wan
+RL_ARGS=""
+for arg in "$@"; do
+  case "$arg" in
+    --start-from-current) RL_ARGS="--ros-args -p start_from_current:=true" ;;
+    -h|--help)
+      echo "用法: $0 [--start-from-current]"
+      echo "默认: 缓入预设姿态后等 P；--start-from-current: 保持实时姿态后等 P。"
+      exit 0 ;;
+    *) echo "错误: 未知参数 $arg" >&2; exit 2 ;;
+  esac
+done
 
 command -v gnome-terminal >/dev/null || { echo "错误: 未找到 gnome-terminal"; exit 1; }
+
+# 新入口必须确认安装版支持该模式，避免旧节点忽略参数后仍走 prepare。
+if [[ -n "$RL_ARGS" ]]; then
+  if ! (source "$ROS"; source "$H1/rl_real_py/install/setup.bash";
+        python3 -c 'from rl_real_py.rl_real_common import RL_real; assert hasattr(RL_real, "_capture_current_target") and hasattr(RL_real, "_current_state_ready")'); then
+    echo "错误: 安装版 RL 不支持从当前姿态启动；请先在 deploy/rl_real_py 编译安装。" >&2
+    exit 1
+  fi
+fi
 
 # ---- IMU (含 rviz) ----
 echo "[IMU] 启动 ..."
@@ -34,7 +54,13 @@ sleep 3
 echo "[RL] 启动 ($RL_NODE) ..."
 gnome-terminal --title="RL policy ($RL_NODE)" -- bash -c \
   "source $ROS; source $H1/rl_real_py/install/setup.bash; \
-   ros2 run rl_real_py $RL_NODE; \
+   ros2 run rl_real_py $RL_NODE $RL_ARGS; \
    echo; echo '[RL 已退出, 回车关闭]'; read"
 
-echo "全部已启动。流程: 自动缓慢进准备姿态 -> 站立保持 -> 在 RL 窗口按 P 开始行走。"
+if [[ -n "$RL_ARGS" ]]; then
+  echo "全部已启动。流程: 等待有效状态 -> 保持当前姿态 (跳过准备/到位补偿) -> 在 RL 窗口按 P 开始策略。"
+  echo "P/B 暂停保持当前位置，R/X 重新锁定当前位置；不会回预设姿态。"
+  echo "注意: 驱动启动仍会使能电机；P 后策略会产生新目标，不能保证任意姿态都能稳定运行。"
+else
+  echo "全部已启动。流程: 自动缓慢进准备姿态 -> 站立保持 -> 在 RL 窗口按 P 开始行走。"
+fi
