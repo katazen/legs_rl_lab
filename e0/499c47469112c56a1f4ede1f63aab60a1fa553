@@ -1,0 +1,57 @@
+deploy/rl_real_py/test/test_start_current.py
+  s_22f8ffc6662cf2::t_ce1f77cf1d3a28 110,119-120,229-230,240-241,243,245-248
+  s_22f8ffc6662cf2::t_199e577bbd7a8f 1-2,5-96,98-99,101-109,111-118,121-188,199-201,206-225
+  s_22f8ffc6662cf2::t_8187abea47b193 3-4,97,100,189-198,202-205,226-228,231-239,242,244,249-254
+deploy/pose_transition.py
+  s_22f8ffc6662cf2::t_4cfe675d17a2c0 52-60,63,66-69,77,156-160,169-170,173-179,183,193,196,296-314,325-326,338-340,344-345,377-379,381-382,408-409
+  s_22f8ffc6662cf2::t_731d5553c6baf5 346-348,376,380,386
+  s_22f8ffc6662cf2::t_cb708d5e668f19 76,172,219-220,262-270,324,337
+  s_22f8ffc6662cf2::t_f9650729bc9b44 97-99,194-195,374-375,383-385
+  s_22f8ffc6662cf2::t_3fc7ed977187bd 115-118,249-251,274-278,280-295
+  s_22f8ffc6662cf2::t_b1f32af823f555 1-51,61-62,64-65,70-75,78-96,100-114,119-155,161-168,171,180-182,184-192,197-218,221-248,252-261,271-273,279,315-323,327-336,341-343,349-373,387-407,410-422
+deploy/control_ws/usbcan.rules
+  s_22f8ffc6662cf2::t_75f8d28db15463 1,3-4,7-9,11-12
+deploy/rl_real_py/rl_real_py/rl_real_common.py
+  s_22f8ffc6662cf2::t_199e577bbd7a8f 385-386
+  s_22f8ffc6662cf2::t_9891c917d6ac79 64,126,197,235-238,299-301,303-306,309-327,334-341,378-380,384,393-398,444-445,451-454,460,467-468,487-490
+  s_22f8ffc6662cf2::t_ce1f77cf1d3a28 302,307-308
+deploy/start_real.sh
+  s_22f8ffc6662cf2::t_1c47f072c85c9a 12-22,57,60-66
+  s_22f8ffc6662cf2::t_2aff8552c2b589 26-34
+deploy/start_now.sh
+  s_22f8ffc6662cf2::t_1c47f072c85c9a 1-5
+deploy/rl_real_py/configs/common.yaml
+  h_d698c05df35737 9,11,31-32
+  s_22f8ffc6662cf2::t_6e7e100ff97cd5 30
+deploy/analyze_pose_log.py
+  h_d698c05df35737 1-108
+deploy/com_check.py
+  h_d698c05df35737 1-657
+deploy/control_ws/src/armcontrol/config/arm_control_node.yaml
+  h_d698c05df35737 3
+deploy/latch_check.py
+  h_d698c05df35737 1-191
+deploy/pose_move.py
+  h_d698c05df35737 1-448
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.7.4",
+  "base_commit_sha": "e0499c47469112c56a1f4ede1f63aab60a1fa553",
+  "prompts": {},
+  "humans": {
+    "h_d698c05df35737": {
+      "author": "woan <377801872@qq.com>"
+    }
+  },
+  "sessions": {
+    "s_22f8ffc6662cf2": {
+      "agent_id": {
+        "tool": "codex",
+        "id": "01a06a55-9d3a-7f52-b1dc-6c6e4d885f57",
+        "model": "gpt-6-astra"
+      },
+      "human_author": "woan <377801872@qq.com>"
+    }
+  }
+}
