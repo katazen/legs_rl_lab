@@ -64,6 +64,24 @@ _build
 **/logs/*
 **/recordings/*
 
+# 仅同步指定训练记录的部署参数和导出策略；其余日志与训练检查点仍忽略。
+!/logs/rsl_rl/
+/logs/rsl_rl/*
+!/logs/rsl_rl/nlegs_rough/
+!/logs/rsl_rl/nlegs_flat/
+!/logs/rsl_rl/nlegs_flat_crouch/
+/logs/rsl_rl/*/*
+!/logs/rsl_rl/nlegs_rough/2026-08-26_20-37-55/
+!/logs/rsl_rl/nlegs_flat/2026-08-26_13-57-34/
+!/logs/rsl_rl/nlegs_flat_crouch/2026-09-09_20-27-00/
+/logs/rsl_rl/*/*/*
+!/logs/rsl_rl/nlegs_rough/2026-08-26_20-37-55/params/
+!/logs/rsl_rl/nlegs_rough/2026-08-26_20-37-55/exported/
+!/logs/rsl_rl/nlegs_flat/2026-08-26_13-57-34/params/
+!/logs/rsl_rl/nlegs_flat/2026-08-26_13-57-34/exported/
+!/logs/rsl_rl/nlegs_flat_crouch/2026-09-09_20-27-00/params/
+!/logs/rsl_rl/nlegs_flat_crouch/2026-09-09_20-27-00/exported/
+
 # 实机姿态工具的逐帧记录 (每次运行一个 CSV)
 deploy/pose_logs/
 
