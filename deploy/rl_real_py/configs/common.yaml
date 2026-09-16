@@ -29,6 +29,27 @@ keyboard:
 # 按实际手柄 /joy 核对；LB+A/X/Y 选择任务，B 中断，Back 重新验收。
 gamepad_buttons: {a: 0, b: 1, x: 2, y: 3, lb: 4, back: 6, start: 7}
 
+# 2026-09-16 16:00 只读标定，机身前倾 32.098°；供旧策略临时验证。
+# 只覆盖蹲姿验收和指定的单侧任务边界，不改模型、参考动作或上方硬件限位。
+# ankle roll 仅用于姿态验收；重新训练后核对标定，删除本段即恢复训练端点。
+crouch_calibration:
+  joint_pos:
+    L1: -0.9813458457
+    L2:  0.5334935531
+    L3:  0.5045014115
+    L4:  1.0606927596
+    L5: -0.3778515297
+    L6: -0.2534905013
+    R1: -0.9645609216
+    R2: -0.5266269932
+    R3: -0.6788357366
+    R4:  1.0858701457
+    R5: -0.4354543374
+    R6:  0.2512016480
+  body_quat_wxyz: [0.9366867561, -0.0619481135, 0.2694300308, 0.2149134956]
+  stop_sides: {L1: lower, L2: upper, L3: upper, L4: upper, L5: lower,
+              R1: lower, R2: lower, R3: lower, R4: upper, R5: lower}
+
 multi_task:
   stable_time: 0.30
   joint_tolerance: 0.12

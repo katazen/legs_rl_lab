@@ -62,6 +62,8 @@ class MultiTaskController:
         self.pose_q = {"stand": down.motion.positions[0, down.sim2real],
                        "crouch": up.motion.positions[0, up.sim2real]}
         self.pose_rot = {"stand": down.motion.rotations[0], "crouch": up.motion.rotations[0]}
+        if cfg.get("crouch_calibration") is not None:
+            self._calibrate_crouch(cfg["crouch_calibration"])
         for name, p in self.policies.items():
             p.obs_raw[:] = 0.
             p.obs_raw[3:7] = p.motion.quaternions[0] if p.motion else [1., 0., 0., 0.]
@@ -83,6 +85,36 @@ class MultiTaskController:
         self.key_escape = False
         if not getattr(node, "preflight_only", False):
             self.show_status()
+
+    def _calibrate_crouch(self, calibration):
+        """实测蹲姿只用于验收和任务边界；不改网络观测、训练 clip 或参考动作。"""
+        names = self.n.real_joint_names
+        if (not isinstance(calibration, dict)
+                or set(calibration) != {"joint_pos", "body_quat_wxyz", "stop_sides"}
+                or not isinstance(calibration["joint_pos"], dict)
+                or set(calibration["joint_pos"]) != set(names)
+                or not isinstance(calibration["stop_sides"], dict)
+                or set(calibration["stop_sides"]) != set(names) - {"L6", "R6"}
+                or any(side not in ("lower", "upper") for side in calibration["stop_sides"].values())):
+            raise ValueError("crouch_calibration 需要完整 12 关节姿态、机身四元数和除 ankle roll 外的 10 个限位方向")
+        q = np.asarray([calibration["joint_pos"][name] for name in names], dtype=np.float32)
+        if (q.shape != (12,) or not np.isfinite(q).all()
+                or np.any(q < self.n.lo) or np.any(q > self.n.hi)):
+            raise ValueError("实测蹲姿必须为有限角度且位于 common 硬件限位内")
+        rot = rotation_matrix(calibration["body_quat_wxyz"])
+        if rot[2, 2] < np.cos(self.cfg["max_tilt"]):
+            raise ValueError("实测蹲姿倾角超过 max_tilt")
+        lo, hi = self.lo.copy(), self.hi.copy()
+        for name, side in calibration["stop_sides"].items():
+            i = names.index(name)
+            (lo if side == "lower" else hi)[i] = q[i]
+        if (np.any(lo >= hi) or np.any(q < lo) or np.any(q > hi)
+                or np.any(self.pose_q["stand"] < lo) or np.any(self.pose_q["stand"] > hi)):
+            raise ValueError("实测任务边界无效，或不能同时包含蹲姿与站姿")
+        self.lo, self.hi = lo, hi
+        self.pose_q["crouch"], self.pose_rot["crouch"] = q, rot
+        print("[multi] 使用实测蹲姿验收和 10 个单侧任务限位；ankle roll 不设实测限位；"
+              "common、训练 clip、参考动作与真实观测不变。")
 
     def show_status(self):
         label, actions = {

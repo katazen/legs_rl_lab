@@ -20,11 +20,13 @@ from test_io import make_node
 CONFIG = Path(__file__).resolve().parents[1] / "configs/common.yaml"
 
 
-def make_multi(monkeypatch, pose="stand"):
+def make_multi(monkeypatch, pose="stand", calibrated=False):
     n = make_node(monkeypatch)
     clock = [100.]
     monkeypatch.setattr("rl_real_py.rl_real_common.time.monotonic", lambda: clock[0])
     cfg, run, root = load_settings(CONFIG)
+    if not calibrated:
+        cfg.pop("crouch_calibration", None)  # 原训练场景回归；实测标定另测。
     Policy.__init__(n, cfg, run, root)
     n.target_pub = n.target_real = n.default_real.copy()
     n.cmd_accel_limit = np.asarray(cfg["cmd_accel_limit"], np.float32)
@@ -149,6 +151,67 @@ def test_crouch_start_never_interpolates_to_standing(monkeypatch):
     assert n.multi.request("rise")
 
 
+def test_measured_crouch_handover_and_shared_bounds(monkeypatch):
+    cfg, _, _ = load_settings(CONFIG)
+    c = cfg["crouch_calibration"]
+    n, clock = make_multi(monkeypatch, "crouch", calibrated=True)
+    m, p = n.multi, n.multi.policies["rise"]
+    n.obs_raw[3:7] = c["body_quat_wxyz"]
+    n.obs_raw[19:31] = np.array([-1, -1, 1, -1, 1, -1, 1, -1, 1, 1, -1, -1]) * (45 / 4095)
+    measured = n.obs_raw.copy()
+    reference = p.motion.positions.copy()
+    clip = p.action_term_clip.copy()
+    assert m.pose_error("crouch") is None
+    advance(n, clock, .8)
+    assert m.state == "crouch_ready"
+    assert all(np.array_equal(target, measured[7:19]) for target in n.sent)
+    assert m.request("rise")
+    np.testing.assert_array_equal(m.handover_from, measured[7:19])
+    np.testing.assert_array_equal(p.obs_raw, measured)  # 不伪造观测来适配旧网络。
+    assert np.max(np.abs(m.pending_target - measured[7:19])) < m.cfg["handover_max_delta"]
+    for name, side in c["stop_sides"].items():
+        i = n.real_joint_names.index(name)
+        assert (m.lo if side == "lower" else m.hi)[i] == measured[7 + i]
+    for name in ("L6", "R6"):
+        i = n.real_joint_names.index(name)
+        assert m.lo[i] == max(n.lo[i], p.motion.limits[p.sim2real[i], 0])
+        assert m.hi[i] == min(n.hi[i], p.motion.limits[p.sim2real[i], 1])
+    for _ in range(700):
+        # 合成反馈只验证切换和裁剪，不是动力学仿真或实机起身成功证明。
+        n.obs_raw[7:19] = np.clip(p.motion.positions[p.motion.frame, p.sim2real], m.lo, m.hi)
+        n.obs_raw[3:7] = p.motion.quaternions[p.motion.frame]
+        n.obs_raw[19:31] = 0.
+        advance(n, clock, n.pub_dt)
+        assert m.state != "stopped", m.reason
+        assert np.all(n.sent[-1] >= m.lo) and np.all(n.sent[-1] <= m.hi)
+    assert m.state == "stand_ready" and m.request("walk")
+    np.testing.assert_array_equal(p.motion.positions, reference)
+    np.testing.assert_array_equal(p.action_term_clip, clip)
+    np.testing.assert_array_equal(n.lo, np.asarray(cfg["joint_lower_limits"], np.float32))
+    np.testing.assert_array_equal(n.hi, np.asarray(cfg["joint_upper_limits"], np.float32))
+    n.obs_raw[7 + n.real_joint_names.index("R4")] = m.hi[n.real_joint_names.index("R4")] + .031
+    advance(n, clock, n.pub_dt)
+    assert m.state == "stopped" and "反馈超出任务限位" in m.reason
+
+
+@pytest.mark.parametrize("bad", ["missing", "nan", "hardware", "ankle_stop", "side", "reversed", "quat", "tilt"])
+def test_invalid_crouch_calibration_rejected(monkeypatch, bad):
+    n, _ = make_multi(monkeypatch)
+    cfg, _, root = load_settings(CONFIG)
+    c = cfg["crouch_calibration"]
+    if bad == "missing": c["joint_pos"].pop("L1")
+    if bad == "nan": c["joint_pos"]["L1"] = float("nan")
+    if bad == "hardware": c["joint_pos"]["L1"] = -1.051
+    if bad == "ankle_stop": c["stop_sides"]["L6"] = "lower"
+    if bad == "side": c["stop_sides"]["L1"] = "wrong"
+    if bad == "reversed": c["stop_sides"]["L1"] = "upper"
+    if bad == "quat": c["body_quat_wxyz"] = [0., 0., 0., 0.]
+    if bad == "tilt": c["body_quat_wxyz"] = [np.cos(.5), 0., np.sin(.5), 0.]
+    with pytest.raises(ValueError):
+        MultiTaskController(n, cfg, root)
+    assert not n.sent
+
+
 @pytest.mark.parametrize("bad", ["stale", "nan", "joint", "tilt", "motor", "action", "unsafe_target", "late", "slow"])
 def test_fault_latches_keeps_last_target_and_never_auto_resumes(monkeypatch, bad):
     n, clock = make_multi(monkeypatch)
@@ -220,7 +283,7 @@ def test_operator_stop_priority_and_gamepad_edges(monkeypatch):
     assert not n._kb_cmd.any()
 
 
-def test_unfinished_motion_and_unconfirmed_stop_time_out(monkeypatch):
+def test_unfinished_motion_times_out_without_unsafe_rehandover(monkeypatch):
     n, clock = make_multi(monkeypatch)
     advance(n, clock, .8)
     m = n.multi
@@ -229,6 +292,15 @@ def test_unfinished_motion_and_unconfirmed_stop_time_out(monkeypatch):
     assert m.state == "stopped"
     assert m.request("reset")
     advance(n, clock, .4)
+    assert m.state == "stand_ready"
+    assert not m.request("walk"), "反馈站立但仍保持下蹲目标，不能绕过首拍跳变量保护"
+    assert "首拍目标跳变过大" in n.warnings[-1]
+
+
+def test_unconfirmed_stop_times_out(monkeypatch):
+    n, clock = make_multi(monkeypatch)
+    advance(n, clock, .8)
+    m = n.multi
     assert m.request("walk")
     advance(n, clock, .3)
     assert m.request("stop")
