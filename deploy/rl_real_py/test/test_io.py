@@ -3,9 +3,12 @@
 from pathlib import Path
 import csv
 import os
+import pty
 import queue
+import select
 import subprocess
 import threading
+import tty
 from types import SimpleNamespace
 
 import numpy as np
@@ -44,6 +47,30 @@ def make_node(monkeypatch):
     n._close_log = lambda: n.log_events.append("close")
     n._log_row = lambda *args: None
     return n
+
+
+def test_keyboard_nonblocking_pty_idle_input_and_split_utf8(monkeypatch):
+    master, slave = pty.openpty()
+    received = []
+    n = SimpleNamespace(multi=SimpleNamespace(keys=received.append))
+    try:
+        with os.fdopen(slave, "r", encoding="utf-8") as stream:
+            tty.setcbreak(stream.fileno())
+            os.set_blocking(stream.fileno(), False)
+            monkeypatch.setattr(module.sys, "stdin", stream)
+            for _ in range(200):
+                RL_real._read_keys(n)  # 空终端曾在 TextIOWrapper.read 中抛 TypeError。
+            assert not any(received)
+            for data, expected in ((b"3p1r", "3p1r"), (b"\xe4", ""),
+                                   (b"\xbd\xa0\x1b[A3", "\x1b[A3")):
+                os.write(master, data)
+                assert select.select([stream], [], [], 1.)[0]
+                RL_real._read_keys(n)
+                assert received[-1] == expected
+                RL_real._read_keys(n)
+                assert received[-1] == ""
+    finally:
+        os.close(master)
 
 
 def test_async_log_writer(tmp_path):

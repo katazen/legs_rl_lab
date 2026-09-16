@@ -1,7 +1,6 @@
 """离线切换测试：真实 ONNX 推理、合成反馈；不初始化 ROS 节点或连接电机。"""
 
 import copy
-import io
 import json
 import os
 from pathlib import Path
@@ -276,7 +275,8 @@ def test_operator_stop_priority_and_gamepad_edges(monkeypatch):
     step = n.policy_step
     n._on_joy(SimpleNamespace(axes=[0.]*3, buttons=buttons))
     assert n.policy_step == step
-    monkeypatch.setattr("sys.stdin", io.StringIO("2p1r"))
+    monkeypatch.setattr("sys.stdin", SimpleNamespace(fileno=lambda: 0))
+    monkeypatch.setattr("rl_real_py.rl_real_common.os.read", lambda fd, size: b"2p1r")
     RL_real._read_keys(n)
     assert m.state == "stopped" and m.active is None
     m.keys("w")

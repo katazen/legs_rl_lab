@@ -426,7 +426,8 @@ class RL_real(Node, Policy):
 
     def _read_keys(self):
         try:
-            chars = sys.stdin.read() or ""
+            # 非阻塞文本流空读会在解码器内抛 TypeError；控制键均为 ASCII。
+            chars = os.read(sys.stdin.fileno(), 4096).decode("ascii", errors="ignore")
         except (IOError, OSError):
             chars = ""
         self.multi.keys(chars)
