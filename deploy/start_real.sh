@@ -1,36 +1,49 @@
 #!/usr/bin/env bash
 # 一键启动实机部署全栈: IMU -> armcontrol -> RL 策略。
-# 各开一个 gnome-terminal 窗口(RL 窗口有真终端, 键盘 W/S/A/D/Q/E/P/R 可用)。
+# 各开一个 gnome-terminal 窗口；RL 统一管理走路/下蹲/起身。
 # 注: 不在脚本里 build, 编译自行处理; 各节点只 source + 启动。
 #
-# 关闭: 直接关掉三个窗口, 或在任一窗口 Ctrl-C。
+# 关闭全栈: 先支撑机器人，再执行 stop_real.sh。
 
 set -e
+export PATH="/usr/bin:$PATH"
 ROS=/opt/ros/humble/setup.bash
 H1="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"   # deploy 目录(脚本所在)
-RL_NODE=rl_real_common   # 要测 wan 就改成 rl_real_wan
-RL_ARGS=""
-for arg in "$@"; do
-  case "$arg" in
-    --start-from-current) RL_ARGS="--ros-args -p start_from_current:=true" ;;
+RL_NODE=rl_real_common
+CONFIG_FILE="$H1/rl_real_py/configs/common.yaml"
+CHECK_ONLY=false
+while (($#)); do
+  case "$1" in
+    --config)
+      [[ $# -ge 2 ]] || { echo "错误: --config 缺少路径" >&2; exit 2; }
+      CONFIG_FILE="$2"; shift 2 ;;
+    --check-only) CHECK_ONLY=true; shift ;;
     -h|--help)
-      echo "用法: $0 [--start-from-current]"
-      echo "默认: 缓入预设姿态后等 P；--start-from-current: 保持实时姿态后等 P。"
+      echo "用法: $0 [--config YAML] [--check-only]"
+      echo "统一切换走路/下蹲/起身；保持当前姿态，不自动回站立。"
+      echo "--check-only: 仅检查配置/策略/PD，不启动驱动、不修改 PD 文件。"
       exit 0 ;;
-    *) echo "错误: 未知参数 $arg" >&2; exit 2 ;;
+    *) echo "错误: 未知参数 $1" >&2; exit 2 ;;
   esac
 done
+CONFIG_FILE="$(readlink -f -- "$CONFIG_FILE")"
+RL_ARGS=(--ros-args -p "config_file:=$CONFIG_FILE")
 
+# 必须先确认安装版支持无输出预检，避免旧 main 忽略参数后直接启动控制。
+echo "[preflight] 检查安装版、所选模型与配置 ..."
+if ! (source "$ROS"; source "$H1/rl_real_py/install/setup.bash";
+      python3 -c 'from rl_real_py.rl_real_common import RL_real, main; assert hasattr(RL_real, "multi") and not hasattr(RL_real, "_tick_prepare"), "请先重新编译 rl_real_py（统一三任务版）"; main()' \
+      "${RL_ARGS[@]}" -p preflight_only:=true); then
+  echo "错误: 预检失败，未启动电机驱动；请检查模型/配置，并重新编译 rl_real_py。" >&2
+  exit 1
+fi
+python3 "$H1/sync_pd.py" --config "$CONFIG_FILE" --check-only
+if $CHECK_ONLY; then exit 0; fi
 command -v gnome-terminal >/dev/null || { echo "错误: 未找到 gnome-terminal"; exit 1; }
 
-# 新入口必须确认安装版支持该模式，避免旧节点忽略参数后仍走 prepare。
-if [[ -n "$RL_ARGS" ]]; then
-  if ! (source "$ROS"; source "$H1/rl_real_py/install/setup.bash";
-        python3 -c 'from rl_real_py.rl_real_common import RL_real; assert hasattr(RL_real, "_capture_current_target") and hasattr(RL_real, "_current_state_ready")'); then
-    echo "错误: 安装版 RL 不支持从当前姿态启动；请先在 deploy/rl_real_py 编译安装。" >&2
-    exit 1
-  fi
-fi
+# 同步失败必须退出，不能用旧 PD 启动另一份策略。
+python3 "$H1/sync_pd.py" --config "$CONFIG_FILE"
+printf -v RL_ARGS_TEXT '%q ' "${RL_ARGS[@]}"
 
 # ---- IMU (含 rviz) ----
 echo "[IMU] 启动 ..."
@@ -42,8 +55,6 @@ sleep 3
 
 # ---- armcontrol (电机驱动) ----
 echo "[armcontrol] 启动 ..."
-echo "[PD] 从 deploy.yaml 同步 kp/kd -> armcontrol ..."
-python3 $H1/sync_pd.py || echo "[PD] 同步失败, 沿用旧 arm yaml"
 gnome-terminal --title="armcontrol" -- bash -c \
   "source $ROS; source $H1/control_ws/install/setup.bash; \
    ros2 run armcontrol arm_control_node; \
@@ -54,13 +65,9 @@ sleep 3
 echo "[RL] 启动 ($RL_NODE) ..."
 gnome-terminal --title="RL policy ($RL_NODE)" -- bash -c \
   "source $ROS; source $H1/rl_real_py/install/setup.bash; \
-   ros2 run rl_real_py $RL_NODE $RL_ARGS; \
+   ros2 run rl_real_py $RL_NODE $RL_ARGS_TEXT; \
    echo; echo '[RL 已退出, 回车关闭]'; read"
 
-if [[ -n "$RL_ARGS" ]]; then
-  echo "全部已启动。流程: 等待有效状态 -> 保持当前姿态 (跳过准备/到位补偿) -> 在 RL 窗口按 P 开始策略。"
-  echo "P/B 暂停保持当前位置，R/X 重新锁定当前位置；不会回预设姿态。"
-  echo "注意: 驱动启动仍会使能电机；P 后策略会产生新目标，不能保证任意姿态都能稳定运行。"
-else
-  echo "全部已启动。流程: 自动缓慢进准备姿态 -> 站立保持 -> 在 RL 窗口按 P 开始行走。"
-fi
+echo "统一入口：1/LB+A 走路，2/LB+X 下蹲，3/LB+Y 起身；任务键表示已人工确认落地。"
+echo "0/Start 先停步减速，Enter/再次 Start 确认接地收脚；P/B 中断锁存，R/Back 重新验收。"
+echo "只接管当前姿态，不自动插值回站立；P/B 不是断电急停。"

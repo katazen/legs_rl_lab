@@ -1,93 +1,46 @@
-# ============================================================
-#  实机部署配置 (rl_real_common 节点)
-#  ★ 部署时通常只改 run 这一项 ★
-#  所有模型参数(默认站姿/观测顺序+scale/history/action_scale/步态周期/step_dt)
-#  都从 <logs_root>/<run>/params/deploy.yaml 自动读取;
-#  策略从 <logs_root>/<run>/exported/policy.onnx (优先) 或 policy.pt 读取;
-#  实机数据自动存到 <logs_root>/<run>/sim2real/<保存时间>.csv
-# ============================================================
-run: 2026-08-26_20-37-55
-# 相对 legs_rl_lab 根(deploy 的上一级); 也可填绝对路径覆盖。代码自动解析。
-logs_root: logs/rsl_rl/nlegs_rough
+# 统一三任务配置：只在这里选择模型、配置硬件和切换阈值。
+# 模型的观测、动作、PD、参考轨迹仍读取各 run 的 params/deploy.yaml。
+# 路径相对仓库根目录；不自动选择最新模型。
+tasks:
+  walk: logs/rsl_rl/nlegs_flat_static/2026-09-16_11-41-05
+  crouch: logs/rsl_rl/nlegs_mimic_crouch/2026-09-15_15-36-16
+  rise: logs/rsl_rl/nlegs_mimic_stand/2026-09-15_18-50-29
 
-# ---------- 部署时序 (硬件相关, 非模型参数) ----------
-publish_rate: 200          # 下发率 Hz; 策略率 = 1/step_dt (由 deploy.yaml 决定), decimation 自动算
+publish_rate: 200
+target_ema_alpha: 1.0       # 统一部署与 sim2sim 一致，不叠加目标 EMA
+cmd_bias: [0.0, 0.0, 0.0]   # 统一部署不叠加速度零偏
+state_timeout: 0.06        # s，关节/IMU 反馈超时则锁存停止
 
-# ---------- 下发目标 EMA 平滑 ----------
-# 推理 50Hz、发布 200Hz, 两拍间用 EMA 插值消除位置目标的阶梯 -> 电机更平顺、抑制 50Hz 抖。
-# target_pub += alpha*(target - target_pub), 每个 200Hz tick 一次。
-# alpha ∈ (0,1]: 1.0=关闭(等同 ZOH); 越小越平滑但滞后越大。0.5≈一拍内到 90%; T1 约 0.2。
-# 注意: 这会给下发链多一点滞后, sim 侧没有 -> 如需严格 sim2real 一致, sim2sim/训练也应加同样滤波。
-target_ema_alpha: 0.5
-
-# ---------- 关节顺序 (硬件事实, deploy.yaml 里没有, 按名映射) ----------
-# 实机话题序 (/left_joint_states, /dog_joint_pos): position[0..5]=L1..L6, [6..11]=R1..R6
+# 话题中的实机顺序；策略顺序从各模型按关节名读取。
 joint_index_in_real: ["L1","L2","L3","L4","L5","L6","R1","R2","R3","R4","R5","R6"]
-# 策略/仿真序 (Isaac 交错序, 与 deploy.yaml 的 default_joint_pos 对应)
-joint_index_in_sim:  ["R1","L1","R2","L2","R3","L3","R4","L4","R5","L5","R6","L6"]
-
-# ---------- 发布安全限位 (实机序 L1..L6,R1..R6; 取自 URDF) ----------
-# R5 (CAN 6) 下限按 2026-09-09 实测端点设置，不另加向外裕量。
+# 硬件边界；任务 clip 不能放宽它。R5 下限保留此前实测设置。
 joint_lower_limits: [-1.05, -0.26, -1.0, 0.0, -0.45, -0.39,
                      -1.05, -1.05, -1.0, 0.0, -0.45, -0.39]
 joint_upper_limits: [ 1.05,  1.05,  1.0, 1.92, 0.4,  0.35,
                       1.05,  0.26,  1.0, 1.92, 0.4,  0.35]
 
-# ---------- 关节速度来源 ----------
-# 解码表已按固件 VMAX=45 校正, msg.velocity 现已正确; False=直接用电机上报速度(更准更低延迟)
-use_derived_vel: False
-vel_ema_alpha: 0.5         # 位置差分速度的 EMA 系数 (仅 use_derived_vel=True 时用)
-
-# ---------- 上电缓入准备姿态 ----------
-prepare_time: 4.0          # 秒; 从当前实测姿态 smoothstep 平滑移动到 default
-
-# ---------- 到位补偿 settle (prepare 之后, hold 之前) ----------
-# 为什么需要: 关节存在静摩擦死区(实测踝的门槛约 2~3 N·m)。踝 kp=40, 残差 0.05 rad 只产生
-# 2 N·m, 顶不破摩擦 -> 误差就地冻结, 纯 P 控制永远纠不回来。而左右残差互不相同,
-# 表现就是两脚一前一后错开几 cm; 此时策略在"读数世界"里是自洽的, 照样能走, 只是一直歪着。
-# 做法: prepare 结束后不直接进 hold, 而是把残差积分成目标偏置, 把力矩推过摩擦门槛;
-# 关节一挣脱摩擦、残差立刻减小, 偏置随即停止增长 -> 自收敛。hold 阶段保留这个偏置
-# (若回到裸 default, 残差会立刻掉回来); run 阶段由策略接管, 不再使用。
-settle_time: 3.0           # 秒; 补偿阶段最长时间, 到时无论是否达标都进 hold
-settle_ki: 0.01            # 残差积分增益(每 200Hz tick); 0.01 -> 残差 0.05 时偏置以 0.1 rad/s 增长
-settle_tol: 0.01           # rad; 12 个关节残差全部小于此值 = 提前达标
-settle_tau_max: 5.0        # N·m; 补偿允许引入的额外力矩上限, 逐关节按 kp 折算成角度上限
-                           #   髋pitch(kp200)->0.025  髋roll/yaw(kp100)->0.05
-                           #   膝(kp250)->0.02        踝pitch(kp40)->0.125 rad
-                           #   (踝pitch 余量最大, 正好是最需要补偿的关节)
-                           # 另按 0.3*effort 再封一层: 踝roll effort 仅 5.8 N·m, 实际只给
-                           # 1.74 N·m -> 0.0435 rad, 避免补偿吃完它的出力余量而饱和。
-
-# ---------- 左右镜像残差验收 ----------
-# prepare 的正确判据: 只比"目标 vs 实测"发现不了两脚错位(两条腿可以各自都在容差内却一前一后)。
-# 必须比左右镜像: 关节1髋pitch/4膝/5踝pitch 左右同号 -> 看 L-R; 关节2髋roll/3髋yaw/6踝roll
-# 左右反号 -> 看 L+R。超过此阈值会打印告警, 提示不要起跑。踝差 0.02 rad 约对应脚前后错 1 cm。
-mirror_tol: 0.02           # rad
-
-# ---------- 数据新鲜度看门狗 ----------
-state_timeout: 0.2         # 秒; run 中若关节/IMU 超过此时间没更新 -> 冻结指令, 不拿旧观测推理
-
-# ---------- 手柄 (满杆范围自动读取当前模型 deploy.yaml; A=行走 B=停 X=复位) ----------
+use_derived_vel: false     # 默认直接使用电机上报速度
+vel_ema_alpha: 0.5         # 仅差分速度模式使用
 deadzone: 0.12
-
-# ---------- 速度指令缓升 [vx, vy, wz] ----------
-# 仅限制指令幅值增加速率；摇杆回中、空格清零、减小速度均立即生效，不做缓降。
-# 单位分别为 m/s², m/s², rad/s²；当前模型向前 vx 0→0.5m/s 约需 1.0s。
-cmd_accel_limit: [0.5, 0.5, 1.0]
-
-# ---------- 手柄"松开归零"看门狗 (秒) ----------
-# 仅作用于手柄: /joy 超过此时间没更新 -> 手柄指令归零, 防 /joy 停发时指令 latch 住漂移。
-# (键盘为累加式, 不受此超时影响; 由空格清零。)
-ctrl_timeout: 0.4
-
-# ---------- 指令零偏修正 [vx, vy, wz] (m/s, m/s, rad/s) ----------
-# 实机零指令下若持续漂移, 在此填一个反向常量速度抵消(相当于给策略一个"补偿指令")。
-# 只加到喂策略的观测上, 不影响日志/手柄上限。全 0 = 不修正。
-# 标定法: 零指令下观察漂移方向 -> 往相反方向小步加(如右漂加 +vy / 反向 wz), 迭代到不漂为止。
-cmd_bias: [0.0, 0.0, 0.0]
-
-# ---------- 键盘 (累加式; 每次速度变化会打印) ----------
-# W/S: vx±  A/D: vy±  Q/E: yaw±  (每按一下加/减 step);  空格=全部清零;  P=行走/暂停  R=复位
-# step=每次按键的增量；各轴上下限自动读取当前模型 deploy.yaml。
+ctrl_timeout: 0.4          # s，手柄消息过期归零
+cmd_accel_limit: [0.5, 0.5, 1.0]  # 速度指令缓升/缓降
 keyboard:
-  step: 0.1
+  step: 0.05
+# 按实际手柄 /joy 核对；LB+A/X/Y 选择任务，B 中断，Back 重新验收。
+gamepad_buttons: {a: 0, b: 1, x: 2, y: 3, lb: 4, back: 6, start: 7}
+
+multi_task:
+  stable_time: 0.30
+  joint_tolerance: 0.12
+  ankle_roll_tolerance: 0.20
+  joint_speed: 0.35
+  tilt_error: 0.15
+  angular_speed: 0.40
+  max_tilt: 0.80
+  joint_limit_tolerance: 0.03  # 仅任务反馈容差，不放宽指令或硬件边界
+  max_policy_gap: 0.06
+  handover_time: 0.20
+  handover_max_delta: 0.60
+  stop_blend_time: 0.50
+  stop_timeout: 6.0
+  end_timeout: 4.0
