@@ -1,0 +1,33 @@
+deploy/rl_real_py/test/test_multi_task.py
+  s_22f8ffc6662cf2::t_829281d246c0d2 23,28-29,154-212
+  s_22f8ffc6662cf2::t_8e5945a562204c 286,295-303
+  s_22f8ffc6662cf2::t_1bd09491614890 213-214
+deploy/rl_real_py/configs/common.yaml
+  s_22f8ffc6662cf2::t_829281d246c0d2 32-52
+deploy/README.md
+  s_22f8ffc6662cf2::t_829281d246c0d2 50-57
+deploy/rl_real_py/rl_real_py/multi_task.py
+  s_22f8ffc6662cf2::t_829281d246c0d2 65-66,89-117
+  s_22f8ffc6662cf2::t_8d777460ce8a7b 118
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.7.4",
+  "base_commit_sha": "1b938f645d34c7f2680c899455a6be8397064846",
+  "prompts": {},
+  "humans": {
+    "h_d698c05df35737": {
+      "author": "woan <377801872@qq.com>"
+    }
+  },
+  "sessions": {
+    "s_22f8ffc6662cf2": {
+      "agent_id": {
+        "tool": "codex",
+        "id": "01a06a55-9d3a-7f52-b1dc-6c6e4d885f57",
+        "model": "gpt-6-astra"
+      },
+      "human_author": "woan <377801872@qq.com>"
+    }
+  }
+}
