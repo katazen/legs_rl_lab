@@ -306,7 +306,6 @@ class RL_real(Node, Policy):
             f"walk={run_dir.name}  obs={self.num_obs}x{self.num_history}  "
             f"pub={1/self.pub_dt:.0f}Hz  policy={1/(self.pub_dt*self.decimation):.0f}Hz  "
             f"period={self.gait_period}s")
-        print("统一入口：只保持当前姿态，等待站姿/蹲姿就绪；1/2/3 选择任务，P 中断，R 重新验收。")
 
     def _fresh(self):
         """关节与 IMU 是否都在 state_timeout 内更新过。"""

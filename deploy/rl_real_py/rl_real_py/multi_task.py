@@ -81,8 +81,26 @@ class MultiTaskController:
         self.reason = "等待完整关节/IMU，先保持实测姿态，不自动回站立"
         self.end_announced = False
         self.key_escape = False
-        print("[multi] 1/LB+A 走路，2/LB+X 下蹲，3/LB+Y 起身；0/Start 停步，Enter/再次 Start 确认接地收脚。")
-        print("[multi] P/B 中断锁存，R/Back 重新验收；任务键表示人工确认双脚落地，不是接触检测。")
+        if not getattr(node, "preflight_only", False):
+            self.show_status()
+
+    def show_status(self):
+        label, actions = {
+            "wait_current": ("等待关节/IMU 反馈", "反馈有效后自动保持当前姿态 → 等待使能反馈；不自动回站立。"),
+            "wait_feedback": ("保持当前姿态，等待使能反馈", "反馈连续恢复后自动 → 姿态验收；暂不能启动任务。"),
+            "checking": ("姿态验收中", "站姿/蹲姿连续达标后自动 → 对应就绪状态；不自动调整姿态，暂不能启动任务。"),
+            "stand_ready": ("站立就绪", "1 / LB+A → 走路；2 / LB+X → 下蹲。"),
+            "crouch_ready": ("下蹲就绪", "3 / LB+Y → 起身；起身完成后才能走路。"),
+            "walking": ("行走中", "0 / Start → 停步等待确认；W/S 前后、A/D 左右、Q/E 转向，或手柄摇杆调速；空格清零速度，但不退出行走。"),
+            "stopping": ("停步中，等待人工确认接地", "速度归零且亲眼确认双脚落地后：Enter / 再次按 Start → 平滑收脚；不是再次按 0。"),
+            "standing_transition": ("收脚回站立中", "收脚完成且姿态稳定后自动 → 站立就绪；暂不能切换任务。"),
+            "lowering": ("下蹲中", "动作结束且实测姿态到位后自动 → 下蹲就绪，继续策略保持；暂不能切换任务。"),
+            "rising": ("起身中", "动作结束且实测姿态到位后自动 → 站立就绪，继续策略保持；暂不能切换任务。"),
+            "stopped": ("中断/故障锁存", "排除故障并恢复到稳定站姿/蹲姿后：R / Back → 重新验收；不会自动回站立或续播。"),
+        }[self.state]
+        print(f"\n[操作提示] 当前状态：{label} ({self.state})\n"
+              f"  下一步：{actions}\n"
+              "  P / B → 中断锁存（不是断电急停）。任务键表示人工确认双脚落地站稳。", flush=True)
 
     def change(self, state, reason):
         previous = self.state
@@ -90,9 +108,11 @@ class MultiTaskController:
         self.reason, self.state_since = reason, time.monotonic()
         self.stable_since = self.stable_pose = None
         print(f"[multi] {previous} -> {state}: {reason}")
+        self.show_status()
 
     def reject(self, reason):
         self.n.get_logger().warn(f"[multi 拒绝] {reason}")
+        self.show_status()
         return False
 
     def halt(self, reason):
@@ -347,6 +367,7 @@ class MultiTaskController:
         if "p" in chars:
             self.request("halt")
             return
+        speed_changed = False
         for ch in chars:
             if ch == "\x1b":
                 self.key_escape = True
@@ -359,11 +380,17 @@ class MultiTaskController:
                 self.request(self.KEYS[ch])
             elif ch == " ":
                 self.n._clear_cmd_sources()
+                speed_changed = True
             elif ch in "wsadqe" and self.state == "walking":
                 index = "wsadqe".index(ch)
                 axis, sign = index // 2, (1 if index % 2 == 0 else -1)
                 self.n._kb_cmd[axis] = np.clip(self.n._kb_cmd[axis] + sign*self.n.kb_step,
                                                self.n.cmd_min[axis], self.n.cmd_max[axis])
+                speed_changed = True
+        if speed_changed:
+            vx, vy, wz = self.n._kb_cmd
+            print(f"[键盘速度设置] 前后={vx:.2f}m/s，左右={vy:.2f}m/s，转向={wz:.2f}rad/s；未含手柄输入。")
+            self.show_status()
 
     def joy(self, msg):
         n = self.n

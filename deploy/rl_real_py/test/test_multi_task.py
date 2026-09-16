@@ -62,46 +62,80 @@ def advance(n, clock, seconds, follow=False, fresh=True):
             assert np.all(n.sent[-1] >= n.lo) and np.all(n.sent[-1] <= n.hi)
 
 
-def test_complete_cycle_separate_histories_and_manual_stop(monkeypatch):
+def test_complete_cycle_separate_histories_and_manual_stop(monkeypatch, capsys):
+    def hint(state, *controls):
+        output = capsys.readouterr().out
+        prompt = output.rsplit("[操作提示]", 1)[-1]
+        assert f"({state})" in prompt
+        assert "不是断电急停" in prompt
+        assert all(control in prompt for control in controls)
+        return output
+
     n, clock = make_multi(monkeypatch)
     m = n.multi
+    hint("wait_current", "不自动回站立")
     assert not m.request("walk")
+    hint("wait_current")
+    assert "不能从 wait_current 启动" in n.warnings[-1]
     advance(n, clock, .8)
+    output = hint("stand_ready", "1 / LB+A", "2 / LB+X")
+    assert "(wait_feedback)" in output and "(checking)" in output
     assert m.state == "stand_ready" and not m.request("rise")
+    hint("stand_ready", "1 / LB+A", "2 / LB+X")
     initial = n.target_pub.copy()
     assert m.request("crouch")
+    hint("lowering", "下蹲就绪", "暂不能切换任务")
     assert not m.request("rise") and not m.request("crouch")
+    hint("lowering")
     p = m.policies["crouch"]
     advance(n, clock, .1, follow=True)
     assert p.motion.steps == 0
     assert np.max(np.abs(n.target_pub-initial)) < m.cfg["handover_max_delta"]
     advance(n, clock, 4., follow=True)
     assert m.state == "crouch_ready" and m.active == "crouch"
+    hint("crouch_ready", "3 / LB+Y")
     assert p.motion.frame == len(p.motion.positions)-1
     assert not m.request("walk")
     before = p.motion.steps
     assert m.request("rise")
+    hint("rising", "站立就绪", "暂不能切换任务")
     assert m.policies["rise"].motion.steps == 0 and p.motion.steps == before
     advance(n, clock, 3.5, follow=True)
     assert m.state == "stand_ready" and m.active == "rise"
+    hint("stand_ready", "1 / LB+A", "2 / LB+X")
     assert m.request("walk")
+    hint("walking", "0 / Start", "W/S", "手柄摇杆", "空格")
     walk = m.policies["walk"]
     assert walk.hist is not m.policies["rise"].hist
     assert all(np.all(buf == buf[0]) for buf in walk.hist.buffers)
     m.keys("w")
+    assert "[键盘速度设置]" in hint("walking")
     advance(n, clock, .5)
+    assert "[操作提示]" not in capsys.readouterr().out, "控制循环不能反复刷操作提示"
     assert n.cmd[0] > 0
     assert m.request("stop")
+    hint("stopping", "Enter / 再次按 Start", "不是再次按 0")
     advance(n, clock, .5)
     assert m.state == "stopping", "没有接触传感器，不能擅自宣告双脚承重并自动收脚"
     assert np.linalg.norm(n.cmd) < 1e-6
     assert not m.request("stop"), "长按 0 的重复字符不能被当成收脚确认"
     assert m.request("confirm_stop")
+    hint("standing_transition", "站立就绪", "暂不能切换任务")
     advance(n, clock, 1.)
     assert m.state == "stand_ready" and m.active is None
+    hint("stand_ready", "1 / LB+A", "2 / LB+X")
     assert m.request("crouch")
     advance(n, clock, 4.1, follow=True)
     assert m.state == "crouch_ready"
+    hint("crouch_ready", "3 / LB+Y")
+    m.keys("p")
+    hint("stopped", "R / Back", "不会自动回站立或续播")
+    assert m.request("reset")
+    hint("checking", "暂不能启动任务")
+    advance(n, clock, .4)
+    hint("crouch_ready", "3 / LB+Y")
+    m.keys(" ")
+    assert "前后=0.00m/s" in hint("crouch_ready")
 
 
 def test_crouch_start_never_interpolates_to_standing(monkeypatch):
