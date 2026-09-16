@@ -1,0 +1,29 @@
+deploy/rl_real_py/test/test_multi_task.py
+  s_22f8ffc6662cf2::t_4edf0a967bbfd8 278-279
+deploy/rl_real_py/test/test_io.py
+  s_22f8ffc6662cf2::t_079c438fef0fe7 6,8,11,52-73
+  s_22f8ffc6662cf2::t_00a2f33b603f2c 74-75
+deploy/rl_real_py/rl_real_py/rl_real_common.py
+  s_22f8ffc6662cf2::t_4edf0a967bbfd8 429-430
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.7.4",
+  "base_commit_sha": "e7b84daaf688376ed058b7c7f679690cb7cdb890",
+  "prompts": {},
+  "humans": {
+    "h_d698c05df35737": {
+      "author": "woan <377801872@qq.com>"
+    }
+  },
+  "sessions": {
+    "s_22f8ffc6662cf2": {
+      "agent_id": {
+        "tool": "codex",
+        "id": "01a06a55-9d3a-7f52-b1dc-6c6e4d885f57",
+        "model": "gpt-6-astra"
+      },
+      "human_author": "woan <377801872@qq.com>"
+    }
+  }
+}
