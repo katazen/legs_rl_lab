@@ -1,0 +1,39 @@
+deploy/start_real.sh
+  s_22f8ffc6662cf2::t_4e87b4f3b8e6b9 71
+deploy/README.md
+  s_22f8ffc6662cf2::t_4766ed9ff6c976 7-10,24,34,63-64,69-74,100
+  s_22f8ffc6662cf2::t_aadef26e3e5c20 121,127-130
+deploy/rl_real_py/rl_real_py/multi_task.py
+  s_22f8ffc6662cf2::t_4e87b4f3b8e6b9 40-42,44-45,48,52,55-63,65-67,69,139-140,246-247
+deploy/rl_real_py/rl_real_py/deployment_config.py
+  s_22f8ffc6662cf2::t_4e87b4f3b8e6b9 15-19,24,30,33-34
+deploy/rl_real_py/configs/common.yaml
+  s_22f8ffc6662cf2::t_4e87b4f3b8e6b9 6,32,34,37-49
+deploy/rl_real_py/test/test_multi_task.py
+  s_22f8ffc6662cf2::t_2ff77806c2adce 459-461
+  s_22f8ffc6662cf2::t_b36ca6c8272836 15,23,28-35,54,56,441-442
+  s_22f8ffc6662cf2::t_4766ed9ff6c976 560-620
+deploy/rl_real_py/test/fixtures/nlegs_limit_20260915.xml
+  s_22f8ffc6662cf2::t_fa3c61b67566be 1-149
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.7.4",
+  "base_commit_sha": "9b96c72304e1c638fc8da6ff3934c7e6de79890b",
+  "prompts": {},
+  "humans": {
+    "h_d698c05df35737": {
+      "author": "woan <377801872@qq.com>"
+    }
+  },
+  "sessions": {
+    "s_22f8ffc6662cf2": {
+      "agent_id": {
+        "tool": "codex",
+        "id": "01a06a55-9d3a-7f52-b1dc-6c6e4d885f57",
+        "model": "gpt-6-astra"
+      },
+      "human_author": "woan <377801872@qq.com>"
+    }
+  }
+}
