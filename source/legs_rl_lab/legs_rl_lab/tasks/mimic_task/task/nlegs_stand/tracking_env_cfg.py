@@ -1,4 +1,4 @@
-"""下蹲到站立：复用下蹲 Mimic，只覆盖参考动作和对应时序。"""
+"""实测蹲姿到站立：复用下蹲 Mimic，使用抬脚 2 cm、放慢后的 v2 动作。"""
 
 from pathlib import Path
 
@@ -11,10 +11,10 @@ from ..nlegs_crouch.tracking_env_cfg import NlegsCrouchEnvCfg
 class NlegsStandEnvCfg(NlegsCrouchEnvCfg):
     def __post_init__(self):
         super().__post_init__()
-        self.commands.motion.motion_file = str(Path(__file__).parent / "motions/crouch_to_stand_v1.npz")
-        self.commands.motion.sample_until_s = 2.08
-        self.events.push_robot.params["motion_time_range_s"] = (.4, 2.08)
-        self.episode_length_s = 2.68
+        self.commands.motion.motion_file = str(Path(__file__).parent / "motions/crouch_to_stand_v2.npz")
+        self.commands.motion.sample_until_s = 2.6
+        self.events.push_robot.params["motion_time_range_s"] = (.5, 2.6)
+        self.episode_length_s = 3.35
 
 
 @configclass
