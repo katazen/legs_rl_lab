@@ -196,6 +196,10 @@ class Policy:
         return [(np.clip(feats[n], *clip) if clip is not None else feats[n]).astype(np.float32) * scale
                 for n, scale, clip in zip(self.obs_names, self.term_scales, self.term_clips)]
 
+    def _joint_range_details(self, q, lo, hi, outside):
+        return "; ".join(f"{self.real_joint_names[i]}={q[i]:.4f}，范围[{lo[i]:.4f}, {hi[i]:.4f}]"
+                         for i in np.flatnonzero(outside))
+
     def _target_from_action(self, action):
         action = np.asarray(action, dtype=np.float32)
         if action.shape != (self.num_actions,) or not np.isfinite(action).all():
@@ -209,8 +213,10 @@ class Policy:
             raise ValueError("策略目标维度错误或含 NaN/Inf")
         if self.motion is not None:
             real_target = target[self.sim2real]
-            if np.any(real_target < self.lo - 1e-6) or np.any(real_target > self.hi + 1e-6):
-                raise ValueError("策略目标超过硬件软件限位，拒绝下发；不会静默裁剪改变动作")
+            outside = (real_target < self.lo - 1e-6) | (real_target > self.hi + 1e-6)
+            if np.any(outside):
+                raise ValueError("策略目标超过 common 硬件限位，拒绝下发（rad）: "
+                                 + self._joint_range_details(real_target, self.lo, self.hi, outside))
         self.last_action = action
         return np.clip(target[self.sim2real], self.lo, self.hi).astype(np.float32)
 
@@ -325,11 +331,10 @@ class RL_real(Node, Policy):
             reason = f"IMU 四元数无效（范数 {quat_norm:.5f}，应接近 1）"
         else:
             q = self.obs_raw[7:19]
-            outside = np.flatnonzero((q < self.lo) | (q > self.hi))
-            if len(outside):
-                i = int(outside[0])
-                reason = (f"{self.real_joint_names[i]}={q[i]:.5f} rad 超出 common 硬件限位 "
-                          f"[{self.lo[i]:.5f}, {self.hi[i]:.5f}]，不会裁剪后拉回")
+            outside = (q < self.lo) | (q > self.hi)
+            if np.any(outside):
+                reason = ("反馈超出 common 硬件限位（rad）: "
+                          + self._joint_range_details(q, self.lo, self.hi, outside))
         if reason is not None:
             self.get_logger().warn(f"当前姿态不可接管: {reason}", throttle_duration_sec=1.0)
             return False

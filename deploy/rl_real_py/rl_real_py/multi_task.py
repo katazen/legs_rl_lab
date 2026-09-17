@@ -90,6 +90,7 @@ class MultiTaskController:
         self.end_announced = False
         self.key_escape = False
         if not getattr(node, "preflight_only", False):
+            print("[注意] P/B 保持目标，不是断电急停；任务键确认落地站稳；4 须扶稳/吊起，不负责平衡。")
             self.show_status()
 
     def _calibrate_crouch(self, calibration):
@@ -123,32 +124,31 @@ class MultiTaskController:
               "common、训练 clip、参考动作与真实观测不变。")
 
     def show_status(self):
+        crouch_key = "；2/LB+X 下蹲" if "crouch" in self.policies else ""
         label, actions = {
-            "wait_current": ("等待关节/IMU 反馈", "反馈有效后自动保持当前姿态 → 等待使能反馈；不自动回站立。"),
-            "wait_feedback": ("保持当前姿态，等待使能反馈", "反馈连续恢复后自动 → 姿态验收；暂不能启动任务。"),
-            "checking": ("姿态验收中", "站姿/蹲姿连续达标后自动 → 对应就绪状态；不自动调整姿态，暂不能启动策略。稳定保持后 4 / LB+Start → 慢回准备站姿。"),
-            "stand_ready": ("站立就绪", "1 / LB+A → 走路；2 / LB+X → 下蹲；稳定保持后 4 / LB+Start → 慢回准备站姿。"),
-            "crouch_ready": ("下蹲就绪", "3 / LB+Y → 起身；起身完成后才能走路。稳定保持后 4 / LB+Start → 慢回准备站姿。"),
-            "walking": ("行走中", "0 / Start → 停步等待确认；W/S 前后、A/D 左右、Q/E 转向，或手柄摇杆调速；空格清零速度，但不退出行走。"),
-            "stopping": ("停步中，等待人工确认接地", "速度归零且亲眼确认双脚落地后：Enter / 再次按 Start → 平滑收脚；不是再次按 0。"),
-            "standing_transition": ("插值回准备站姿中", "插值完成且实测站姿稳定后自动 → 站立就绪；暂不能切换任务，4 无效。"),
-            "lowering": ("下蹲中", "动作结束且实测姿态到位后自动 → 下蹲就绪，继续策略保持；暂不能切换任务。"),
-            "rising": ("起身中", "动作结束且实测姿态到位后自动 → 站立就绪，继续策略保持；暂不能切换任务。"),
-            "stopped": ("中断/故障锁存", "排除故障后：R / Back → 重新验收站姿/蹲姿；稳定保持后 4 / LB+Start → 慢回准备站姿。不会自动回站立或续播。"),
+            "wait_current": ("等待关节/IMU", "就绪后保持当前姿态"),
+            "wait_feedback": ("等待使能反馈", "保持当前姿态"),
+            "checking": ("姿态验收中", "稳定后 4/LB+Start 慢回站姿"),
+            "stand_ready": ("站立就绪", f"1/LB+A 走路{crouch_key}；4/LB+Start 慢回站姿"),
+            "crouch_ready": ("下蹲就绪", "3/LB+Y 起身；4/LB+Start 慢回站姿"),
+            "walking": ("行走中", "0/Start 停步；W/S 前后 A/D 左右 Q/E 转向（或摇杆）；空格零速"),
+            "stopping": ("停步待确认", "速度归零、双脚落地后 Enter/再次 Start 收脚"),
+            "standing_transition": ("慢回站姿中", "请等待，不能切换"),
+            "lowering": ("下蹲中", "请等待，不能切换"),
+            "rising": ("起身中", "请等待，不能切换"),
+            "stopped": ("中断锁存", "排障后 R/Back 重验；稳定后 4/LB+Start 慢回站姿"),
         }[self.state]
-        if "crouch" not in self.policies:
-            actions = actions.replace("2 / LB+X → 下蹲", "2 / LB+X → 下蹲已禁用（待新模型）")
-        print(f"\n[操作提示] 当前状态：{label} ({self.state})\n"
-              f"  下一步：{actions}\n"
-              "  P / B → 中断锁存（不是断电急停）。策略键表示确认落地站稳；4 表示已扶稳/吊起，插值不负责平衡。", flush=True)
+        print(f"[操作提示] {label} | {actions} | P/B 中断", flush=True)
 
     def change(self, state, reason):
-        previous = self.state
         self.state = self.n.mode = state
         self.reason, self.state_since = reason, time.monotonic()
         self.stable_since = self.stable_pose = None
         self.return_still_since = None
-        print(f"[multi] {previous} -> {state}: {reason}")
+        if state == "stopped":
+            self.n.get_logger().warn(f"[停止] {reason}")
+        elif state == "standing_transition":
+            print(f"[multi] 慢回站姿，预计 {self.stand_blend_time:.1f}s")
         self.show_status()
 
     def reject(self, reason):
@@ -161,7 +161,7 @@ class MultiTaskController:
         self.active = self.pending_target = None
         self.n._clear_cmd_sources()
         self.n._close_log()
-        self.change("stopped", reason + "；保持最后下发目标，恢复后 R 重新验收或稳定后 4 手动回站姿，不自动续播")
+        self.change("stopped", reason)
 
     def state_error(self, task_bounds=False):
         n = self.n
@@ -176,12 +176,15 @@ class MultiTaskController:
         except ValueError as exc:
             return str(exc)
         q = n.obs_raw[7:19]
-        if np.any(q < n.lo) or np.any(q > n.hi):
-            return "反馈超出 common 硬件限位"
+        outside = (q < n.lo) | (q > n.hi)
+        if np.any(outside):
+            return "反馈超出 common 硬件限位（rad）: " + n._joint_range_details(q, n.lo, n.hi, outside)
         if task_bounds:
             margin = self.cfg["joint_limit_tolerance"]
-            if np.any(q < self.lo - margin) or np.any(q > self.hi + margin):
-                return "反馈超出任务限位与容差"
+            outside = (q < self.lo - margin) | (q > self.hi + margin)
+            if np.any(outside):
+                return (f"反馈超出任务限位（rad，容差 ±{margin:.3f}）: "
+                        + n._joint_range_details(q, self.lo, self.hi, outside))
         if rot[2, 2] < np.cos(self.cfg["max_tilt"]):
             return "机身倾角过大"
         return None
@@ -195,8 +198,10 @@ class MultiTaskController:
             tolerance[n.real_joint_names.index(name)] = self.cfg["ankle_roll_tolerance"]
         error = np.abs(n.obs_raw[7:19] - self.pose_q[pose])
         if np.any(error > tolerance):
-            i = int(np.argmax(error / tolerance))
-            return f"{n.real_joint_names[i]} 姿态误差 {error[i]:.3f}rad"
+            label = "蹲姿" if pose == "crouch" else "站姿"
+            return (f"{label}角度不符（rad，范围=参考角±容差）: "
+                    + n._joint_range_details(n.obs_raw[7:19], self.pose_q[pose] - tolerance,
+                                             self.pose_q[pose] + tolerance, error > tolerance))
         rot = rotation_matrix(n.obs_raw[3:7])
         angle = np.arccos(np.clip(np.dot(rot[2], self.pose_rot[pose][2]), -1., 1.))
         if angle > (.20 if stopping else self.cfg["tilt_error"]):
@@ -228,8 +233,11 @@ class MultiTaskController:
         held = self.n.target_pub
         if held.shape != (12,) or not np.isfinite(held).all():
             return "当前保持目标无效"
-        if np.any(np.maximum(self.lo - held, held - self.hi) > self.cfg["joint_limit_tolerance"]):
-            return "当前保持目标超出任务限位容差"
+        margin = self.cfg["joint_limit_tolerance"]
+        outside = np.maximum(self.lo - held, held - self.hi) > margin
+        if np.any(outside):
+            return (f"当前保持目标超出任务限位（rad，容差 ±{margin:.3f}）: "
+                    + self.n._joint_range_details(held, self.lo, self.hi, outside))
         return None
 
     def start_stand_blend(self, duration, reason):
@@ -244,7 +252,7 @@ class MultiTaskController:
     def request(self, task):
         n, now = self.n, time.monotonic()
         if task in ("walk", "crouch", "rise") and task not in self.policies:
-            return self.reject("下蹲任务已禁用，待匹配新起身姿态的下蹲模型训练完成后再启用")
+            return self.reject("下蹲任务已禁用，等待新模型")
         if task == "halt":
             self.halt("操作员中断")
             return True
@@ -262,8 +270,9 @@ class MultiTaskController:
         if task == "reset":
             if self.state != "stopped":
                 return self.reject("仅停止锁存后可重新验收；R 不自动回站立")
-            if all(self.pose_error(p) is not None for p in self.pose_q):
-                return self.reject("当前反馈不满足站姿或蹲姿，需人工恢复；不会强行拉回")
+            errors = [self.pose_error(p) for p in self.pose_q]
+            if all(e is not None for e in errors):
+                return self.reject("重验失败：" + "；".join(dict.fromkeys(errors)))
             self.change("checking" if self.has_target else "wait_current", "重新连续验收，仍需手动选择任务")
             return True
         if task == "stop":
@@ -284,12 +293,18 @@ class MultiTaskController:
             return self.reject("尚未进入正常停步，不接受收脚确认")
         required = {"walk": "stand_ready", "crouch": "stand_ready", "rise": "crouch_ready"}
         if task not in required or self.state != required[task] or self.active == task:
-            return self.reject(f"{task} 不能从 {self.state} 启动；不排队、不重播")
+            reason = None
+            if task in required and self.state in ("wait_current", "wait_feedback", "checking", "stand_ready", "crouch_ready", "stopped"):
+                reason = self.pose_error("crouch" if task == "rise" else "stand")
+            label = {"walk": "走路", "crouch": "下蹲", "rise": "起身"}.get(task, task)
+            return self.reject(f"{label}未启动：{reason or '当前状态不允许'}")
         if (reason := self.pose_error("crouch" if task == "rise" else "stand")) is not None:
             return self.reject(reason)
         hold_violation = np.maximum(self.lo - n.target_pub, n.target_pub - self.hi)
         if np.any(hold_violation > self.cfg["joint_limit_tolerance"]):
-            return self.reject("当前保持目标超出任务限位容差，需先安全恢复并重新接管")
+            return self.reject(f"当前保持目标超出任务限位（rad，容差 ±{self.cfg['joint_limit_tolerance']:.3f}）: "
+                               + n._joint_range_details(n.target_pub, self.lo, self.hi,
+                                                        hold_violation > self.cfg["joint_limit_tolerance"]))
         p = self.policies[task]
         p.policy_step = 0
         p.last_action[:] = 0.
@@ -301,8 +316,11 @@ class MultiTaskController:
         p.cmd[:] = 0.
         try:
             target, _ = self.policy_target(p)
-            if np.max(np.abs(target - n.target_pub)) > self.cfg["handover_max_delta"]:
-                raise ValueError("新策略首拍目标跳变过大")
+            delta = self.cfg["handover_max_delta"]
+            outside = np.abs(target - n.target_pub) > delta
+            if np.any(outside):
+                raise ValueError(f"新策略首拍目标跳变过大（rad，范围=保持目标±{delta:.3f}）: "
+                                 + n._joint_range_details(target, n.target_pub - delta, n.target_pub + delta, outside))
         except Exception as exc:
             n.cmd[:] = previous_command
             return self.reject(f"策略接管预检失败: {exc}")
@@ -427,7 +445,7 @@ class MultiTaskController:
                     self.last_policy = now
                     n._log_row(terms, p)
                     if p.motion and p.motion.frame == len(p.motion.positions) - 1 and not self.end_announced:
-                        print("[multi] 参考末帧：继续策略保持，实测到位后才就绪；不自动断电。")
+                        print("[multi] 参考结束，等待实测到位；继续策略保持。")
                         self.end_announced = True
                     if advancing:
                         p.policy_step += 1

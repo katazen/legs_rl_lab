@@ -73,79 +73,114 @@ def advance(n, clock, seconds, follow=False, fresh=True):
 
 
 def test_complete_cycle_separate_histories_and_manual_stop(monkeypatch, capsys):
-    def hint(state, *controls):
+    def hint(label, *controls):
         output = capsys.readouterr().out
-        prompt = output.rsplit("[操作提示]", 1)[-1]
-        assert f"({state})" in prompt
-        assert "不是断电急停" in prompt
+        prompt = output.rsplit("[操作提示]", 1)[-1].strip()
+        assert prompt.startswith(label + " | ")
+        assert len(prompt.splitlines()) == 1 and len(prompt) < 140
+        assert "P/B 中断" in prompt and "不是断电急停" not in prompt
         assert all(control in prompt for control in controls)
         return output
 
     n, clock = make_multi(monkeypatch)
     m = n.multi
-    hint("wait_current", "不自动回站立")
+    assert "不是断电急停" in hint("等待关节/IMU", "保持当前姿态")
     assert not m.request("walk")
-    hint("wait_current")
-    assert "不能从 wait_current 启动" in n.warnings[-1]
+    assert "不是断电急停" not in hint("等待关节/IMU")
+    assert "走路未启动" in n.warnings[-1]
     advance(n, clock, .8)
-    output = hint("stand_ready", "1 / LB+A", "2 / LB+X")
-    assert "(wait_feedback)" in output and "(checking)" in output
+    output = hint("站立就绪", "1/LB+A", "2/LB+X")
+    assert "等待使能反馈" in output and "姿态验收中" in output
     assert m.state == "stand_ready" and not m.request("rise")
-    hint("stand_ready", "1 / LB+A", "2 / LB+X")
+    hint("站立就绪", "1/LB+A", "2/LB+X")
     initial = n.target_pub.copy()
     assert m.request("crouch")
-    hint("lowering", "下蹲就绪", "暂不能切换任务")
+    hint("下蹲中", "不能切换")
     assert not m.request("rise") and not m.request("crouch")
-    hint("lowering")
+    hint("下蹲中")
     p = m.policies["crouch"]
     advance(n, clock, .1, follow=True)
     assert p.motion.steps == 0
     assert np.max(np.abs(n.target_pub-initial)) < m.cfg["handover_max_delta"]
     advance(n, clock, 4., follow=True)
     assert m.state == "crouch_ready" and m.active == "crouch"
-    hint("crouch_ready", "3 / LB+Y")
+    hint("下蹲就绪", "3/LB+Y")
     assert p.motion.frame == len(p.motion.positions)-1
     assert not m.request("walk")
     before = p.motion.steps
     assert m.request("rise")
-    hint("rising", "站立就绪", "暂不能切换任务")
+    hint("起身中", "不能切换")
     assert m.policies["rise"].motion.steps == 0 and p.motion.steps == before
     advance(n, clock, 3.5, follow=True)
     assert m.state == "stand_ready" and m.active == "rise"
-    hint("stand_ready", "1 / LB+A", "2 / LB+X")
+    hint("站立就绪", "1/LB+A", "2/LB+X")
     assert m.request("walk")
-    hint("walking", "0 / Start", "W/S", "手柄摇杆", "空格")
+    hint("行走中", "0/Start", "W/S", "摇杆", "空格")
     walk = m.policies["walk"]
     assert walk.hist is not m.policies["rise"].hist
     assert all(np.all(buf == buf[0]) for buf in walk.hist.buffers)
     m.keys("w")
-    assert "[键盘速度设置]" in hint("walking")
+    assert "[键盘速度设置]" in hint("行走中")
     advance(n, clock, .5)
     assert "[操作提示]" not in capsys.readouterr().out, "控制循环不能反复刷操作提示"
     assert n.cmd[0] > 0
     assert m.request("stop")
-    hint("stopping", "Enter / 再次按 Start", "不是再次按 0")
+    hint("停步待确认", "Enter/再次 Start", "双脚落地")
     advance(n, clock, .5)
     assert m.state == "stopping", "没有接触传感器，不能擅自宣告双脚承重并自动收脚"
     assert np.linalg.norm(n.cmd) < 1e-6
     assert not m.request("stop"), "长按 0 的重复字符不能被当成收脚确认"
     assert m.request("confirm_stop")
-    hint("standing_transition", "站立就绪", "暂不能切换任务")
+    hint("慢回站姿中", "不能切换")
     advance(n, clock, 1.)
     assert m.state == "stand_ready" and m.active is None
-    hint("stand_ready", "1 / LB+A", "2 / LB+X")
+    hint("站立就绪", "1/LB+A", "2/LB+X")
     assert m.request("crouch")
     advance(n, clock, 4.1, follow=True)
     assert m.state == "crouch_ready"
-    hint("crouch_ready", "3 / LB+Y")
+    hint("下蹲就绪", "3/LB+Y")
     m.keys("p")
-    hint("stopped", "R / Back", "不会自动回站立或续播")
+    hint("中断锁存", "R/Back", "排障后")
     assert m.request("reset")
-    hint("checking", "暂不能启动策略", "4 / LB+Start")
+    hint("姿态验收中", "4/LB+Start")
     advance(n, clock, .4)
-    hint("crouch_ready", "3 / LB+Y")
+    hint("下蹲就绪", "3/LB+Y")
     m.keys(" ")
-    assert "前后=0.00m/s" in hint("crouch_ready")
+    assert "前后=0.00m/s" in hint("下蹲就绪")
+
+
+@pytest.mark.parametrize("kind", ["hardware", "task_limit", "pose", "held_target"])
+def test_rejection_lists_all_bad_joints_even_before_ready(monkeypatch, kind):
+    n, clock = make_multi(monkeypatch)
+    advance(n, clock, .8)
+    m = n.multi
+    joints = [n.real_joint_names.index(name) for name in ("L2", "R4")]
+    if kind == "hardware":
+        n.obs_raw[7 + np.array(joints)] = n.hi[joints] + .01
+    elif kind == "task_limit":
+        n.obs_raw[7 + np.array(joints)] = m.hi[joints] + .031
+    elif kind == "pose":
+        n.obs_raw[7 + np.array(joints)] += .2
+    else:
+        n.target_pub[joints] = m.hi[joints] + .031
+    held = n.target_pub.copy()
+    # 未就绪时的状态门槛也必须给出关节原因；不得放行或改写目标。
+    for state in (("checking", "stand_ready", "stopped") if kind != "held_target" else ("stand_ready",)):
+        m.state = state
+        for task in ("walk", "crouch", "return_stand", "reset"):
+            if (task == "reset" and state != "stopped") or (kind == "pose" and task == "return_stand"):
+                continue  # 手动回站姿不要求匹配姿态模板。
+            assert not m.request(task)
+            warning = n.warnings[-1]
+            assert all(name + "=" in warning for name in ("L2", "R4")), warning
+            assert "rad" in warning and "范围[" in warning
+            assert m.state == state and m.active is None
+            np.testing.assert_array_equal(n.target_pub, held)
+    if kind == "hardware":
+        assert not n._current_state_ready()
+        assert "L2=" in n.warnings[-1] and "R4=" in n.warnings[-1]
+    if kind == "task_limit":
+        assert "容差 ±0.030" in n.warnings[-1]
 
 
 def test_crouch_start_never_interpolates_to_standing(monkeypatch):
@@ -588,11 +623,21 @@ def test_current_rise_only_measured_start_and_disabled_crouch(monkeypatch, capsy
     assert m.state == "stand_ready" and m.active == active
     np.testing.assert_array_equal(n.target_pub, held)
     assert "下蹲任务已禁用" in n.warnings[-1]
-    assert "下蹲已禁用" in capsys.readouterr().out
+    output = capsys.readouterr().out
+    assert "下蹲已禁用" in output
+    assert "2/LB+X" not in output.rsplit("[操作提示]", 1)[-1]
     assert m.request("walk")
+    n.obs_raw[7] = m.lo[0] - .031
     n.obs_raw[7+3] = m.hi[3] + .031
     advance(n, clock, n.pub_dt)
     assert m.state == "stopped" and "任务限位" in m.reason
+    assert "L1=" in m.reason and "L4=" in m.reason
+    held = n.target_pub.copy()
+    m.keys("3")
+    assert "起身未启动" in n.warnings[-1]
+    assert "L1=" in n.warnings[-1] and "L4=" in n.warnings[-1]
+    assert m.state == "stopped" and m.active is None
+    np.testing.assert_array_equal(n.target_pub, held)
 
 
 @pytest.mark.parametrize("task,value", [("walk", None), ("rise", None), ("crouch", ""), ("crouch", False)])
