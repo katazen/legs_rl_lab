@@ -4,7 +4,10 @@
 
 只用 `start_real.sh` 和一个 `rl_real_common` 节点。唯一公共配置是
 `rl_real_py/configs/common.yaml`：`tasks` 选择三份模型，其余字段配置硬件与切换阈值，无配置覆盖层。
-默认模型与 `scripts/sim2sim.py` 一致；不会自动选择最新 checkpoint。
+不会自动选择最新 checkpoint；实机模型由此配置显式选择，不跟随 sim2sim 默认值。
+当前仅启用走路与 `nlegs_mimic_stand/2026-09-17_12-30-38` 新起身模型，
+`tasks.crouch: null` 禁用旧下蹲，不加载它的参考或策略；按 2 / LB+X 只提示禁用，不改变当前目标。
+新下蹲训练好后填入对应 run 路径，仍须通过下蹲/起身端点和任务限位一致性检查，不能直接混用旧模型。
 `rl_real_common.py` 中的 `Policy` 共用模型加载、观测、动作映射；`multi_task.py` 只管理切换。
 旧单策略入口、`start_mimic.sh`、`start_now.sh`、`--multi`、`--start-from-current` 和自动回站立已退役。
 
@@ -18,7 +21,7 @@ cd /home/woan/workspace/legs_rl_lab/deploy
 ./start_real.sh --check-only
 ```
 
-`--check-only` 不启动驱动、不发布目标、不改 PD。正常启动前也会预检三份模型、参考端点、共同 PD/周期和限位；不一致就拒绝启动。
+`--check-only` 不启动驱动、不发布目标、不改 PD。正常启动前也会预检启用的模型、参考端点、共同 PD/周期和限位；不一致就拒绝启动。
 检查通过且现场准备好后，使用 `./start_real.sh`。启动先保持当前实测姿态，等待使能后的反馈恢复，再识别站姿或蹲姿；**不自动插值回站立**，也不自动运行策略。
 
 RL 窗口在启动、状态切换（包括动作完成）、操作被拒绝及键盘调速/清零后显示 `[操作提示]`：
@@ -28,7 +31,7 @@ RL 窗口在启动、状态切换（包括动作完成）、操作被拒绝及�
 | 操作 | 键盘 | 手柄 | 允许的起点 |
 |---|---|---|---|
 | 走路 | 1 | LB+A | `stand_ready` |
-| 下蹲 | 2 | LB+X | `stand_ready` |
+| 下蹲（当前禁用） | 2 | LB+X | 配置启用后才允许从 `stand_ready` 开始 |
 | 起身 | 3 | LB+Y | `crouch_ready` |
 | 手动慢回准备站姿 | 4 | LB+Start | 稳定的 `checking` / `stand_ready` / `crouch_ready` / `stopped` |
 | 正常停步，速度缓降归零 | 0 | Start | `walking` |
@@ -57,14 +60,18 @@ W/S、A/D、Q/E 控制速度；空格清零速度，不等于退出走路策略�
 切换有 0.2s 平滑接管和首拍跳变量检查，各策略的历史、last_action、参考时钟独立；起身会从下蹲首帧开始。
 Mimic 参考按有效策略步推进，结束后继续末帧策略，实测姿态到位才进入就绪；4s 未到位则锁存。
 停步确认后用 0.5s 短程插值收回站姿，再连续验收；不是从任意蹲姿插值站起。
-未配置标定时，所有策略共用下蹲/起身导出的任务边界与 common 的交集；不新增 XML 限位比较、不放宽 common。
+未配置标定时，所有策略共用起身导出的任务边界与 common 的交集；启用下蹲时要求其边界相同。
+站姿验收来自起身末帧，蹲姿验收来自起身首帧，不依赖已禁用的下蹲模型；不新增 XML 限位比较、不放宽 common。
 `common.yaml` 的可选 `crouch_calibration` 用实测 12 关节角和机身 WXYZ 四元数替换蹲姿验收基准，
 并按 `stop_sides` 替换 10 个关节各自的一端任务边界；另一端不变，ankle roll 不设实测限位。
 标定必须在 common 内且允许站姿；反馈、保持目标检查、接管起点、所有策略最终目标和收脚共用该任务边界。
 这不是关节零位偏移：网络仍接收真实关节/IMU，原训练 clip、NPZ 和模型均不变。
-当前标定为 2026-09-16 16:00 实测蹲姿（前倾 32.098°）。首次仅验证起身→站立→走路；
-旧策略适应新几何、贴合新限位和动态平衡均未实机验证，裁剪目标也不能消除惯性造成的实测超调。
-重新训练后核对标定；删除整个 `crouch_calibration` 段恢复训练端点。预检通过不代表实际反馈或起身动力学通过。
+当前标定为 2026-09-17 11:02 实测蹲姿（前倾 29.729°），10 个单侧边界与 v2 起身首帧一致。
+ankle roll 和机身倾斜仍用实测值验收；网络参考保持生成数据中的几何求解值（前倾约 28.282°），不伪造真实观测。
+新起身为 336 帧、100Hz、3.35s；50Hz 策略每步推进两帧，末帧 335 在末尾钳住并继续策略保持。
+首次仅验证起身→站立→走路；动态平衡未实机验证，裁剪目标也不能消除惯性造成的实测超调。
+删除整个 `crouch_calibration` 段会恢复训练端点与较宽的训练任务边界，不建议在本次限位块测试中删除。
+预检通过不代表实际反馈或起身动力学通过。
 统一模式的就绪与运行反馈都保留 0.03rad 任务测量容差，避免接触偏差让“蹲完起身”卡住；common 反馈边界仍无容差。
 若刚启动时捕获的保持目标仅在任务边界外这点容差内，进入策略的插值起点先裁到边界（最多 0.03rad 修正）；更大偏差拒绝接管，策略目标始终不放宽。
 每个模型仍先执行自身训练 action clip；硬件越界、任务反馈越界、NaN/Inf、反馈过期、推理/调度超时和收到的电机故障均锁存，不自动续播。
@@ -90,7 +97,7 @@ ROS 工作区的 `setup.py`、`package.xml` 和驱动配置也保留；`build/`�
 ## 模型同步与保护边界
 
 同步到机器人主机后重新编译 `rl_real_py`，然后运行 `./start_real.sh --check-only`。
-模型需包含各 run 的 `params/`、`exported/`，以及训练使用的参考 NPZ 和 XML。
+模型需包含启用 run 的 `params/`、`exported/`，以及训练使用的参考 NPZ 和 XML；禁用下蹲时不依赖旧下蹲文件。
 XML 仅用于参考模型 SHA256 校验，不读取或对比其关节限位。
 参考路径可按仓库的 `source/` 相对位置重定位，不会自动替换动作。
 旧导出器的 `real_deployment_supported: false` 不必手改；只有通过完整格式校验的参考动作类型才受支持。
@@ -111,12 +118,13 @@ PYTHONPATH="$PWD/deploy/rl_real_py:$PYTHONPATH" /usr/bin/python3 -m pytest deplo
 /usr/bin/python3 deploy/tools/pose_transition.py --selftest
 ```
 
-跨运行时对齐先在训练环境生成两个回放文件（输出到自己的临时目录）：
+跨运行时对齐先在训练环境生成当前起身回放（输出到自己的临时目录）：
 
 ```bash
-python tests/check_crouch_mimic_sim2sim.py --task crouch --parity-output /tmp/crouch.npz
 python tests/check_crouch_mimic_sim2sim.py --task stand --parity-output /tmp/rise.npz
 ```
 
-再给上述 pytest 命令设置 `MULTI_PARITY_DIR=/tmp`，验证两个动作的观测、ONNX 输出和目标逐帧一致。
-未提供回放文件时仅跳过这两项，其余限位、状态切换和历史事故回归照常执行。
+再给上述 pytest 命令设置 `MULTI_PARITY_DIR=/tmp`，验证新起身的观测、ONNX 输出和训练裁剪目标逐帧一致。
+部署随后仍会按实测任务边界裁剪，不能把模型输出对齐等同于实机动力学对齐。
+未提供回放文件的动作跳过对齐检查，其余测试照常执行；旧三任务/事故回归使用固定旧模型与测试专用 XML，
+不会修改当前训练资产或恢复旧下蹲部署。

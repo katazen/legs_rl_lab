@@ -12,6 +12,7 @@ import yaml
 
 from rl_real_py.deployment_config import check_multi_pd, load_settings
 from rl_real_py.multi_task import MultiTaskController
+from rl_real_py import motion_reference
 from rl_real_py.rl_real_common import Policy, RL_real
 from test_io import make_node
 
@@ -19,11 +20,19 @@ from test_io import make_node
 CONFIG = Path(__file__).resolve().parents[1] / "configs/common.yaml"
 
 
-def make_multi(monkeypatch, pose="stand", calibrated=False):
+def make_multi(monkeypatch, pose="stand", calibrated=False, current=False):
     n = make_node(monkeypatch)
     clock = [100.]
     monkeypatch.setattr("rl_real_py.rl_real_common.time.monotonic", lambda: clock[0])
     cfg, run, root = load_settings(CONFIG)
+    if not current:
+        # 旧三任务/事故回归固定旧模型与原 XML，不跟随日常部署选择漂移。
+        cfg["tasks"]["crouch"] = str(root / "logs/rsl_rl/nlegs_mimic_crouch/2026-09-15_15-36-16")
+        cfg["tasks"]["rise"] = str(root / "logs/rsl_rl/nlegs_mimic_stand/2026-09-15_18-50-29")
+        resolve = motion_reference.resolve_recorded_path
+        monkeypatch.setattr(motion_reference, "resolve_recorded_path", lambda path, repo:
+                            Path(__file__).parent / "fixtures/nlegs_limit_20260915.xml"
+                            if Path(path).name == "nlegs_limit.xml" else resolve(path, repo))
     if not calibrated:
         cfg.pop("crouch_calibration", None)  # 原训练场景回归；实测标定另测。
     Policy.__init__(n, cfg, run, root)
@@ -42,9 +51,9 @@ def make_multi(monkeypatch, pose="stand", calibrated=False):
 
 
 def set_pose(n, pose):
-    p = n.multi.policies["crouch" if pose == "stand" else "rise"]
+    p = n.multi.policies["rise"]
     n.obs_raw[:] = 0.
-    n.obs_raw[3:7] = p.motion.quaternions[0]
+    n.obs_raw[3:7] = p.motion.quaternions[-1 if pose == "stand" else 0]
     n.obs_raw[7:19] = n.multi.pose_q[pose]
 
 
@@ -429,6 +438,8 @@ def test_pd_mismatch_rejected_before_synchronization(tmp_path):
     cfg, _, _ = load_settings(CONFIG)
     cfg = copy.deepcopy(cfg)
     for name, path in cfg["tasks"].items():
+        if path is None:
+            continue
         target = tmp_path / name / "params"
         target.mkdir(parents=True)
         dep = yaml.safe_load((Path(path) / "params/deploy.yaml").read_text())
@@ -445,7 +456,9 @@ def test_onnx_reference_inputs_and_targets_match_sim2sim(monkeypatch, task):
     directory = os.environ.get("MULTI_PARITY_DIR")
     if not directory:
         pytest.skip("设置 MULTI_PARITY_DIR，包含 check_crouch_mimic_sim2sim 导出的 crouch.npz / rise.npz")
-    n, _ = make_multi(monkeypatch)
+    if not (Path(directory) / f"{task}.npz").is_file():
+        pytest.skip(f"没有 {task}.npz 回放数据")
+    n, _ = make_multi(monkeypatch, current=(task == "rise"))
     p = n.multi.policies[task]
     with np.load(Path(directory) / f"{task}.npz") as data:
         sdk = data["joint_names"].tolist()
@@ -544,3 +557,64 @@ def test_task_key_rechecks_measured_pose(monkeypatch, bad):
     held = n.target_pub.copy()
     assert not n.multi.request("crouch") and n.multi.active is None
     np.testing.assert_array_equal(n.target_pub, held)
+
+
+def test_current_rise_only_measured_start_and_disabled_crouch(monkeypatch, capsys):
+    n, clock = make_multi(monkeypatch, "crouch", calibrated=True, current=True)
+    cfg, _, _ = load_settings(CONFIG)
+    m, p = n.multi, n.multi.policies["rise"]
+    assert set(m.policies) == {"walk", "rise"} and cfg["tasks"]["crouch"] is None
+    assert p.motion.path.name == "crouch_to_stand_v2.npz" and len(p.motion.positions) == 336
+    n.obs_raw[3:7] = cfg["crouch_calibration"]["body_quat_wxyz"]
+    measured = n.obs_raw.copy()
+    for name, side in cfg["crouch_calibration"]["stop_sides"].items():
+        i = n.real_joint_names.index(name)
+        assert np.isclose(p.motion.positions[0, p.sim2real[i]], measured[7+i], atol=1e-6)
+        assert (m.lo if side == "lower" else m.hi)[i] == measured[7+i]
+    advance(n, clock, .8)
+    assert m.state == "crouch_ready"
+    assert all(np.array_equal(target, measured[7:19]) for target in n.sent)
+    assert m.request("rise")
+    for _ in range(850):
+        advance(n, clock, n.pub_dt, follow=True)
+        assert m.state != "stopped", m.reason
+        assert np.all(n.sent[-1] >= m.lo) and np.all(n.sent[-1] <= m.hi)
+    assert p.motion.frame == 335 and m.state == "stand_ready"
+    held, active = n.target_pub.copy(), m.active
+    m.keys("2")
+    buttons = [0]*8
+    buttons[m.buttons["lb"]] = buttons[m.buttons["x"]] = 1
+    m.joy(SimpleNamespace(buttons=buttons))
+    assert m.state == "stand_ready" and m.active == active
+    np.testing.assert_array_equal(n.target_pub, held)
+    assert "下蹲任务已禁用" in n.warnings[-1]
+    assert "下蹲已禁用" in capsys.readouterr().out
+    assert m.request("walk")
+    n.obs_raw[7+3] = m.hi[3] + .031
+    advance(n, clock, n.pub_dt)
+    assert m.state == "stopped" and "任务限位" in m.reason
+
+
+@pytest.mark.parametrize("task,value", [("walk", None), ("rise", None), ("crouch", ""), ("crouch", False)])
+def test_only_crouch_can_be_explicitly_disabled(tmp_path, task, value):
+    cfg = yaml.safe_load(CONFIG.read_text())
+    cfg["tasks"][task] = value
+    path = tmp_path / "invalid.yaml"
+    path.write_text(yaml.safe_dump(cfg))
+    with pytest.raises(ValueError, match="仅 crouch 可设为 null"):
+        load_settings(path)
+
+
+def test_reenabling_old_crouch_is_not_silently_accepted(monkeypatch):
+    with monkeypatch.context() as legacy:
+        old, _ = make_multi(legacy)
+        down = old.multi.policies["crouch"]
+    n, _ = make_multi(monkeypatch, current=True)
+    cfg, _, root = load_settings(CONFIG)
+    cfg["tasks"]["crouch"] = str(down.run_dir)
+    up = n.multi.policies["rise"]
+    monkeypatch.setattr("rl_real_py.multi_task.Policy", lambda c, path, r:
+                        down if path == down.run_dir else up)
+    with pytest.raises(ValueError, match="端点不衔接"):
+        MultiTaskController(n, cfg, root)
+    assert not n.sent

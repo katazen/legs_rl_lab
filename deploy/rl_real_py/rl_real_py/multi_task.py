@@ -37,31 +37,36 @@ class MultiTaskController:
         check_multi_pd(cfg)
         self.policies = {"walk": node}
         for name in ("crouch", "rise"):
+            if name == "crouch" and cfg["tasks"][name] is None:
+                print("[multi] 下蹲已禁用：2 / LB+X 不可用；仅启用走路和起身。")
+                continue
             self.policies[name] = Policy(cfg, Path(cfg["tasks"][name]), root)
-        walk, down, up = (self.policies[n] for n in ("walk", "crouch", "rise"))
+        walk, up = self.policies["walk"], self.policies["rise"]
+        down = self.policies.get("crouch")
         if walk.motion is not None or set(walk.deploy["commands"]) != {"base_velocity"}:
             raise ValueError("walk 必须是速度控制策略")
-        if down.motion is None or up.motion is None:
+        if up.motion is None or (down is not None and down.motion is None):
             raise ValueError("crouch / rise 必须是参考动作跟踪策略")
         for p in self.policies.values():
             if not np.array_equal(p.default_real, walk.default_real):
-                raise ValueError("三任务默认站姿必须相同")
+                raise ValueError("启用任务的默认站姿必须相同")
             if any(v["history_length"] != p.num_history for v in p.deploy["observations"].values()):
                 raise ValueError("当前部署要求各观测项历史长度相同")
-        for fa, fb in ((0, -1), (-1, 0)):
-            if (not np.allclose(down.motion.positions[fa, down.sim2real], up.motion.positions[fb, up.sim2real], atol=1e-5)
-                    or not np.allclose(down.motion.rotations[fa], up.motion.rotations[fb], atol=1e-5)):
-                raise ValueError("下蹲、起身参考端点不衔接")
-        if not np.allclose(down.motion.positions[0, down.sim2real], walk.default_real, atol=1e-5):
-            raise ValueError("下蹲首帧必须与走路默认站姿一致")
-        if not np.allclose(down.motion.limits[down.sim2real], up.motion.limits[up.sim2real], atol=1e-6):
-            raise ValueError("下蹲和起身任务限位不一致")
+        if down is not None:
+            for fa, fb in ((0, -1), (-1, 0)):
+                if (not np.allclose(down.motion.positions[fa, down.sim2real], up.motion.positions[fb, up.sim2real], atol=1e-5)
+                        or not np.allclose(down.motion.rotations[fa], up.motion.rotations[fb], atol=1e-5)):
+                    raise ValueError("下蹲、起身参考端点不衔接")
+            if not np.allclose(down.motion.limits[down.sim2real], up.motion.limits[up.sim2real], atol=1e-6):
+                raise ValueError("下蹲和起身任务限位不一致")
+        if not np.allclose(up.motion.positions[-1, up.sim2real], walk.default_real, atol=1e-5):
+            raise ValueError("起身末帧必须与走路默认站姿一致")
         # 同 sim2sim 共用 limit 机器人；不改 common，不读取或比较 XML 的限位。
-        self.lo = np.maximum(node.lo, down.motion.limits[down.sim2real, 0])
-        self.hi = np.minimum(node.hi, down.motion.limits[down.sim2real, 1])
-        self.pose_q = {"stand": down.motion.positions[0, down.sim2real],
+        self.lo = np.maximum(node.lo, up.motion.limits[up.sim2real, 0])
+        self.hi = np.minimum(node.hi, up.motion.limits[up.sim2real, 1])
+        self.pose_q = {"stand": up.motion.positions[-1, up.sim2real],
                        "crouch": up.motion.positions[0, up.sim2real]}
-        self.pose_rot = {"stand": down.motion.rotations[0], "crouch": up.motion.rotations[0]}
+        self.pose_rot = {"stand": up.motion.rotations[-1], "crouch": up.motion.rotations[0]}
         if cfg.get("crouch_calibration") is not None:
             self._calibrate_crouch(cfg["crouch_calibration"])
         for name, p in self.policies.items():
@@ -131,6 +136,8 @@ class MultiTaskController:
             "rising": ("起身中", "动作结束且实测姿态到位后自动 → 站立就绪，继续策略保持；暂不能切换任务。"),
             "stopped": ("中断/故障锁存", "排除故障后：R / Back → 重新验收站姿/蹲姿；稳定保持后 4 / LB+Start → 慢回准备站姿。不会自动回站立或续播。"),
         }[self.state]
+        if "crouch" not in self.policies:
+            actions = actions.replace("2 / LB+X → 下蹲", "2 / LB+X → 下蹲已禁用（待新模型）")
         print(f"\n[操作提示] 当前状态：{label} ({self.state})\n"
               f"  下一步：{actions}\n"
               "  P / B → 中断锁存（不是断电急停）。策略键表示确认落地站稳；4 表示已扶稳/吊起，插值不负责平衡。", flush=True)
@@ -236,6 +243,8 @@ class MultiTaskController:
 
     def request(self, task):
         n, now = self.n, time.monotonic()
+        if task in ("walk", "crouch", "rise") and task not in self.policies:
+            return self.reject("下蹲任务已禁用，待匹配新起身姿态的下蹲模型训练完成后再启用")
         if task == "halt":
             self.halt("操作员中断")
             return True
