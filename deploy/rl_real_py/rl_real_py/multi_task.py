@@ -15,14 +15,14 @@ from .rl_real_common import Policy, TermGroupedHistory
 
 
 class MultiTaskController:
-    KEYS = {"1": "walk", "2": "crouch", "3": "rise", "0": "stop", "p": "halt", "r": "reset",
+    KEYS = {"1": "walk", "2": "crouch", "3": "rise", "4": "return_stand", "0": "stop", "p": "halt", "r": "reset",
             "\n": "confirm_stop", "\r": "confirm_stop"}
 
     def __init__(self, node, cfg, root):
         self.n, self.cfg = node, cfg["multi_task"]
         required = {"stable_time", "joint_tolerance", "ankle_roll_tolerance", "joint_speed", "tilt_error",
                     "angular_speed", "max_tilt", "joint_limit_tolerance", "max_policy_gap", "handover_time",
-                    "handover_max_delta", "stop_blend_time", "stop_timeout", "end_timeout"}
+                    "handover_max_delta", "stop_blend_time", "stop_timeout", "end_timeout", "return_max_speed"}
         if set(self.cfg) != required or any(not np.isfinite(v) or v <= 0 for v in self.cfg.values()):
             raise ValueError("multi_task 阈值必须完整且为有限正数")
         if self.cfg["max_policy_gap"] <= node.step_dt:
@@ -79,6 +79,7 @@ class MultiTaskController:
         self.state = node.mode = "wait_current"
         self.state_since = time.monotonic()
         self.stable_since = self.stable_pose = None
+        self.return_still_since = None
         self.last_policy = self.clock0 = self.pending_target = None
         self.reason = "等待完整关节/IMU，先保持实测姿态，不自动回站立"
         self.end_announced = False
@@ -120,25 +121,26 @@ class MultiTaskController:
         label, actions = {
             "wait_current": ("等待关节/IMU 反馈", "反馈有效后自动保持当前姿态 → 等待使能反馈；不自动回站立。"),
             "wait_feedback": ("保持当前姿态，等待使能反馈", "反馈连续恢复后自动 → 姿态验收；暂不能启动任务。"),
-            "checking": ("姿态验收中", "站姿/蹲姿连续达标后自动 → 对应就绪状态；不自动调整姿态，暂不能启动任务。"),
-            "stand_ready": ("站立就绪", "1 / LB+A → 走路；2 / LB+X → 下蹲。"),
-            "crouch_ready": ("下蹲就绪", "3 / LB+Y → 起身；起身完成后才能走路。"),
+            "checking": ("姿态验收中", "站姿/蹲姿连续达标后自动 → 对应就绪状态；不自动调整姿态，暂不能启动策略。稳定保持后 4 / LB+Start → 慢回准备站姿。"),
+            "stand_ready": ("站立就绪", "1 / LB+A → 走路；2 / LB+X → 下蹲；稳定保持后 4 / LB+Start → 慢回准备站姿。"),
+            "crouch_ready": ("下蹲就绪", "3 / LB+Y → 起身；起身完成后才能走路。稳定保持后 4 / LB+Start → 慢回准备站姿。"),
             "walking": ("行走中", "0 / Start → 停步等待确认；W/S 前后、A/D 左右、Q/E 转向，或手柄摇杆调速；空格清零速度，但不退出行走。"),
             "stopping": ("停步中，等待人工确认接地", "速度归零且亲眼确认双脚落地后：Enter / 再次按 Start → 平滑收脚；不是再次按 0。"),
-            "standing_transition": ("收脚回站立中", "收脚完成且姿态稳定后自动 → 站立就绪；暂不能切换任务。"),
+            "standing_transition": ("插值回准备站姿中", "插值完成且实测站姿稳定后自动 → 站立就绪；暂不能切换任务，4 无效。"),
             "lowering": ("下蹲中", "动作结束且实测姿态到位后自动 → 下蹲就绪，继续策略保持；暂不能切换任务。"),
             "rising": ("起身中", "动作结束且实测姿态到位后自动 → 站立就绪，继续策略保持；暂不能切换任务。"),
-            "stopped": ("中断/故障锁存", "排除故障并恢复到稳定站姿/蹲姿后：R / Back → 重新验收；不会自动回站立或续播。"),
+            "stopped": ("中断/故障锁存", "排除故障后：R / Back → 重新验收站姿/蹲姿；稳定保持后 4 / LB+Start → 慢回准备站姿。不会自动回站立或续播。"),
         }[self.state]
         print(f"\n[操作提示] 当前状态：{label} ({self.state})\n"
               f"  下一步：{actions}\n"
-              "  P / B → 中断锁存（不是断电急停）。任务键表示人工确认双脚落地站稳。", flush=True)
+              "  P / B → 中断锁存（不是断电急停）。策略键表示确认落地站稳；4 表示已扶稳/吊起，插值不负责平衡。", flush=True)
 
     def change(self, state, reason):
         previous = self.state
         self.state = self.n.mode = state
         self.reason, self.state_since = reason, time.monotonic()
         self.stable_since = self.stable_pose = None
+        self.return_still_since = None
         print(f"[multi] {previous} -> {state}: {reason}")
         self.show_status()
 
@@ -152,7 +154,7 @@ class MultiTaskController:
         self.active = self.pending_target = None
         self.n._clear_cmd_sources()
         self.n._close_log()
-        self.change("stopped", reason + "；保持最后下发目标，恢复后 R 重新验收，不自动续播")
+        self.change("stopped", reason + "；保持最后下发目标，恢复后 R 重新验收或稳定后 4 手动回站姿，不自动续播")
 
     def state_error(self, task_bounds=False):
         n = self.n
@@ -207,10 +209,46 @@ class MultiTaskController:
             self.stable_pose, self.stable_since = pose, time.monotonic()
         return time.monotonic() - self.stable_since >= self.cfg["stable_time"]
 
+    def return_error(self):
+        if not self.has_target or self.state not in ("checking", "stand_ready", "crouch_ready", "stopped"):
+            return "慢回站姿只允许稳定保持状态；执行动作中无效，不排队"
+        if (reason := self.state_error(task_bounds=True)) is not None:
+            return reason
+        if np.max(np.abs(self.n.obs_raw[19:31])) > self.cfg["joint_speed"]:
+            return "关节尚未稳定"
+        if np.linalg.norm(self.n.obs_raw[:3]) > self.cfg["angular_speed"]:
+            return "机身角速度过大"
+        held = self.n.target_pub
+        if held.shape != (12,) or not np.isfinite(held).all():
+            return "当前保持目标无效"
+        if np.any(np.maximum(self.lo - held, held - self.hi) > self.cfg["joint_limit_tolerance"]):
+            return "当前保持目标超出任务限位容差"
+        return None
+
+    def start_stand_blend(self, duration, reason):
+        self.blend_start = np.clip(self.n.target_pub, self.lo, self.hi).astype(np.float32)
+        self.stand_blend_time = duration
+        self.last_policy = time.monotonic()
+        self.active = self.pending_target = None
+        self.n._clear_cmd_sources()
+        self.n._close_log()
+        self.change("standing_transition", reason)
+
     def request(self, task):
         n, now = self.n, time.monotonic()
         if task == "halt":
             self.halt("操作员中断")
+            return True
+        if task == "return_stand":
+            if (reason := self.return_error()) is not None:
+                self.return_still_since = None
+                return self.reject(reason)
+            if self.return_still_since is None or now - self.return_still_since < self.cfg["stable_time"]:
+                return self.reject(f"需连续稳定 {self.cfg['stable_time']:.2f}s 后重新按 4；不会自动执行")
+            distance = np.max(np.abs(np.clip(n.target_pub, self.lo, self.hi) - self.pose_q["stand"]))
+            # smoothstep 的峰值导数是 1.5；限制的是目标速度，不是电机实际速度。
+            duration = max(self.cfg["stop_blend_time"], 1.5 * distance / self.cfg["return_max_speed"])
+            self.start_stand_blend(duration, f"操作者确认已支撑；{duration:.1f}s 同步慢回准备站姿，不运行策略")
             return True
         if task == "reset":
             if self.state != "stopped":
@@ -232,10 +270,7 @@ class MultiTaskController:
                 reason = self.pose_error("stand", stopping=True)
                 if reason or np.linalg.norm(n.cmd) >= 1e-6:
                     return self.reject(reason or "速度命令尚未归零，请稍后再次确认")
-                self.blend_start = n.target_pub.copy()
-                self.active = None
-                n._close_log()
-                self.change("standing_transition", "操作者确认接地，0.5s 平滑收回站姿")
+                self.start_stand_blend(self.cfg["stop_blend_time"], "操作者确认接地，0.5s 平滑收回站姿")
                 return True
             return self.reject("尚未进入正常停步，不接受收脚确认")
         required = {"walk": "stand_ready", "crouch": "stand_ready", "rise": "crouch_ready"}
@@ -313,13 +348,17 @@ class MultiTaskController:
             self.halt("停步超时，未收到有效的接地/收脚确认")
         elif self.state == "standing_transition":
             elapsed = now - self.state_since
-            if elapsed >= self.cfg["stop_blend_time"] and self.stable("stand"):
-                self.change("stand_ready", "收脚结束且站姿稳定")
-            elif elapsed > self.cfg["stop_blend_time"] + self.cfg["end_timeout"]:
-                self.halt("收脚后站姿未稳定: " + self.reason)
+            if elapsed >= self.stand_blend_time and self.stable("stand"):
+                self.change("stand_ready", "插值结束且实测站姿稳定，不自动启动走路")
+            elif elapsed > self.stand_blend_time + self.cfg["end_timeout"]:
+                self.halt("插值后站姿未稳定: " + self.reason)
 
     def tick(self):
         n, now = self.n, time.monotonic()
+        if self.return_error() is not None:
+            self.return_still_since = None
+        elif self.return_still_since is None:
+            self.return_still_since = now
         if self.state == "wait_current":
             if (reason := self.state_error()) is not None:
                 n.get_logger().warn(f"[multi 等待] {reason}", throttle_duration_sec=1.0)
@@ -351,8 +390,8 @@ class MultiTaskController:
             self.halt(reason)
             n._publish_target()
             return
-        if self.active and now - self.last_policy > self.cfg["max_policy_gap"]:
-            self.halt("策略调度间隔超时")
+        if (self.active or self.state == "standing_transition") and now - self.last_policy > self.cfg["max_policy_gap"]:
+            self.halt("策略/插值调度间隔超时")
         self.update_state()
         if self.active:
             p = self.policies[self.active]
@@ -388,10 +427,11 @@ class MultiTaskController:
                 except Exception as exc:
                     self.halt(f"策略异常: {exc}")
         elif self.state == "standing_transition":
-            a = np.clip((now - self.state_since) / self.cfg["stop_blend_time"], 0., 1.)
+            a = np.clip((now - self.state_since) / self.stand_blend_time, 0., 1.)
             s = a*a*(3-2*a)
             n.target_pub = np.clip((1-s)*self.blend_start + s*self.pose_q["stand"], self.lo, self.hi).astype(np.float32)
             n.target_real = n.target_pub.copy()
+            self.last_policy = now
         n._publish_target()
 
     def keys(self, chars):
@@ -436,7 +476,8 @@ class MultiTaskController:
         elif pressed("back"):
             self.request("reset")
         elif pressed("start"):
-            self.request("confirm_stop" if self.state == "stopping" else "stop")
+            self.request("return_stand" if down("lb", msg.buttons)
+                         else "confirm_stop" if self.state == "stopping" else "stop")
         elif down("lb", msg.buttons):
             for button, task in (("a", "walk"), ("x", "crouch"), ("y", "rise")):
                 if pressed(button):

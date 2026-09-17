@@ -4,7 +4,7 @@
 tasks:
   walk: logs/rsl_rl/nlegs_flat_static/2026-09-16_11-41-05
   crouch: logs/rsl_rl/nlegs_mimic_crouch/2026-09-15_15-36-16
-  rise: logs/rsl_rl/nlegs_mimic_stand/2026-09-15_18-50-29
+  rise: logs/rsl_rl/nlegs_mimic_stand/2026-09-17_12-30-38
 
 publish_rate: 200
 target_ema_alpha: 1.0       # 统一部署与 sim2sim 一致，不叠加目标 EMA
@@ -14,10 +14,10 @@ state_timeout: 0.06        # s，关节/IMU 反馈超时则锁存停止
 # 话题中的实机顺序；策略顺序从各模型按关节名读取。
 joint_index_in_real: ["L1","L2","L3","L4","L5","L6","R1","R2","R3","R4","R5","R6"]
 # 硬件边界；任务 clip 不能放宽它。R5 下限保留此前实测设置。
-joint_lower_limits: [-1.05, -0.26, -1.0, 0.0, -0.45, -0.39,
-                     -1.05, -1.05, -1.0, 0.0, -0.45, -0.39]
-joint_upper_limits: [ 1.05,  1.05,  1.0, 1.92, 0.4,  0.35,
-                      1.05,  0.26,  1.0, 1.92, 0.4,  0.35]
+joint_lower_limits: [-1.05, -0.26, -1.0, -0.5, -0.45, -0.5,
+                     -1.05, -1.05, -1.0, -0.5, -0.45, -0.5]
+joint_upper_limits: [ 1.05,  1.05,  1.0, 1.92, 1.0,  0.5,
+                      1.05,  0.26,  1.0, 1.92, 1.0,  0.5]
 
 use_derived_vel: false     # 默认直接使用电机上报速度
 vel_ema_alpha: 0.5         # 仅差分速度模式使用
@@ -63,5 +63,6 @@ multi_task:
   handover_time: 0.20
   handover_max_delta: 0.60
   stop_blend_time: 0.50
+  return_max_speed: 0.15   # rad/s，4 / LB+Start 手动回准备站姿的目标峰值速度
   stop_timeout: 6.0
   end_timeout: 4.0

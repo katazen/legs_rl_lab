@@ -132,7 +132,7 @@ def test_complete_cycle_separate_histories_and_manual_stop(monkeypatch, capsys):
     m.keys("p")
     hint("stopped", "R / Back", "不会自动回站立或续播")
     assert m.request("reset")
-    hint("checking", "暂不能启动任务")
+    hint("checking", "暂不能启动策略", "4 / LB+Start")
     advance(n, clock, .4)
     hint("crouch_ready", "3 / LB+Y")
     m.keys(" ")
@@ -148,6 +148,123 @@ def test_crouch_start_never_interpolates_to_standing(monkeypatch):
         np.testing.assert_array_equal(target, q)
     assert not hasattr(n, "prepare_t0")
     assert n.multi.request("rise")
+
+
+@pytest.mark.parametrize("start", ["crouch", "arbitrary", "stopped", "completed_policy"])
+def test_manual_stand_return_is_slow_synchronized_and_explicit(monkeypatch, start):
+    n, clock = make_multi(monkeypatch, "crouch", calibrated=True)
+    m = n.multi
+    cfg, _, _ = load_settings(CONFIG)
+    n.obs_raw[3:7] = cfg["crouch_calibration"]["body_quat_wxyz"]
+    if start == "arbitrary":
+        n.obs_raw[7:19] = .5 * (m.pose_q["stand"] + m.pose_q["crouch"])
+        n.obs_raw[3:7] = [np.cos(.15), 0., np.sin(.15), 0.]
+    advance(n, clock, 1.1)
+    if start == "arbitrary":
+        assert m.state == "checking" and all(m.pose_error(p) for p in m.pose_q)
+    if start == "stopped":
+        m.halt("测试人工中断")
+        advance(n, clock, .35)
+    if start == "completed_policy":
+        m.active = "crouch"
+        p = m.policies["crouch"]
+        p.motion.steps = int(np.ceil((len(p.motion.positions) - 1) / p.motion.stride))
+    original = n.target_pub.copy()
+    if start == "stopped":
+        buttons = [0] * 8
+        buttons[m.buttons["lb"]] = buttons[m.buttons["start"]] = 1
+        m.joy(SimpleNamespace(buttons=buttons))
+        since = m.state_since
+        m.joy(SimpleNamespace(buttons=buttons))  # 手柄长按不能重启插值。
+        assert m.state_since == since
+    else:
+        m.keys("4")
+    assert m.state == "standing_transition" and m.active is None
+    np.testing.assert_array_equal(n.target_pub, original)  # 按键本身不跳目标。
+    duration = m.stand_blend_time
+    assert duration >= 1.5 * np.max(np.abs(original - m.pose_q["stand"])) / m.cfg["return_max_speed"] - 1e-6
+    for p in m.policies.values():
+        p._infer = lambda x: pytest.fail("手动回站姿不得运行策略推理")
+    assert not m.request("return_stand") and not m.request("walk")
+    frames = [original]
+    for _ in range(int(np.ceil((duration + .5) / n.pub_dt))):
+        # 理想跟随只测试调度、速度和状态机，不证明实机能独立平衡。
+        n.obs_raw[7:19] = n.target_pub
+        n.obs_raw[3:7] = [1., 0., 0., 0.]
+        advance(n, clock, n.pub_dt)
+        frames.append(n.target_pub.copy())
+        assert m.state != "stopped", m.reason
+    frames = np.array(frames)
+    assert np.abs(np.diff(frames, axis=0)).max() / n.pub_dt <= m.cfg["return_max_speed"] + 5e-5
+    assert np.all(frames >= m.lo) and np.all(frames <= m.hi)
+    np.testing.assert_allclose(n.target_pub, m.pose_q["stand"], atol=1e-6)
+    moving = np.abs(m.pose_q["stand"] - original) > 1e-4
+    progress = (frames[:, moving] - original[moving]) / (m.pose_q["stand"][moving] - original[moving])
+    assert np.ptp(progress, axis=1).max() < 1e-5
+    assert m.state == "stand_ready" and m.active is None and not n.cmd.any()
+
+
+@pytest.mark.parametrize("state", ["wait_current", "wait_feedback", "walking", "stopping", "lowering", "rising", "standing_transition"])
+def test_manual_stand_return_never_interrupts_or_queues(monkeypatch, state):
+    n, clock = make_multi(monkeypatch)
+    advance(n, clock, 1.1)
+    m = n.multi
+    m.state = state
+    held = n.target_pub.copy()
+    assert not m.request("return_stand")
+    assert m.state == state
+    np.testing.assert_array_equal(n.target_pub, held)
+
+
+@pytest.mark.parametrize("bad", ["stale", "nan", "quat", "hardware", "task_limit", "tilt", "motor", "moving", "angular", "held_target"])
+def test_manual_stand_return_rechecks_faults_and_stability(monkeypatch, bad):
+    n, clock = make_multi(monkeypatch)
+    advance(n, clock, 1.1)
+    m = n.multi
+    if bad == "stale": n._last_imu_rx = clock[0] - 1.
+    if bad == "nan": n.obs_raw[7] = np.nan
+    if bad == "quat": n.obs_raw[3:7] = 0.
+    if bad == "hardware": n.obs_raw[7] = n.lo[0] - .001
+    if bad == "task_limit": n.obs_raw[8] = m.hi[1] + .031
+    if bad == "tilt": n.obs_raw[3:7] = [np.cos(.5), 0., np.sin(.5), 0.]
+    if bad == "motor": n._motor_faults["left:1"] = "失能"
+    if bad == "moving": n.obs_raw[19] = .4
+    if bad == "angular": n.obs_raw[0] = .5
+    if bad == "held_target": n.target_pub[1] = m.hi[1] + .031
+    held = n.target_pub.copy()
+    assert not m.request("return_stand") and m.return_still_since is None
+    np.testing.assert_array_equal(n.target_pub, held)
+    set_pose(n, "stand")
+    n._motor_faults.clear()
+    n.target_pub = n.default_real.copy()
+    advance(n, clock, .1)
+    assert not m.request("return_stand"), "须重新累计稳定时间，不能沿用故障前计时"
+    advance(n, clock, .25)
+    assert m.state == "stand_ready", "之前拒绝的请求不得自动执行"
+    assert m.request("return_stand")
+
+
+@pytest.mark.parametrize("event", ["halt", "timeout", "stale", "scheduling", "motor", "task_limit", "tilt"])
+def test_manual_stand_return_can_stop_and_never_declares_false_success(monkeypatch, event):
+    n, clock = make_multi(monkeypatch, "crouch")
+    advance(n, clock, 1.1)
+    m = n.multi
+    assert m.request("return_stand")
+    advance(n, clock, .1)
+    held = n.target_pub.copy()
+    if event == "halt": m.keys("p")
+    if event == "stale": n._last_joint_rx = clock[0] - 1.
+    if event == "scheduling": clock[0] += .1
+    if event == "motor": n._motor_faults["left:1"] = "失能"
+    if event == "task_limit": n.obs_raw[8] = m.hi[1] + .031
+    if event == "tilt": n.obs_raw[3:7] = [np.cos(.5), 0., np.sin(.5), 0.]
+    if event == "timeout":
+        advance(n, clock, m.stand_blend_time + m.cfg["end_timeout"] + .5)
+    else:
+        if event == "scheduling": n._last_joint_rx = n._last_imu_rx = clock[0]
+        n._tick()
+        np.testing.assert_array_equal(n.target_pub, held)
+    assert m.state == "stopped" and m.active is None
 
 
 def test_measured_crouch_handover_and_shared_bounds(monkeypatch):

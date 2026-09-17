@@ -63,7 +63,8 @@ def main():
     assert np.isclose(runner.model.body_subtreemass[runner.base_body_id], nominal.body("base").subtreemass[0] + 2.5)
     assert np.allclose(runner._target_sdk(np.zeros(12)), cfg.default_sdk)
 
-    for step in (0, 1, 40, 64, 114, 170, 1000):
+    end_step = int(np.ceil((len(motion["joint_pos"]) - 1) / runner.frame_stride))
+    for step in (0, 1, 40, 64, 114, end_step - 1, end_step, end_step + 1, 1000):
         runner.episode_step = step
         frame = min(round(step * cfg.step_dt * float(motion["fps"])), len(motion["joint_pos"]) - 1)
         assert runner.reference_frame == frame
