@@ -14,6 +14,7 @@ import xml.etree.ElementTree as ET
 from isaaclab.app import AppLauncher
 
 parser = argparse.ArgumentParser(description=__doc__)
+parser.add_argument("--export-check-dir", type=Path, help="可选：导出两轮冒烟模型到新目录，仅供接口测试，不能部署实机")
 AppLauncher.add_app_launcher_args(parser)
 args = parser.parse_args()
 app = AppLauncher(args).app
@@ -25,9 +26,10 @@ import yaml
 from rsl_rl.runners import OnPolicyRunner
 from isaaclab_rl.rsl_rl import RslRlVecEnvWrapper
 from isaaclab.utils.math import quat_error_magnitude
+from isaaclab.utils.io import dump_yaml
 
 import legs_rl_lab.tasks
-from legs_rl_lab.tasks.mimic_task.task.nlegs_crouch.tracking_env_cfg import NlegsCrouchPlayEnvCfg, NlegsCrouchEnvCfg
+from legs_rl_lab.tasks.mimic_task.task.nlegs_crouch.tracking_env_cfg import NlegsCrouchPlayEnvCfg, NlegsCrouchEnvCfg, joint_ranges
 from legs_rl_lab.tasks.mimic_task.agents.rsl_rl_ppo_cfg import NlegsCrouchPPORunnerCfg
 from legs_rl_lab.tasks.mimic_task import mdp
 from legs_rl_lab.utils.export_deploy_cfg import export_deploy_cfg
@@ -106,6 +108,17 @@ def main():
         assert obs["policy"].shape == (16, 69) and obs["critic"].shape == (16, 138)
         assert term.motion.fps == 100 and env.step_dt == .02
         assert term.time_steps.eq(0).all() and torch.isfinite(obs["policy"]).all()
+        assert Path(term.cfg.motion_file).name == "stand_to_crouch_v3.npz"
+        assert term.cfg.track_heading and term.cfg.end_hold_s == 0.
+        limits = joint_ranges(term.cfg.model_file)
+        expected = torch.tensor([limits[n] for n in robot.joint_names], device=env.device).expand(16, -1, -1)
+        torch.testing.assert_close(robot.data.joint_pos_limits, expected, atol=1e-6, rtol=0.)
+        torch.testing.assert_close(env.action_manager.get_term("JointPositionAction")._clip, expected, atol=1e-6, rtol=0.)
+        rise = Path(term.cfg.motion_file).parents[2] / "nlegs_stand/motions/crouch_to_stand_v2.npz"
+        with np.load(rise, allow_pickle=False) as data:
+            order = [data["joint_names"].tolist().index(n) for n in robot.joint_names]
+            np.testing.assert_array_equal(term.motion.joint_pos[-1].cpu(), data["joint_pos"][0, order])
+            np.testing.assert_array_equal(term.motion.joint_pos[0].cpu(), data["joint_pos"][-1, order])
         assert NlegsCrouchEnvCfg().commands.motion.start_probability == .5
         assert NlegsCrouchPPORunnerCfg().algorithm.symmetry_cfg is None
         check_crouch_events(env)
@@ -164,11 +177,24 @@ def main():
             export_deploy_cfg(env, log_dir, policy_action_clip=5.)
             exported = yaml.safe_load((Path(log_dir) / "params/deploy.yaml").read_text())
             assert exported["real_deployment_supported"] is False and "motion" in exported["commands"]
+            assert exported["commands"]["motion"]["motion_file"] == cfg.commands.motion.motion_file
+            assert exported["commands"]["motion"]["track_heading"] is True
             agent = NlegsCrouchPPORunnerCfg()
             agent.device = env.device
             wrapped = RslRlVecEnvWrapper(env, clip_actions=agent.clip_actions)
             runner = OnPolicyRunner(wrapped, agent.to_dict(), log_dir=log_dir, device=env.device)
             runner.learn(num_learning_iterations=2, init_at_random_ep_len=True)
+            if args.export_check_dir:
+                output = args.export_check_dir
+                output.mkdir(parents=True, exist_ok=False)
+                export_deploy_cfg(env, str(output), policy_action_clip=agent.clip_actions)
+                dump_yaml(str(output / "params/agent.yaml"), agent)
+                (output / "exported").mkdir()
+                torch.jit.script(runner.alg.actor.as_jit()).save(str(output / "exported/policy.pt"))
+                model = runner.alg.actor.as_onnx(verbose=False).cpu()
+                torch.onnx.export(model, torch.zeros(1, model.input_size), str(output / "exported/policy.onnx"),
+                                  opset_version=11, input_names=["obs"], output_names=["actions"])
+                print(f"SMOKE ONLY, not a trained crouch policy: {output}", flush=True)
         print("PASS: registration, 69/138D, named FK/velocity, 100-to-50 Hz clock, RSI/partial reset, end clamp, finite rollout, export and 2 PPO iterations", flush=True)
     finally:
         env.close()

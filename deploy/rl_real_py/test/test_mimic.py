@@ -175,3 +175,21 @@ def test_heading_flag_must_be_boolean(monkeypatch):
     dep["commands"]["motion"]["track_heading"] = "false"
     with pytest.raises(ValueError, match="track_heading"):
         MotionReference(dep, root, cfg["joint_index_in_real"], cfg["joint_lower_limits"], cfg["joint_upper_limits"])
+
+
+def test_measured_crouch_v3_matches_rise_and_deployment_bounds(monkeypatch):
+    node, _ = make_multi(monkeypatch, current=True, calibrated=True)
+    cfg, _, root = load_settings(CONFIG)
+    rise = node.multi.policies["rise"]
+    dep = copy.deepcopy(rise.deploy)  # Test metadata compatibility only; no substitute policy is deployed.
+    dep["commands"]["motion"]["motion_file"] = str(
+        root / "source/legs_rl_lab/legs_rl_lab/tasks/mimic_task/task/nlegs_crouch/motions/stand_to_crouch_v3.npz")
+    dep["commands"]["motion"]["track_heading"] = True
+    down = MotionReference(dep, root, cfg["joint_index_in_real"], node.lo, node.hi)
+    assert down.track_heading and down.stride == 2 and len(down.positions) == 341
+    for first, last in ((0, -1), (-1, 0)):
+        np.testing.assert_array_equal(down.positions[first], rise.motion.positions[last])
+        np.testing.assert_array_equal(down.rotations[first], rise.motion.rotations[last])
+    q = down.positions[:, rise.sim2real]
+    assert (q >= node.multi.lo - 1e-6).all() and (q <= node.multi.hi + 1e-6).all()
+    assert cfg["tasks"]["crouch"] is None, "Keep the obsolete real crouch policy disabled until retraining"

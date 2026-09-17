@@ -81,6 +81,16 @@ def main():
         assert (data["joint_pos"] >= limits[:, 0] - 1e-6).all()
         assert (data["joint_pos"] <= limits[:, 1] + 1e-6).all()
     assert (TASK / "motions/crouch_to_stand_v1.npz").is_file(), "Keep old reference for old policies"
+    with np.load(TASKS / "task/nlegs_crouch/motions/stand_to_crouch_v3.npz") as down, np.load(motion) as up:
+        assert down["joint_names"].tolist() == up["joint_names"].tolist()
+        assert str(down["model_sha256"]) == str(up["model_sha256"])
+        assert float(down["fps"]) == 100. and len(down["joint_pos"]) == 341
+        for first, last in ((0, -1), (-1, 0)):
+            np.testing.assert_array_equal(down["joint_pos"][first], up["joint_pos"][last])
+            np.testing.assert_array_equal(down["body_quat_w"][first], up["body_quat_w"][last])
+        assert (down["joint_pos"] >= limits[:, 0] - 1e-6).all()
+        assert (down["joint_pos"] <= limits[:, 1] + 1e-6).all()
+    assert (TASKS / "task/nlegs_crouch/motions/stand_to_crouch_v2.npz").is_file()
     # Execute only play's config restore, without launching its top-level Isaac app.
     play_tree = ast.parse((ROOT / "scripts/rsl_rl/play.py").read_text())
     main_func = next(node for node in play_tree.body if isinstance(node, ast.FunctionDef) and node.name == "main")
@@ -90,12 +100,15 @@ def main():
         params = Path(directory) / "params"
         params.mkdir()
         for saved in ({}, {"track_heading": False, "end_hold_s": 5.}):
+            saved["motion_file"] = str(motion)
             (params / "deploy.yaml").write_text(yaml.safe_dump({"commands": {"motion": saved}}))
             config = SimpleNamespace(episode_length_s=8.35, commands=SimpleNamespace(
                 motion=SimpleNamespace(track_heading=False, end_hold_s=5.)))
             exec(compile(ast.Module(body=[restore], type_ignores=[]), "play_config", "exec"),
-                 {"env_cfg": config, "log_dir": directory, "os": os, "yaml": yaml})
+                 {"env_cfg": config, "log_dir": directory, "os": os, "yaml": yaml, "np": np,
+                  "Path": Path, "__file__": str(ROOT / "scripts/rsl_rl/play.py")})
             assert config.commands.motion.track_heading == saved.get("track_heading", True)
+            assert Path(config.commands.motion.motion_file) == motion
             assert np.isclose(config.episode_length_s, 3.35 + saved.get("end_hold_s", 0.))
     print("PASS: registration, v2 measured endpoint, 3.35s reference + 5s hold, heading-free config, Play overrides, XML limits/hash.")
 

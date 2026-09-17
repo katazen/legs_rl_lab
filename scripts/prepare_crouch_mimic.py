@@ -1,4 +1,4 @@
-"""Convert the preserved v2 reference into named full-body mimic data, without Isaac Sim."""
+"""Convert the measured v3 reference into named full-body mimic data, without Isaac Sim."""
 
 import argparse
 import hashlib
@@ -10,7 +10,7 @@ import numpy as np
 from generate_crouch_pose_bank import XML
 
 ROOT = Path(__file__).resolve().parents[1]
-DEFAULT_OUTPUT = ROOT / "source/legs_rl_lab/legs_rl_lab/tasks/mimic_task/task/nlegs_crouch/motions/stand_to_crouch_v2.npz"
+DEFAULT_OUTPUT = ROOT / "source/legs_rl_lab/legs_rl_lab/tasks/mimic_task/task/nlegs_crouch/motions/stand_to_crouch_v3.npz"
 
 
 def convert(source, output):
@@ -61,7 +61,7 @@ def convert(source, output):
 
 if __name__ == "__main__":
     parser = argparse.ArgumentParser(description=__doc__)
-    parser.add_argument("--input", type=Path, default=ROOT / "datasets/stand_to_crouch_v2/motion.npz")
+    parser.add_argument("--input", type=Path, default=ROOT / "datasets/stand_to_crouch_v3/motion.npz")
     parser.add_argument("--output", type=Path, default=DEFAULT_OUTPUT)
     args = parser.parse_args()
     convert(args.input, args.output)

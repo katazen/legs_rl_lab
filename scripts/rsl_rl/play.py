@@ -47,8 +47,10 @@ simulation_app = app_launcher.app
 
 import gymnasium as gym
 import os
+from pathlib import Path
 import time
 import torch
+import numpy as np
 import yaml
 
 from rsl_rl.runners import OnPolicyRunner
@@ -101,8 +103,20 @@ def main():
         with open(os.path.join(log_dir, "params", "deploy.yaml")) as stream:
             recorded_motion = yaml.safe_load(stream)["commands"]["motion"]
         motion = env_cfg.commands.motion
+        reference_path = Path(recorded_motion["motion_file"]).expanduser()
+        root = Path(__file__).resolve().parents[2]
+        if not reference_path.is_absolute():
+            reference_path = root / reference_path
+        if not reference_path.is_file():
+            relative = reference_path.as_posix().partition("/source/")[2]
+            if relative:
+                reference_path = root / "source" / relative
+        if not reference_path.is_file():
+            raise FileNotFoundError(f"找不到该模型训练使用的参考动作: {recorded_motion['motion_file']}")
+        motion.motion_file = str(reference_path)
         end_hold_s = recorded_motion.get("end_hold_s", 0.)
-        env_cfg.episode_length_s += end_hold_s - motion.end_hold_s
+        with np.load(reference_path, allow_pickle=False) as reference:
+            env_cfg.episode_length_s = (len(reference["joint_pos"]) - 1) / float(reference["fps"]) + end_hold_s
         motion.track_heading = recorded_motion.get("track_heading", True)
         motion.end_hold_s = end_hold_s
 

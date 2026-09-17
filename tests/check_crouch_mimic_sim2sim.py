@@ -36,6 +36,8 @@ def main():
     spec.loader.exec_module(entry)
     replay = entry.replay if args.task == "stand" else entry
     assert Path(replay.flat.LOGS_ROOT).name == f"nlegs_mimic_{args.task}"
+    if not (args.run or entry.RUN):
+        parser.error("下蹲检查需要 --run 指定新训练并导出的模型")
     np.random.seed(42)
     cfg = replay.flat.load_config(args.run or entry.RUN)
     runner = replay.MimicCrouchRunner(cfg, show_viewer=False)

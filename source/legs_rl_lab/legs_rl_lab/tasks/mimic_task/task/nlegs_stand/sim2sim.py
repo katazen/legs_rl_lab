@@ -21,7 +21,7 @@ spec = importlib.util.spec_from_file_location(
 replay = importlib.util.module_from_spec(spec)
 spec.loader.exec_module(replay)
 replay.flat.LOGS_ROOT = str(Path(replay.flat._REPO_ROOT) / "logs/rsl_rl/nlegs_mimic_stand")
-RUN = "2026-09-17_12-30-38"
+RUN = "2026-09-17_15-40-44"
 
 
 def main():

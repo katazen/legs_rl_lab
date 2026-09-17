@@ -6,6 +6,7 @@ P/B 中断锁存，R/Back 重新验收（不重置物理、不自动运行）。
 W/S 前后，A/D 左右，Q/E 转向；空格清零速度，不等于停步。
 数字支持主键盘和小键盘；聚焦 MuJoCo 窗口操作。
 --walk-run、--crouch-run、--rise-run 接受目录名或绝对路径。
+未指定的模型读取 deploy/rl_real_py/configs/common.yaml；下蹲未启用时须显式指定 --crouch-run。
 """
 
 import argparse
@@ -13,6 +14,7 @@ from dataclasses import fields
 import importlib.util
 from pathlib import Path
 from queue import SimpleQueue
+import sys
 import threading
 import time
 
@@ -22,15 +24,16 @@ import numpy as np
 
 
 ROOT = Path(__file__).resolve().parents[1]
+sys.path.insert(0, str(ROOT / "deploy/rl_real_py"))
+from rl_real_py.deployment_config import load_settings
+
 spec = importlib.util.spec_from_file_location(
     "multi_mimic", ROOT / "source/legs_rl_lab/legs_rl_lab/tasks/mimic_task/task/nlegs_crouch/sim2sim.py",
 )
 mimic = importlib.util.module_from_spec(spec)
 spec.loader.exec_module(mimic)
 flat = mimic.flat
-RUNS = {"walk": ("nlegs_flat_static", "2026-09-16_11-41-05"),
-        "crouch": ("nlegs_mimic_crouch", "2026-09-15_15-36-16"),
-        "rise": ("nlegs_mimic_stand", "2026-09-15_18-50-29")}
+RUNS = {"walk": "nlegs_flat_static", "crouch": "nlegs_mimic_crouch", "rise": "nlegs_mimic_stand"}
 STABLE_TIME = .30
 STOP_BLEND_TIME = .50
 STOP_TIMEOUT = 6.
@@ -49,9 +52,13 @@ class MultiTaskSim:
     def __init__(self, runs=None, initial_pose="stand", base_mass_add=2.5):
         if initial_pose not in ("stand", "crouch"):
             raise ValueError("initial_pose 必须是 stand 或 crouch")
+        configured, _, _ = load_settings(ROOT / "deploy/rl_real_py/configs/common.yaml")
+        selected = {name: (runs or {}).get(name) or configured["tasks"][name] for name in RUNS}
+        if selected["crouch"] is None:
+            raise ValueError("请先训练并导出新版下蹲模型，用 --crouch-run 指定；实机下蹲仍可保持禁用")
         self.runners = {}
-        for name, (task, default) in RUNS.items():
-            path = Path((runs or {}).get(name) or default).expanduser()
+        for name, task in RUNS.items():
+            path = Path(selected[name]).expanduser()
             if not path.is_absolute():
                 path = ROOT / "logs/rsl_rl" / task / path
             cfg = flat.load_config(str(path))

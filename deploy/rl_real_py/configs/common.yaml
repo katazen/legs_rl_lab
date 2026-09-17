@@ -3,8 +3,8 @@
 # 路径相对仓库根目录；不自动选择最新模型。
 tasks:
   walk: logs/rsl_rl/nlegs_flat_static/2026-09-16_11-41-05
-  crouch: null  # 旧下蹲与新起身不配套；禁用 2 / LB+X，待新模型。
-  rise: logs/rsl_rl/nlegs_mimic_stand/2026-09-17_12-30-38
+  crouch: null  # 待 v3 下蹲重训、导出并通过 sim2sim 后填 run 路径；不要填旧 v2 模型。
+  rise: logs/rsl_rl/nlegs_mimic_stand/2026-09-17_15-40-44
 
 publish_rate: 200
 target_ema_alpha: 1.0       # 统一部署与 sim2sim 一致，不叠加目标 EMA

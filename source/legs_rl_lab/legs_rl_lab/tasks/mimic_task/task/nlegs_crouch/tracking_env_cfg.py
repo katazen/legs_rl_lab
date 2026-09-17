@@ -1,4 +1,4 @@
-"""nlegs v2 crouch tracking, adapted from unitree_rl_lab/tasks/mimic (Apache-2.0)."""
+"""Measured-limit v3 crouch tracking, adapted from unitree_rl_lab/tasks/mimic (Apache-2.0)."""
 
 import math
 from pathlib import Path
@@ -81,7 +81,7 @@ class RobotSceneCfg(InteractiveSceneCfg):
 @configclass
 class CommandsCfg:
     motion = mdp.MotionCommandCfg(
-        asset_name="robot", motion_file=str(Path(__file__).parent / "motions/stand_to_crouch_v2.npz"),
+        asset_name="robot", motion_file=str(Path(__file__).parent / "motions/stand_to_crouch_v3.npz"),
         model_file=str(ASSET / "mjcf/nlegs_limit.xml"),
         anchor_body_name="base", body_names=BODIES, resampling_time_range=(1.e9, 1.e9),
         debug_vis=False, start_probability=.5, sample_until_s=2.28,

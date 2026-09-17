@@ -1,8 +1,9 @@
 """CPU/MuJoCo 检查统一三任务回放，不打开窗口、不启动 ROS。
 
-python tests/check_multi_sim2sim.py
+python tests/check_multi_sim2sim.py --crouch-run 新下蹲目录 [--interface-only]
 """
 
+import argparse
 import numpy as np
 import glfw
 import mujoco
@@ -52,8 +53,14 @@ def start(sim, task):
 
 
 def main():
+    parser = argparse.ArgumentParser(description=__doc__)
+    for task in ("walk", "crouch", "rise"):
+        parser.add_argument(f"--{task}-run")
+    parser.add_argument("--interface-only", action="store_true", help="只检查加载/数据衔接/按键接口，不宣称策略动作成功")
+    args = parser.parse_args()
+    runs = {task: getattr(args, task + "_run") for task in ("walk", "crouch", "rise")}
     np.random.seed(42)
-    sim = MultiTaskSim()
+    sim = MultiTaskSim(runs)
     assert len({id(r.data) for r in sim.runners.values()}) == 1
     assert len({id(r.model) for r in sim.runners.values()}) == 1
     assert len({id(r.latency) for r in sim.runners.values()}) == 1
@@ -61,15 +68,25 @@ def main():
     until(sim, "stand_ready")
     assert sim.data.time >= STABLE_TIME
     assert not sim.request("rise")
+    if args.interface_only:
+        before = sim.data.qpos.copy()
+        assert sim.request("crouch")
+        assert np.array_equal(sim.data.qpos, before) and sim.state == "lowering"
+        assert sim.request("halt")
+        crouched = MultiTaskSim(runs, initial_pose="crouch")
+        assert np.allclose(crouched.data.qpos[crouched.robot.qpos_adr], crouched.pose_q["crouch"])
+        assert sim.pose_error("stand") is None
+        print("PASS: three-policy loading, new endpoints/limits, stand/crouch initial poses, manual start/halt; no policy success claim")
+        return
     start(sim, "crouch")
     assert not sim.request("crouch") and not sim.request("rise") and not sim.request("walk")
     until(sim, "crouch_ready")
-    assert sim.active == "crouch" and sim.runners["crouch"].reference_frame == 340
+    assert sim.active == "crouch" and sim.runners["crouch"].reference_frame == len(sim.runners["crouch"].ref_pos) - 1
     advance(sim, .5)
     assert not sim.request("walk")
     start(sim, "rise")
     until(sim, "stand_ready")
-    assert sim.active == "rise" and sim.runners["rise"].reference_frame == 268
+    assert sim.active == "rise" and sim.runners["rise"].reference_frame == len(sim.runners["rise"].ref_pos) - 1
     start(sim, "walk")
     assert not sim.request("crouch")
     sim.keyboard_command[:] = [.15, 0., .15]
@@ -111,7 +128,7 @@ def main():
     assert not sim.gamepad_command.any()
 
     np.random.seed(42)
-    squatting = MultiTaskSim(initial_pose="crouch")
+    squatting = MultiTaskSim(runs, initial_pose="crouch")
     until(squatting, "crouch_ready")
     # 双脚悬空不可验收，单靠角度相同不够。
     original = squatting.data.qpos.copy()

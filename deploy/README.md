@@ -8,8 +8,27 @@
 当前仅启用走路与 `nlegs_mimic_stand/2026-09-17_12-30-38` 新起身模型，
 `tasks.crouch: null` 禁用旧下蹲，不加载它的参考或策略；按 2 / LB+X 只提示禁用，不改变当前目标。
 新下蹲训练好后填入对应 run 路径，仍须通过下蹲/起身端点和任务限位一致性检查，不能直接混用旧模型。
+当前下蹲训练已改用 `nlegs_crouch/motions/stand_to_crouch_v3.npz`：341 帧、100Hz、3.4s，
+末帧与 `crouch_to_stand_v2.npz` 首帧的关节角和机身姿态一致。沿用当前 limit USD/XML、原奖励和朝向跟踪，
+随机推扰仍只在 1.48–2.28s 下蹲段施加；旧 v2 文件保留，仅供旧记录核对。
 `rl_real_common.py` 中的 `Policy` 共用模型加载、观测、动作映射；`multi_task.py` 只管理切换。
 旧单策略入口、`start_mimic.sh`、`start_now.sh`、`--multi`、`--start-from-current` 和自动回站立已退役。
+
+新版下蹲训练、导出及离线验证（仓库根目录、`unitree_lab` 环境；将 `<新run>` 替换为训练目录名）：
+
+```bash
+./legs_rl_lab.sh -t --task=nlegs_mimic_crouch
+./legs_rl_lab.sh -p --task=nlegs_mimic_crouch --load_run '<新run>' --num_envs 1
+python source/legs_rl_lab/legs_rl_lab/tasks/mimic_task/task/nlegs_crouch/sim2sim.py --run '<新run>'
+python scripts/sim2sim.py --crouch-run '<新run>'
+```
+
+独立下蹲回放从站姿等待，按 5 开始；统一回放按 2 下蹲、3 起身。
+统一回放未指定的模型读取 common 的 `tasks`，不再默认混用旧下蹲/旧起身；可用 `--rise-run` 验证新起身。
+Play 使用所选 run 记录的参考文件，不会把旧权重自动配成新版数据；旧模型与当前模型校验不符时仍拒绝运行。
+离线效果确认后，再把 `tasks.crouch` 从 null 改为 `logs/rsl_rl/nlegs_mimic_crouch/<新run>`。
+部署代码自动读取该 run 的参考和 action clip，已有实测单侧任务边界及 common 硬件边界保持不变。
+本次不启用旧下蹲，不替换已有策略权重；参考数据的运动学验证不能代替新策略的动力学和实机验证。
 
 在实际控制机器人的主机上编译、预检：
 
