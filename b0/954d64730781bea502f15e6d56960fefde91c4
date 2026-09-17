@@ -1,0 +1,29 @@
+source/legs_rl_lab/legs_rl_lab/tasks/mimic_task/task/nlegs_stand/tracking_env_cfg.py
+  s_22f8ffc6662cf2::t_967e1e23546365 1,14-17
+tests/check_crouch_mimic_sim2sim.py
+  s_22f8ffc6662cf2::t_e945f837b8b95a 1-197
+tests/check_stand_mimic_cfg.py
+  s_22f8ffc6662cf2::t_967e1e23546365 1,4,11-12,37,39-41,55-66,68,72-85,87-90,92,94-96,98-133,138-140
+  s_22f8ffc6662cf2::t_66397a299fa2b0 86,91,93,97
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.7.4",
+  "base_commit_sha": "b0954d64730781bea502f15e6d56960fefde91c4",
+  "prompts": {},
+  "humans": {
+    "h_d698c05df35737": {
+      "author": "woan <377801872@qq.com>"
+    }
+  },
+  "sessions": {
+    "s_22f8ffc6662cf2": {
+      "agent_id": {
+        "tool": "codex",
+        "id": "01a06a55-9d3a-7f52-b1dc-6c6e4d885f57",
+        "model": "gpt-6-astra"
+      },
+      "human_author": "woan <377801872@qq.com>"
+    }
+  }
+}
