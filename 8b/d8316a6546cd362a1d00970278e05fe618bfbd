@@ -1,0 +1,40 @@
+deploy/rl_real_py/configs/common.yaml
+  h_d698c05df35737 7,17-20
+  s_22f8ffc6662cf2::t_e5844e3a8bd794 66
+deploy/README.md
+  s_22f8ffc6662cf2::t_e5844e3a8bd794 33,41-50
+deploy/rl_real_py/rl_real_py/multi_task.py
+  s_22f8ffc6662cf2::t_e5844e3a8bd794 18,25,82,124-126,129,132,136,143,212-236,242-252,273,351-354,358-361,393-394,430,434,479-480
+  s_22f8ffc6662cf2::t_7adcea1edaac55 157
+tests/check_crouch_mimic_sim2sim.py
+  s_22f8ffc6662cf2::t_e5a122cce699ec 66-67
+deploy/start_real.sh
+  s_22f8ffc6662cf2::t_e5844e3a8bd794 73
+source/legs_rl_lab/legs_rl_lab/tasks/mimic_task/task/nlegs_stand/sim2sim.py
+  s_22f8ffc6662cf2::t_e5a122cce699ec 6,8,24
+deploy/rl_real_py/test/test_multi_task.py
+  s_22f8ffc6662cf2::t_8ef585034ddb60 153-267
+  s_22f8ffc6662cf2::t_7adcea1edaac55 135
+  s_22f8ffc6662cf2::t_02a4c60ce9334d 268-269
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.7.4",
+  "base_commit_sha": "8bd8316a6546cd362a1d00970278e05fe618bfbd",
+  "prompts": {},
+  "humans": {
+    "h_d698c05df35737": {
+      "author": "woan <377801872@qq.com>"
+    }
+  },
+  "sessions": {
+    "s_22f8ffc6662cf2": {
+      "agent_id": {
+        "tool": "codex",
+        "id": "01a06a55-9d3a-7f52-b1dc-6c6e4d885f57",
+        "model": "gpt-6-astra"
+      },
+      "human_author": "woan <377801872@qq.com>"
+    }
+  }
+}
