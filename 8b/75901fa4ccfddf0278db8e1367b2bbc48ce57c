@@ -1,0 +1,43 @@
+deploy/rl_real_py/test/test_multi_task.py
+  s_22f8ffc6662cf2::t_a85b718d79c078 630,634-640
+  s_22f8ffc6662cf2::t_d7babcc072d96a 76,78-81,87,89-90,92-93,95,98,100,107,112,116,118,123,128,134,137,141,143,145,147,149-183,626-628
+tests/check_multi_sim2sim.py
+  s_22f8ffc6662cf2::t_e945f837b8b95a 1-164
+deploy/rl_real_py/rl_real_py/multi_task.py
+  s_22f8ffc6662cf2::t_9afd707bbec2cb 93,127,129-139,141,148-151,164,179-181,184-187,201-204,236-240,255,273-275,296-300,305-307,319-323,448
+deploy/README.md
+  s_22f8ffc6662cf2::t_9afd707bbec2cb 28-29
+scripts/sim2sim.py
+  s_22f8ffc6662cf2::t_da487e2aba9795 119-123,125,225,227
+  s_22f8ffc6662cf2::t_878f3edec6b865 173,183,187,294,315,341
+  s_22f8ffc6662cf2::t_9179bb7346b4ae 16,399,401,403,435-437
+  s_22f8ffc6662cf2::t_89a4dba3dabe37 1-15,17-30,32-37,40-118,124,126-171,174-182,184-186,188-224,226,228-232,235-256,259,261-272,275-293,295-314,316-323,325,330-340,342-353,358-398,400,402,405-406,409-434,438-462
+  s_22f8ffc6662cf2::t_be11232231be91 38-39,257-258,260,324,326-329
+  s_22f8ffc6662cf2::t_10789b5443422b 354-357,404
+  h_d698c05df35737 31
+  s_22f8ffc6662cf2::t_3e28c97abc1cd3 407-408
+  s_22f8ffc6662cf2::t_a3c540de1b3cba 172,233-234,273-274
+deploy/rl_real_py/rl_real_py/rl_real_common.py
+  s_22f8ffc6662cf2::t_9afd707bbec2cb 199-202,216-219,334-337
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.7.4",
+  "base_commit_sha": "8b75901fa4ccfddf0278db8e1367b2bbc48ce57c",
+  "prompts": {},
+  "humans": {
+    "h_d698c05df35737": {
+      "author": "woan <377801872@qq.com>"
+    }
+  },
+  "sessions": {
+    "s_22f8ffc6662cf2": {
+      "agent_id": {
+        "tool": "codex",
+        "id": "01a06a55-9d3a-7f52-b1dc-6c6e4d885f57",
+        "model": "gpt-6-astra"
+      },
+      "human_author": "woan <377801872@qq.com>"
+    }
+  }
+}
