@@ -125,7 +125,7 @@ class PoseSolver:
             "com_margin_m": float(state["margin"]),
         }
 
-    def solve_limit(self):
+    def solve_limit(self, max_foot_tilt=0.5, max_height_error=0.001):
         """十个关节固定在 XML 端点，只求身体 roll/pitch 和双踝 roll。"""
         ankle_ids = [NAMES.index(f"joint_{side}6") for side in ("L", "R")]
 
@@ -147,15 +147,15 @@ class PoseSolver:
         if not result.success:
             raise ValueError(f"精确限位姿态求解失败: {result.message}")
         q, state = evaluate(result.x)
-        self.validate(q, state)
+        self.validate(q, state, max_foot_tilt, max_height_error)
         return q, state
 
-    def validate(self, q, state):
+    def validate(self, q, state, max_foot_tilt=0.5, max_height_error=0.001):
         if not (np.isfinite(q).all() and np.isfinite(state["height"])):
             raise ValueError("姿态包含非有限值")
         if np.any(q < self.limits[:, 0]) or np.any(q > self.limits[:, 1]):
             raise ValueError("关节越限")
-        if (state["tilt_deg"] > 0.5 or state["height_error"] > 0.001
+        if (state["tilt_deg"] > max_foot_tilt or state["height_error"] > max_height_error
                 or state["margin"] < 0.005 or state["self_penetration"] > 0.0001
                 or -self.data.xpos[self.feet, 2].min() < 0.2):
             raise ValueError(f"未通过接触/支撑校验: tilt={state['tilt_deg']:.3f}deg, "

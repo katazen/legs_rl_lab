@@ -18,7 +18,7 @@ from scipy.optimize import least_squares
 from scipy.spatial import ConvexHull
 from scipy.spatial.transform import Rotation, Slerp
 
-from generate_crouch_pose_bank import CLEARANCE, NAMES, STAND, XML, PoseSolver
+from generate_crouch_pose_bank import CLEARANCE, CROUCH_LIMIT_SIDE, NAMES, STAND, XML, PoseSolver
 
 OUTPUT = Path(__file__).resolve().parents[1] / "datasets/stand_to_crouch_v1"
 FPS = 50
@@ -57,8 +57,30 @@ def com(solver):
             + 2.5 * solver.data.xipos[solver.base]) / (solver.mass + 2.5)
 
 
-def endpoints(solver):
-    q, state = solver.solve_limit()
+def read_crouch_snapshot(path):
+    snapshot = json.loads(path.read_text())
+    return np.array(snapshot["L"]["q"] + snapshot["R"]["q"], dtype=float)
+
+
+def motion_solver(measured_q=None):
+    solver = PoseSolver()
+    if measured_q is not None:
+        measured_q = np.asarray(measured_q, dtype=float)
+        if (measured_q.shape != (12,) or not np.isfinite(measured_q).all()
+                or np.any(measured_q < solver.limits[:, 0]) or np.any(measured_q > solver.limits[:, 1])):
+            raise ValueError("Measured crouch must contain 12 finite angles within the current XML bounds")
+        solver.crouch[:] = measured_q
+        for name, side in CROUCH_LIMIT_SIDE.items():
+            i = NAMES.index(name)
+            solver.limits[i, side] = measured_q[i]
+        if np.any(STAND < solver.limits[:, 0]) or np.any(STAND > solver.limits[:, 1]):
+            raise ValueError("Measured task stops exclude the standing pose")
+    return solver
+
+
+def endpoints(solver, measured=False):
+    # Exact measured stops are mildly non-coplanar in the nominal geometry.
+    q, state = solver.solve_limit(max_foot_tilt=1.0, max_height_error=.003) if measured else solver.solve_limit()
     end = np.r_[0, 0, state["height"] - CLEARANCE,
                 Rotation.from_quat(state["quat"], scalar_first=True).as_euler("xyz"), q]
     state = solver.evaluate(STAND, 0, 0)
@@ -72,14 +94,24 @@ def endpoints(solver):
     return start, end, np.array(feet), np.array(rotations), np.array(centers)
 
 
-def generate(solver, variant="v1"):
-    start, end, feet, rots, centers = endpoints(solver)
+def generate(solver, variant="v1", lift_height=None, time_scale=1.0, measured=False):
+    if not np.isfinite(time_scale) or time_scale < 1:
+        raise ValueError("time_scale must be finite and >= 1")
+    start, end, feet, rots, centers = endpoints(solver, measured)
     quick = variant == "v2"
     times = np.array([0, .6, 1.0, 1.08, 1.48, 2.28, 3.4]) if quick else TIMES
     labels = (["Stand", "Low step left out", "Touch down", "Low step right out",
                "Settle to limits", "Hold crouch"] if quick else LABELS)
     fps = 100 if quick else FPS
-    lift_times, swing_duration, lift_height = ((.6, 1.08), .4, .012) if quick else ((1.6, 4.4), 1.6, .05)
+    lift_times, swing_duration, default_lift = ((.6, 1.08), .4, .012) if quick else ((1.6, 4.4), 1.6, .05)
+    lift_height = default_lift if lift_height is None else lift_height
+    if not np.isfinite(lift_height) or not 0 < lift_height <= .05:
+        raise ValueError("lift_height must be in (0, 0.05] m")
+    times = times * time_scale
+    if not np.allclose(times * fps, np.round(times * fps)):
+        raise ValueError("Scaled segment boundaries must align with the frame interval")
+    lift_times = np.array(lift_times) * time_scale
+    swing_duration *= time_scale
     support = feet[:, :, :2] + np.einsum("sfij,j->sfi", rots, [.05, 0, 0])[:, :, :2]
     com_keys = np.array([centers[0], centers[0], support[0, 1], support[0, 1],
                          support[1, 0], support[1, 0], centers[1], centers[1], centers[1]])
@@ -157,7 +189,9 @@ def generate(solver, variant="v1"):
             "phase": np.array(phases), "foot_target_pos": np.array(targets),
             "com_target_xy": np.array(com_targets), "variant": np.array(variant),
             "segment_times": times, "segment_labels": np.array(labels),
-            "swing_duration": np.array(swing_duration), "lift_height": np.array(lift_height)}
+            "swing_duration": np.array(swing_duration), "lift_height": np.array(lift_height),
+            "time_scale": np.array(time_scale),
+            **({"measured_crouch_joint_pos": solver.crouch.copy()} if measured else {})}
 
 
 def validate_and_complete(motion, solver, reverse=False):
@@ -201,7 +235,10 @@ def validate_and_complete(motion, solver, reverse=False):
              "min_nominal_com_support_margin_mm": float(min(margins) * 1000),
              "static_support_check_passed": bool(min(margins) >= 0),
              "max_joint_speed_rad_s": float(np.abs(qvel[:, dofs]).max()),
+             "max_joint_acceleration_rad_s2": float(np.abs(np.gradient(qvel[:, dofs], dt, axis=0)).max()),
              "max_joint_frame_step_rad": float(np.abs(np.diff(q, axis=0)).max()),
+             "crouch_sole_height_spread_mm": float(np.ptp(points[crouch_frame, :, :, 2]) * 1000),
+             "crouch_rpy_deg": Rotation.from_quat(motion["root_quat_wxyz"][crouch_frame], scalar_first=True).as_euler("xyz", degrees=True).tolist(),
              "final_rpy_deg": Rotation.from_quat(motion["root_quat_wxyz"][-1], scalar_first=True).as_euler("xyz", degrees=True).tolist()}
     print(json.dumps(stats, indent=2), flush=True)
     assert stats["max_foot_target_error_mm"] < 2, "IK failed to preserve foot trajectory"
@@ -212,7 +249,8 @@ def validate_and_complete(motion, solver, reverse=False):
         outward = q[:, [1, 7]] * [1, -1]
         direction = -1 if reverse else 1
         assert np.all(outward >= -1e-8) and np.all(direction * np.diff(outward, axis=0) >= -1e-7), "Hip roll reverses direction"
-        assert float(motion["swing_duration"]) <= .4 and float(motion["lift_height"]) <= .012
+        assert np.isclose(float(motion["swing_duration"]), .4 * float(motion.get("time_scale", 1)))
+        assert 0 < float(motion["lift_height"]) <= .05
         stats["hip_roll_monotonic_inward" if reverse else "hip_roll_monotonic_outward"] = True
     motion.update(joint_vel=qvel[:, dofs], root_lin_vel_world=qvel[:, :3],
                   root_ang_vel_body=qvel[:, 3:6], foot_pos=foot_pos,
@@ -275,18 +313,23 @@ def main():
     parser.add_argument("--check", action="store_true")
     parser.add_argument("--render-only", action="store_true")
     parser.add_argument("--no-render", action="store_true")
+    parser.add_argument("--crouch-snapshot", type=Path, help="Read ten task stops from an L/R q snapshot; solve ankles and base")
+    parser.add_argument("--lift-height", type=float)
+    parser.add_argument("--time-scale", type=float, default=1.)
     args = parser.parse_args()
     args.output = args.output or OUTPUT.with_name(f"stand_to_crouch_{args.variant}")
-    solver = PoseSolver()
     path = args.output / "motion.npz"
     if args.check or args.render_only:
         motion = dict(np.load(path, allow_pickle=False))
         metadata = json.loads((args.output / "metadata.json").read_text())
         assert metadata["model_sha256"] == hashlib.sha256(XML.read_bytes()).hexdigest()
+        solver = motion_solver(motion.get("measured_crouch_joint_pos"))
     else:
         if path.exists():
             parser.error(f"Refusing to overwrite {path}; choose a new --output directory")
-        motion = generate(solver, args.variant)
+        measured_q = read_crouch_snapshot(args.crouch_snapshot) if args.crouch_snapshot else None
+        solver = motion_solver(measured_q)
+        motion = generate(solver, args.variant, args.lift_height, args.time_scale, measured_q is not None)
     stats = validate_and_complete(motion, solver)
     if args.check:
         print("PASS: joint limits, endpoint, continuity, foot clearance and planted-foot drift")
@@ -299,6 +342,11 @@ def main():
                     "duration_s": float(motion["time"][-1]), "model": str(XML),
                     "swing_duration_s": float(motion["swing_duration"]),
                     "lift_height_m": float(motion["lift_height"]),
+                    "time_scale": float(motion["time_scale"]),
+                    "crouch_snapshot": str(args.crouch_snapshot) if args.crouch_snapshot else None,
+                    "crouch_snapshot_sha256": hashlib.sha256(args.crouch_snapshot.read_bytes()).hexdigest() if args.crouch_snapshot else None,
+                    "measured_joint_pos": motion["measured_crouch_joint_pos"].tolist() if "measured_crouch_joint_pos" in motion else None,
+                    "crouch_joint_pos": motion["joint_pos"][-1].tolist(),
                     "model_sha256": hashlib.sha256(XML.read_bytes()).hexdigest(),
                     "joint_order": NAMES, "foot_order": ["left", "right"],
                     "quaternion_order": "wxyz", "units": "m, rad, s",
@@ -311,7 +359,7 @@ def main():
                                     "No torque, friction-cone, contact-force or dynamic tracking validation.",
                                     "COM support check is nominal/static, not a dynamic stability certificate.",
                                     "Only feet have collision geometry; full-body self-collision is not certified.",
-                                    "Exact ten-joint limits leave approximately 1 mm sole non-coplanarity.",
+                                    "Exact ten-joint stops are preserved; see checks.crouch_sole_height_spread_mm for nominal sole non-coplanarity. Ankles/base are solved, not copied from the IMU snapshot.",
                                     "Reference data only; not directly executable on hardware or a ready-made Mimic format."]}
         (args.output / "metadata.json").write_text(json.dumps(metadata, indent=2) + "\n")
         print(f"Motion: {path}", flush=True)
