@@ -6,15 +6,18 @@ python tests/check_crouch_mimic_sim2sim.py [--task crouch|stand] [--run RUN]
 """
 
 import argparse
+import ast
 import copy
 import importlib.util
 from pathlib import Path
 import tempfile
+import sys
 from unittest.mock import patch
 
 import glfw
 import mujoco
 import numpy as np
+import yaml
 from scipy.spatial.transform import Rotation
 
 
@@ -80,6 +83,9 @@ def main():
     runner.data.qvel[3:6] = [.2, -.3, .4]
     runner.last_action[:] = np.arange(12) * .3 - 1.5
     reference_rot = Rotation.from_quat(motion["body_quat_w"][80, base], scalar_first=True)
+    if not runner.track_heading:
+        delta = rotation.as_euler("xyz")[2] - reference_rot.as_euler("xyz")[2]
+        reference_rot = Rotation.from_euler("z", delta) * reference_rot
     expected = {
         "motion_command": np.r_[motion["joint_pos"][80, order], motion["joint_vel"][80, order]],
         "motion_anchor_ori_b": (rotation.inv() * reference_rot).as_matrix()[:, :2].reshape(-1),
@@ -95,6 +101,31 @@ def main():
             values = np.clip(values, *term["clip"])
         assert np.allclose(terms[name], values * term["scale"], atol=1e-6), name
     assert np.concatenate(list(terms.values())).size == 69
+    # Same input semantics in standalone replay, unified replay and real deployment.
+    sys.path.insert(0, str(ROOT / "deploy/rl_real_py"))
+    from rl_real_py.motion_reference import MotionReference
+    deployed = yaml.safe_load((Path(cfg.model_path).parents[1] / "params/deploy.yaml").read_text())
+    heading_cfg = copy.deepcopy(cfg)
+    heading_cfg.commands["motion"]["track_heading"] = False
+    deployed["commands"]["motion"]["track_heading"] = False
+    free = replay.MimicCrouchRunner(heading_cfg, show_viewer=False)
+    reference = MotionReference(deployed, ROOT, cfg.short_joint_names, [-10.] * 12, [10.] * 12)
+    free.data.qvel[3:6] = [.2, -.3, .4]
+    for step in (0, 40, end_step, end_step + 100):
+        free.episode_step = reference.steps = step
+        observed = []
+        for yaw in (-3., 0., 2.9):
+            quat = Rotation.from_euler("xyz", [.1, -.2, yaw]).as_quat(scalar_first=True)
+            free.data.qpos[3:7] = quat
+            features = free._observation_features()
+            for name, value in reference.features(quat).items():
+                np.testing.assert_allclose(features[name], value, atol=1e-6)
+            observed.append(features["motion_anchor_ori_b"])
+            np.testing.assert_allclose(features["ang_vel"], [.2, -.3, .4])
+        np.testing.assert_allclose(observed, np.broadcast_to(observed[0], (3, 6)), atol=1e-6)
+    unified = ast.parse((ROOT / "scripts/sim2sim.py").read_text())
+    assert any(isinstance(node, ast.Assign) and ast.unparse(node) == "MotionRunner = mimic.MimicCrouchRunner"
+               for node in unified.body), "Unified replay must reuse the same observation implementation"
     action = np.linspace(-5, 5, 12)
     target = runner._target_sdk(action)
     for i, name in enumerate(policy_names):
@@ -187,7 +218,7 @@ def main():
     if args.parity_output:
         np.savez_compressed(args.parity_output, **{k: np.asarray(v) for k, v in parity.items()},
                             observations=np.asarray(observations), joint_names=np.asarray(cfg.joint_names))
-    print("PASS: 69D order/rotation, named joint/action mapping, frozen keypad wait, 100-to-50Hz clock, "
+    print("PASS: 69D order/rotation, heading-free deployment parity, named joint/action mapping, frozen keypad wait, 100-to-50Hz clock, "
           "end clamp/no reset, model checksum and real-policy 6s finite rollout")
     print(f"Rollout only (not a success assertion): min base_z={min(heights):.3f}m; "
           f"final base_z={runner.data.qpos[2]:.3f}m; "

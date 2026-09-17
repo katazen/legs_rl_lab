@@ -13,8 +13,10 @@ class NlegsStandEnvCfg(NlegsCrouchEnvCfg):
         super().__post_init__()
         self.commands.motion.motion_file = str(Path(__file__).parent / "motions/crouch_to_stand_v2.npz")
         self.commands.motion.sample_until_s = 2.6
+        self.commands.motion.track_heading = False
+        self.commands.motion.end_hold_s = 5.0
         self.events.push_robot.params["motion_time_range_s"] = (.5, 2.6)
-        self.episode_length_s = 3.35
+        self.episode_length_s = 3.35 + self.commands.motion.end_hold_s
 
 
 @configclass

@@ -49,6 +49,7 @@ import gymnasium as gym
 import os
 import time
 import torch
+import yaml
 
 from rsl_rl.runners import OnPolicyRunner
 
@@ -94,6 +95,16 @@ def main():
         resume_path = get_checkpoint_path(log_root_path, agent_cfg.load_run, agent_cfg.load_checkpoint)
 
     log_dir = os.path.dirname(resume_path)
+
+    if hasattr(getattr(env_cfg, "commands", None), "motion"):
+        # Observation meaning belongs to the trained run, not today's task defaults.
+        with open(os.path.join(log_dir, "params", "deploy.yaml")) as stream:
+            recorded_motion = yaml.safe_load(stream)["commands"]["motion"]
+        motion = env_cfg.commands.motion
+        end_hold_s = recorded_motion.get("end_hold_s", 0.)
+        env_cfg.episode_length_s += end_hold_s - motion.end_hold_s
+        motion.track_heading = recorded_motion.get("track_heading", True)
+        motion.end_hold_s = end_hold_s
 
     # create isaac environment
     env = gym.make(args_cli.task, cfg=env_cfg, render_mode="rgb_array" if args_cli.video else None)

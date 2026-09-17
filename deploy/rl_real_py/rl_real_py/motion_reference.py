@@ -80,6 +80,9 @@ class MotionReference:
         if not np.isfinite(self.step_dt) or self.step_dt <= 0:
             raise ValueError("step_dt 必须为有限正数")
         config = deploy["commands"]["motion"]
+        self.track_heading = config.get("track_heading", True)
+        if not isinstance(self.track_heading, bool):
+            raise ValueError("motion.track_heading 必须是布尔值")
         if config["anchor_body_name"] != "base":
             raise ValueError("mimic 仅支持 base 参考姿态")
         model_file = resolve_recorded_path(config["model_file"], root)
@@ -147,6 +150,12 @@ class MotionReference:
         self.steps = 0
 
     def features(self, actual_quat):
-        relative = rotation_matrix(actual_quat).T @ self.yaw_alignment @ self.rotations[self.frame]
+        actual, reference = rotation_matrix(actual_quat), self.rotations[self.frame]
+        alignment = self.yaw_alignment
+        if not self.track_heading:
+            yaw = np.arctan2(actual[1, 0], actual[0, 0]) - np.arctan2(reference[1, 0], reference[0, 0])
+            c, s = np.cos(yaw), np.sin(yaw)
+            alignment = np.array([[c, -s, 0.], [s, c, 0.], [0., 0., 1.]])
+        relative = actual.T @ alignment @ reference
         return {"motion_command": np.r_[self.positions[self.frame], self.velocities[self.frame]],
                 "motion_anchor_ori_b": relative[:, :2].reshape(-1).astype(np.float32)}

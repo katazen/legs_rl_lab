@@ -78,7 +78,7 @@ def motion_anchor_ori_b(env: ManagerBasedEnv, command_name: str) -> torch.Tensor
         command.robot_anchor_pos_w,
         command.robot_anchor_quat_w,
         command.anchor_pos_w,
-        command.anchor_quat_w,
+        command.target_anchor_quat_w,
     )
     mat = matrix_from_quat(ori)
     return mat[..., :2].reshape(mat.shape[0], -1)

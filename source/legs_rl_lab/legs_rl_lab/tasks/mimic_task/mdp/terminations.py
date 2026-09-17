@@ -22,7 +22,8 @@ from legs_rl_lab.tasks.mimic_task.mdp.rewards import _get_body_indexes
 
 def motion_time_out(env: ManagerBasedRLEnv, command_name: str = "motion") -> torch.Tensor:
     command: MotionCommand = env.command_manager.get_term(command_name)
-    return command.elapsed >= command.motion.duration - command.start_frames / command.motion.fps - 1e-6
+    return command.elapsed >= (command.motion.duration - command.start_frames / command.motion.fps
+                               + command.cfg.end_hold_s - 1e-6)
 
 
 def bad_anchor_pos(env: ManagerBasedRLEnv, command_name: str, threshold: float) -> torch.Tensor:

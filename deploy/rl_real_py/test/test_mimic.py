@@ -144,3 +144,34 @@ def test_reference_and_model_mismatch_rejected(monkeypatch, tmp_path):
     broken["commands"]["motion"]["motion_file"] = str(tmp_path / "wrong.npz")
     with pytest.raises(ValueError, match="校验"):
         MotionReference(broken, root, cfg["joint_index_in_real"], cfg["joint_lower_limits"], cfg["joint_upper_limits"])
+
+
+def test_heading_free_observation_keeps_tilt_joints_and_gyro(monkeypatch):
+    node, _ = make_multi(monkeypatch, current=True)
+    policy = node.multi.policies["rise"]
+    motion = policy.motion
+    assert motion.track_heading  # Existing exports without this field remain unchanged.
+    motion.reset([1., 0., 0., 0.])
+    motion.steps = 10_000
+    policy.obs_raw[0:3] = [.2, -.3, .4]
+    policy.obs_raw[7:19] = node.obs_raw[7:19]
+    motion.track_heading = False
+    terms = []
+    for yaw in (-3., 0., 2.9):
+        policy.obs_raw[3:7] = [np.cos(yaw/2)*np.cos(.1), np.cos(yaw/2)*np.sin(.1),
+                              np.sin(yaw/2)*np.sin(.1), np.sin(yaw/2)*np.cos(.1)]
+        terms.append(policy._build_terms())
+    for term in terms[1:]:
+        for expected, actual in zip(terms[0], term):
+            np.testing.assert_allclose(actual, expected, atol=1e-6)
+    np.testing.assert_allclose(terms[0][2], [.2, -.3, .4])
+    assert not np.allclose(motion.features([1., 0., 0., 0.])["motion_anchor_ori_b"], terms[0][1])
+    motion.track_heading = True
+    assert not np.allclose(policy._build_terms()[1], terms[-1][1])
+
+
+def test_heading_flag_must_be_boolean(monkeypatch):
+    _, cfg, dep, _, root = mimic_policy(monkeypatch)
+    dep["commands"]["motion"]["track_heading"] = "false"
+    with pytest.raises(ValueError, match="track_heading"):
+        MotionReference(dep, root, cfg["joint_index_in_real"], cfg["joint_lower_limits"], cfg["joint_upper_limits"])

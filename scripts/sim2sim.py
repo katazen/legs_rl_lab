@@ -42,16 +42,7 @@ VELOCITY_KEYS = {"W": (0, .05), "S": (0, -.05), "A": (1, .05),
                  "D": (1, -.05), "Q": (2, .05), "E": (2, -.05)}
 
 
-class MotionRunner(mimic.MimicCrouchRunner):
-    yaw_alignment = np.eye(3)
-
-    def _observation_features(self):
-        features = super()._observation_features()
-        bq = self.base_qpos_adr
-        actual = mimic.rotation_matrix(self.data.qpos[bq + 3:bq + 7])
-        reference = mimic.rotation_matrix(self.ref_quat[self.reference_frame])
-        features["motion_anchor_ori_b"] = (actual.T @ self.yaw_alignment @ reference)[:, :2].reshape(-1).astype(np.float32)
-        return features
+MotionRunner = mimic.MimicCrouchRunner
 
 
 class MultiTaskSim:

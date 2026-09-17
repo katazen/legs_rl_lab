@@ -80,6 +80,15 @@ class MotionCommand(CommandTerm):
             raise ValueError("First tracked body must be the root; start_probability must be in [0, 1]")
         if not 0 < cfg.sample_until_s <= self.motion.duration:
             raise ValueError("sample_until_s must lie within the reference duration")
+        if not isinstance(cfg.track_heading, bool):
+            raise ValueError("track_heading must be boolean")
+        if not math.isfinite(cfg.end_hold_s) or cfg.end_hold_s < 0:
+            raise ValueError("end_hold_s must be finite and nonnegative")
+        if cfg.end_hold_s and any(
+            tensor[-1].abs().max() > 1e-5
+            for tensor in (self.motion.joint_vel, self.motion.body_lin_vel_w, self.motion.body_ang_vel_w)
+        ):
+            raise ValueError("End hold requires zero reference terminal velocities")
         stride = self.motion.fps * env.step_dt
         if not math.isclose(stride, round(stride), abs_tol=1e-6) or stride < 1:
             raise ValueError("Motion fps must be an integer multiple of the policy frequency; resample the NPZ")
@@ -151,6 +160,21 @@ class MotionCommand(CommandTerm):
         return self.motion.body_quat_w[self.time_steps, self.motion_anchor_body_index]
 
     @property
+    def heading_alignment_w(self) -> torch.Tensor:
+        return quat_mul(yaw_quat(self.robot_anchor_quat_w), quat_inv(yaw_quat(self.anchor_quat_w)))
+
+    @property
+    def target_anchor_quat_w(self) -> torch.Tensor:
+        if self.cfg.track_heading:
+            return self.anchor_quat_w
+        return quat_mul(self.heading_alignment_w, self.anchor_quat_w)
+
+    def align_heading(self, vectors: torch.Tensor) -> torch.Tensor:
+        if self.cfg.track_heading:
+            return vectors
+        return quat_apply(self.heading_alignment_w[:, None, :].expand(-1, vectors.shape[1], -1), vectors)
+
+    @property
     def anchor_lin_vel_w(self) -> torch.Tensor:
         return self.motion.body_lin_vel_w[self.time_steps, self.motion_anchor_body_index]
 
@@ -204,9 +228,13 @@ class MotionCommand(CommandTerm):
 
     def _update_metrics(self):
         self.metrics["error_anchor_pos"] = torch.norm(self.anchor_pos_w - self.robot_anchor_pos_w, dim=-1)
-        self.metrics["error_anchor_rot"] = quat_error_magnitude(self.anchor_quat_w, self.robot_anchor_quat_w)
-        self.metrics["error_anchor_lin_vel"] = torch.norm(self.anchor_lin_vel_w - self.robot_anchor_lin_vel_w, dim=-1)
-        self.metrics["error_anchor_ang_vel"] = torch.norm(self.anchor_ang_vel_w - self.robot_anchor_ang_vel_w, dim=-1)
+        self.metrics["error_anchor_rot"] = quat_error_magnitude(self.target_anchor_quat_w, self.robot_anchor_quat_w)
+        lin_vel = self.align_heading(self.body_lin_vel_w)
+        ang_vel = self.align_heading(self.body_ang_vel_w)
+        self.metrics["error_anchor_lin_vel"] = torch.norm(
+            lin_vel[:, self.motion_anchor_body_index] - self.robot_anchor_lin_vel_w, dim=-1)
+        self.metrics["error_anchor_ang_vel"] = torch.norm(
+            ang_vel[:, self.motion_anchor_body_index] - self.robot_anchor_ang_vel_w, dim=-1)
 
         self.metrics["error_body_pos"] = torch.norm(self.body_pos_relative_w - self.robot_body_pos_w, dim=-1).mean(
             dim=-1
@@ -215,10 +243,10 @@ class MotionCommand(CommandTerm):
             dim=-1
         )
 
-        self.metrics["error_body_lin_vel"] = torch.norm(self.body_lin_vel_w - self.robot_body_lin_vel_w, dim=-1).mean(
+        self.metrics["error_body_lin_vel"] = torch.norm(lin_vel - self.robot_body_lin_vel_w, dim=-1).mean(
             dim=-1
         )
-        self.metrics["error_body_ang_vel"] = torch.norm(self.body_ang_vel_w - self.robot_body_ang_vel_w, dim=-1).mean(
+        self.metrics["error_body_ang_vel"] = torch.norm(ang_vel - self.robot_body_ang_vel_w, dim=-1).mean(
             dim=-1
         )
 
@@ -322,6 +350,8 @@ class MotionCommand(CommandTerm):
         delta_pos_w = robot_anchor_pos_w_repeat
         delta_pos_w[..., 2] = anchor_pos_w_repeat[..., 2]
         delta_ori_w = yaw_quat(quat_mul(robot_anchor_quat_w_repeat, quat_inv(anchor_quat_w_repeat)))
+        if not self.cfg.track_heading:
+            delta_ori_w = self.heading_alignment_w[:, None, :].expand_as(anchor_quat_w_repeat)
 
         self.body_quat_relative_w = quat_mul(delta_ori_w, self.body_quat_w)
         self.body_pos_relative_w = delta_pos_w + quat_apply(delta_ori_w, self.body_pos_w - anchor_pos_w_repeat)
@@ -369,7 +399,7 @@ class MotionCommand(CommandTerm):
             return
 
         self.current_anchor_visualizer.visualize(self.robot_anchor_pos_w, self.robot_anchor_quat_w)
-        self.goal_anchor_visualizer.visualize(self.anchor_pos_w, self.anchor_quat_w)
+        self.goal_anchor_visualizer.visualize(self.anchor_pos_w, self.target_anchor_quat_w)
 
         for i in range(len(self.cfg.body_names)):
             self.current_body_visualizers[i].visualize(self.robot_body_pos_w[:, i], self.robot_body_quat_w[:, i])
@@ -395,6 +425,8 @@ class MotionCommandCfg(CommandTermCfg):
     joint_position_range: tuple[float, float] = (-0.52, 0.52)
     start_probability: float = 0.5
     sample_until_s: float = 2.28
+    track_heading: bool = True
+    end_hold_s: float = 0.0
 
     adaptive_kernel_size: int = 1
     adaptive_lambda: float = 0.8

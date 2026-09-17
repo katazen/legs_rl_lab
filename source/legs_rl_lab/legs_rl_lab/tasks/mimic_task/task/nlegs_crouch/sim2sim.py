@@ -63,6 +63,10 @@ class MimicCrouchRunner(flat.MujocoRunner):
             if len(term["scale"]) != width or term["history_length"] != 1:
                 raise ValueError(f"{name} 必须为 {width}D 单帧观测")
         motion_cfg = cfg.commands["motion"]
+        self.track_heading = motion_cfg.get("track_heading", True)
+        if not isinstance(self.track_heading, bool):
+            raise ValueError("motion.track_heading 必须是布尔值")
+        self.yaw_alignment = np.eye(3)
         if motion_cfg["anchor_body_name"] != "base":
             raise ValueError("此回放器要求 motion 的 anchor_body_name=base")
         if not np.isfinite(base_mass_add) or base_mass_add < 0:
@@ -151,7 +155,13 @@ class MimicCrouchRunner(flat.MujocoRunner):
         features = super()._observation_features()
         frame = self.reference_frame
         quat = self.data.qpos[self.base_qpos_adr + 3:self.base_qpos_adr + 7]
-        relative = rotation_matrix(quat).T @ rotation_matrix(self.ref_quat[frame])
+        actual, reference = rotation_matrix(quat), rotation_matrix(self.ref_quat[frame])
+        alignment = self.yaw_alignment
+        if not self.track_heading:
+            yaw = np.arctan2(actual[1, 0], actual[0, 0]) - np.arctan2(reference[1, 0], reference[0, 0])
+            c, s = np.cos(yaw), np.sin(yaw)
+            alignment = np.array([[c, -s, 0.], [s, c, 0.], [0., 0., 1.]])
+        relative = actual.T @ alignment @ reference
         features["motion_command"] = np.concatenate((self.ref_pos[frame], self.ref_vel[frame]))
         features["motion_anchor_ori_b"] = relative[:, :2].reshape(-1).astype(np.float32)
         features["ang_vel"] = self.data.qvel[self.base_dof_adr + 3:self.base_dof_adr + 6].astype(np.float32)
