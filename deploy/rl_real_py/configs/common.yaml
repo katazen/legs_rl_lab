@@ -2,7 +2,7 @@
 # 模型的观测、动作、PD、参考轨迹仍读取各 run 的 params/deploy.yaml。
 # 路径相对仓库根目录；不自动选择最新模型。
 tasks:
-  walk: logs/rsl_rl/nlegs_flat_static/2026-09-16_11-41-05
+  walk: logs/rsl_rl/nlegs_rough/2026-09-18_10-10-59
   crouch: logs/rsl_rl/nlegs_mimic_crouch/2026-09-17_16-42-11
   rise: logs/rsl_rl/nlegs_mimic_stand/2026-09-17_15-40-44
 
