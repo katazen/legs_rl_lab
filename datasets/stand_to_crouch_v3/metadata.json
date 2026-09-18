@@ -1,0 +1,128 @@
+{
+  "version": 1,
+  "variant": "v2",
+  "validation_level": "kinematic",
+  "fps": 100,
+  "duration_s": 3.4,
+  "model": "/home/woan/workspace/legs_rl_lab/source/legs_rl_lab/legs_rl_lab/assets/nlegs/mjcf/nlegs_limit.xml",
+  "swing_duration_s": 0.4,
+  "lift_height_m": 0.012,
+  "time_scale": 1.0,
+  "crouch_snapshot": "deploy/pose_logs/snaps/read_only_pose_20260917_110210.json",
+  "crouch_snapshot_sha256": "612f74cdca15129e6a2768dc9151e6d83147b1bf68a7e3e74ff22c98347fd749",
+  "measured_joint_pos": [
+    -0.975242236972609,
+    0.4964904249637611,
+    0.49839780270084677,
+    1.0561150530250993,
+    -0.37632562752727416,
+    -0.20199130235751966,
+    -0.9676127260242608,
+    -0.5270084687571525,
+    -0.618562600137332,
+    1.0912108033875036,
+    -0.42248416876478234,
+    0.22335393301289308
+  ],
+  "crouch_joint_pos": [
+    -0.975242236972609,
+    0.4964904249637611,
+    0.49839780270084677,
+    1.0561150530250993,
+    -0.37632562752727416,
+    -0.15665063905095428,
+    -0.9676127260242608,
+    -0.5270084687571525,
+    -0.618562600137332,
+    1.0912108033875036,
+    -0.42248416876478234,
+    0.09402926815965507
+  ],
+  "model_sha256": "1d603069a2eaafbca2f2d59ede1032f0cc57682d24fd9d2e9f7cd2e22862a581",
+  "joint_order": [
+    "joint_L1",
+    "joint_L2",
+    "joint_L3",
+    "joint_L4",
+    "joint_L5",
+    "joint_L6",
+    "joint_R1",
+    "joint_R2",
+    "joint_R3",
+    "joint_R4",
+    "joint_R5",
+    "joint_R6"
+  ],
+  "foot_order": [
+    "left",
+    "right"
+  ],
+  "quaternion_order": "wxyz",
+  "units": "m, rad, s",
+  "payload_for_com_kg": 2.5,
+  "segments": [
+    {
+      "name": "Stand",
+      "start_s": 0.0,
+      "end_s": 0.6
+    },
+    {
+      "name": "Low step left out",
+      "start_s": 0.6,
+      "end_s": 1.0
+    },
+    {
+      "name": "Touch down",
+      "start_s": 1.0,
+      "end_s": 1.08
+    },
+    {
+      "name": "Low step right out",
+      "start_s": 1.08,
+      "end_s": 1.48
+    },
+    {
+      "name": "Settle to limits",
+      "start_s": 1.48,
+      "end_s": 2.28
+    },
+    {
+      "name": "Hold crouch",
+      "start_s": 2.28,
+      "end_s": 3.4
+    }
+  ],
+  "checks": {
+    "max_foot_target_error_mm": 0.0022226243205220324,
+    "cumulative_planted_foot_drift_mm_LR": [
+      0.004929773160759441,
+      0.007919949793592434
+    ],
+    "min_foot_surface_height_mm": -0.002748565432076494,
+    "min_nominal_com_support_margin_mm": -143.2496145307005,
+    "static_support_check_passed": false,
+    "max_joint_speed_rad_s": 5.7586908951850315,
+    "max_joint_acceleration_rad_s2": 100.3640002047663,
+    "max_joint_frame_step_rad": 0.05760276374150558,
+    "crouch_sole_height_spread_mm": 2.4797244357537656,
+    "crouch_rpy_deg": [
+      0.55777113282897,
+      28.28231777637538,
+      0.0
+    ],
+    "final_rpy_deg": [
+      0.55777113282897,
+      28.28231777637538,
+      0.0
+    ],
+    "hip_roll_monotonic_outward": true
+  },
+  "limitations": [
+    "FK/IK replay, not a simulated policy or actuator rollout.",
+    "No torque, friction-cone, contact-force or dynamic tracking validation.",
+    "COM support check is nominal/static, not a dynamic stability certificate.",
+    "Only feet have collision geometry; full-body self-collision is not certified.",
+    "Exact ten-joint stops are preserved; see checks.crouch_sole_height_spread_mm for nominal sole non-coplanarity. Ankles/base are solved, not copied from the IMU snapshot.",
+    "Reference data only; not directly executable on hardware or a ready-made Mimic format."
+  ]
+}

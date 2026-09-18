@@ -1,0 +1,90 @@
+{
+  "version": 1,
+  "variant": "v2",
+  "validation_level": "kinematic",
+  "fps": 100,
+  "duration_s": 3.4,
+  "model": "/home/woan/workspace/legs_rl_lab/source/legs_rl_lab/legs_rl_lab/assets/nlegs/mjcf/nlegs_limit.xml",
+  "swing_duration_s": 0.4,
+  "lift_height_m": 0.012,
+  "model_sha256": "dc8365ae5e6327058eb5d042044a90099daf613c0f586298f69a623455863328",
+  "joint_order": [
+    "joint_L1",
+    "joint_L2",
+    "joint_L3",
+    "joint_L4",
+    "joint_L5",
+    "joint_L6",
+    "joint_R1",
+    "joint_R2",
+    "joint_R3",
+    "joint_R4",
+    "joint_R5",
+    "joint_R6"
+  ],
+  "foot_order": [
+    "left",
+    "right"
+  ],
+  "quaternion_order": "wxyz",
+  "units": "m, rad, s",
+  "payload_for_com_kg": 2.5,
+  "segments": [
+    {
+      "name": "Stand",
+      "start_s": 0.0,
+      "end_s": 0.6
+    },
+    {
+      "name": "Low step left out",
+      "start_s": 0.6,
+      "end_s": 1.0
+    },
+    {
+      "name": "Touch down",
+      "start_s": 1.0,
+      "end_s": 1.08
+    },
+    {
+      "name": "Low step right out",
+      "start_s": 1.08,
+      "end_s": 1.48
+    },
+    {
+      "name": "Settle to limits",
+      "start_s": 1.48,
+      "end_s": 2.28
+    },
+    {
+      "name": "Hold crouch",
+      "start_s": 2.28,
+      "end_s": 3.4
+    }
+  ],
+  "checks": {
+    "max_foot_target_error_mm": 0.002599470875171042,
+    "cumulative_planted_foot_drift_mm_LR": [
+      0.0060899721401334725,
+      0.009635894115616534
+    ],
+    "min_foot_surface_height_mm": -0.0036256399549884633,
+    "min_nominal_com_support_margin_mm": -125.56150031109917,
+    "static_support_check_passed": false,
+    "max_joint_speed_rad_s": 6.5413480197256035,
+    "max_joint_frame_step_rad": 0.06606128716783011,
+    "final_rpy_deg": [
+      0.6063615289227683,
+      23.037434026797534,
+      0.0
+    ],
+    "hip_roll_monotonic_outward": true
+  },
+  "limitations": [
+    "FK/IK replay, not a simulated policy or actuator rollout.",
+    "No torque, friction-cone, contact-force or dynamic tracking validation.",
+    "COM support check is nominal/static, not a dynamic stability certificate.",
+    "Only feet have collision geometry; full-body self-collision is not certified.",
+    "Exact ten-joint limits leave approximately 1 mm sole non-coplanarity.",
+    "Reference data only; not directly executable on hardware or a ready-made Mimic format."
+  ]
+}

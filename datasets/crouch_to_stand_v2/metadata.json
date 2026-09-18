@@ -1,0 +1,133 @@
+{
+  "version": 1,
+  "variant": "v2_reversed",
+  "validation_level": "kinematic",
+  "fps": 100,
+  "duration_s": 3.35,
+  "model": "/home/woan/workspace/legs_rl_lab/source/legs_rl_lab/legs_rl_lab/assets/nlegs/mjcf/nlegs_limit.xml",
+  "swing_duration_s": 0.5,
+  "lift_height_m": 0.02,
+  "model_sha256": "1d603069a2eaafbca2f2d59ede1032f0cc57682d24fd9d2e9f7cd2e22862a581",
+  "joint_order": [
+    "joint_L1",
+    "joint_L2",
+    "joint_L3",
+    "joint_L4",
+    "joint_L5",
+    "joint_L6",
+    "joint_R1",
+    "joint_R2",
+    "joint_R3",
+    "joint_R4",
+    "joint_R5",
+    "joint_R6"
+  ],
+  "foot_order": [
+    "left",
+    "right"
+  ],
+  "quaternion_order": "wxyz",
+  "units": "m, rad, s",
+  "payload_for_com_kg": 2.5,
+  "segments": [
+    {
+      "name": "Hold crouch",
+      "start_s": 0.0,
+      "end_s": 0.5
+    },
+    {
+      "name": "Straighten torso",
+      "start_s": 0.5,
+      "end_s": 1.4999999999999996
+    },
+    {
+      "name": "Low step right in",
+      "start_s": 1.4999999999999996,
+      "end_s": 1.9999999999999996
+    },
+    {
+      "name": "Touch down",
+      "start_s": 1.9999999999999996,
+      "end_s": 2.0999999999999996
+    },
+    {
+      "name": "Low step left in",
+      "start_s": 2.0999999999999996,
+      "end_s": 2.5999999999999996
+    },
+    {
+      "name": "Hold stand",
+      "start_s": 2.5999999999999996,
+      "end_s": 3.3499999999999996
+    }
+  ],
+  "checks": {
+    "max_foot_target_error_mm": 0.002164637449712107,
+    "cumulative_planted_foot_drift_mm_LR": [
+      0.006697729348084731,
+      0.009125612555361286
+    ],
+    "min_foot_surface_height_mm": -0.0027485742601068147,
+    "min_nominal_com_support_margin_mm": -143.14972321921522,
+    "static_support_check_passed": false,
+    "max_joint_speed_rad_s": 4.112142977827723,
+    "max_joint_acceleration_rad_s2": 67.35301768649073,
+    "max_joint_frame_step_rad": 0.04127292698802765,
+    "crouch_sole_height_spread_mm": 2.4797244357537656,
+    "crouch_rpy_deg": [
+      0.55777113282897,
+      28.28231777637538,
+      0.0
+    ],
+    "final_rpy_deg": [
+      0.0,
+      0.0,
+      0.0
+    ],
+    "hip_roll_monotonic_inward": true
+  },
+  "limitations": [
+    "FK/IK replay, not a simulated policy or actuator rollout.",
+    "No torque, friction-cone, contact-force or dynamic tracking validation.",
+    "COM support check is nominal/static, not a dynamic stability certificate.",
+    "Only feet have collision geometry; full-body self-collision is not certified.",
+    "Ten task stops are exact; ankles/base are solved in nominal geometry. See checks.crouch_sole_height_spread_mm.",
+    "Reference only; mimic_motion.npz is a format conversion, not a trained policy or hardware command."
+  ],
+  "direction": "crouch_to_stand",
+  "initial_hold_s": 0.5,
+  "source": "datasets/stand_to_crouch_v2/motion.npz",
+  "source_sha256": "b7ad721da2f7c478ce12f0f2ef8744e1298e8e619faca65729e71624c255c308",
+  "time_scale": 1.25,
+  "crouch_snapshot": "deploy/pose_logs/snaps/read_only_pose_20260917_110210.json",
+  "crouch_snapshot_sha256": "612f74cdca15129e6a2768dc9151e6d83147b1bf68a7e3e74ff22c98347fd749",
+  "measured_joint_pos": [
+    -0.975242236972609,
+    0.4964904249637611,
+    0.49839780270084677,
+    1.0561150530250993,
+    -0.37632562752727416,
+    -0.20199130235751966,
+    -0.9676127260242608,
+    -0.5270084687571525,
+    -0.618562600137332,
+    1.0912108033875036,
+    -0.42248416876478234,
+    0.22335393301289308
+  ],
+  "crouch_joint_pos": [
+    -0.975242236972609,
+    0.4964904249637611,
+    0.49839780270084677,
+    1.0561150530250993,
+    -0.37632562752727416,
+    -0.15665063905095428,
+    -0.9676127260242608,
+    -0.5270084687571525,
+    -0.618562600137332,
+    1.0912108033875036,
+    -0.42248416876478234,
+    0.09402926815965507
+  ],
+  "regenerated_from_v2_recipe": true
+}

@@ -12,7 +12,8 @@
 
 ## 📦 项目内容
 
-- **训练任务** `tasks/nlegs_task`：`nlegs_flat` 平地速度跟踪；`nlegs_rough` rough 地形（继承 flat，台阶 ≤12 cm、坡 ≤17°，带难度课程）。策略盲走（仅 IMU + 关节观测），可直接部署。
+- **行走任务** `tasks/nlegs_task`：`nlegs_flat` 平地速度跟踪；`nlegs_flat_static` 增加零速站稳；`nlegs_flat_crouch` 蹲姿复位；`nlegs_rough` rough 地形（台阶 ≤12 cm、坡 ≤17°，带难度课程）。行走策略盲走，仅使用本体观测。
+- **动作跟踪任务** `tasks/mimic_task`：`nlegs_mimic_crouch` 跟踪下蹲 v3，`nlegs_mimic_stand` 跟踪起身 v2；当前参考数据及元数据随仓库同步，见下方数据集说明。
 - **机器人资产** `assets/nlegs`：MJCF / USD / STL 全部入库，`usd_path` 相对包内解析，克隆即用；执行器用自定义 `DelayedDCMotorCfg`（通信延迟 + 转矩-转速滚降，参数来自实机辨识）。
 - **sim2sim** `task/flat/sim2sim.py`：MuJoCo 独立回放训练好的策略做部署前验证，配置全部读训练 run 的 `deploy.yaml`。
 - **实机部署** `deploy/`：ROS 2 Humble 三节点（IMU / 电机驱动 / RL 策略），同一入口切换走路、下蹲、起身；在 `common.yaml` 集中选择三份模型。
@@ -49,6 +50,10 @@ python scripts/rsl_rl/train.py --task nlegs_flat --headless --num_envs 4096
 # 训练：rough 地形（生成器地形 + 难度课程，奖励已按地形调整）
 python scripts/rsl_rl/train.py --task nlegs_rough --headless --num_envs 4096
 
+# 训练：最新下蹲 / 起身参考动作
+python scripts/rsl_rl/train.py --task nlegs_mimic_crouch --headless --num_envs 4096
+python scripts/rsl_rl/train.py --task nlegs_mimic_stand --headless --num_envs 4096
+
 # 回放 / 评估已训练策略（少量环境、可实时观看，同时导出 exported/policy.pt）
 python scripts/rsl_rl/play.py --task nlegs_flat --num_envs 32 --real-time
 
@@ -57,14 +62,33 @@ python tests/zero_agent.py --task nlegs_flat --num_envs 16
 python tests/random_agent.py --task nlegs_flat --num_envs 16
 ```
 
-常用训练参数：`--task {nlegs_flat,nlegs_rough}`、`--num_envs`、`--max_iterations`、`--seed`、`--headless`、`--video`（录制训练视频）。
+常用训练参数：`--task`（上列任务名）、`--num_envs`、`--max_iterations`、`--seed`、`--headless`、`--video`（录制训练视频）。`nlegs_rough` 默认将 PPO 数据分为 16 个小批次，以降低 4096 环境更新时的显存峰值。
 
 测试目录（`tests/`、各层 `test/`）、独立诊断/分析脚本和 `deploy/tools/` 仅供本地使用，不随 Git 同步；上面的冒烟测试命令需要本地保留这些脚本。全部 `logs/`（含参数、导出模型和检查点）也不入库，换机器回放或部署需单独复制所需 run 的 `params/` 和 `exported/`。
 
-训练产物默认写到 `logs/rsl_rl/<experiment_name>/<时间戳>/`（`nlegs_flat` / `nlegs_rough`）：
+训练产物默认写到 `logs/rsl_rl/<experiment_name>/<时间戳>/`：
 - `params/env.yaml` —— 完整环境配置（含 `gait` 步态参数）。
 - `params/deploy.yaml` —— 部署单一真源（默认站姿 / 观测规格 / action_scale / 步态周期 / PD 增益 / 执行器分组与延迟）。
 - `exported/policy.pt`（及 `policy.onnx`，若导出）—— 推理模型。
+
+### 当前使用的数据集
+
+| 数据目录 | 用途 | 帧数 / 频率 / 时长 |
+|---|---|---|
+| [`datasets/stand_to_crouch_v3/`](datasets/stand_to_crouch_v3/) | 当前下蹲参考，对应 `nlegs_mimic_crouch` | 341 帧 / 100 Hz / 3.40 s |
+| [`datasets/crouch_to_stand_v2/`](datasets/crouch_to_stand_v2/) | 当前起身参考，对应 `nlegs_mimic_stand` | 336 帧 / 100 Hz / 3.35 s |
+| [`datasets/stand_to_crouch_v2/`](datasets/stand_to_crouch_v2/) | 起身生成器引用的历史源数据与溯源记录，不作为当前下蹲训练输入 | 341 帧 / 100 Hz / 3.40 s |
+
+两个当前版本均包含 `motion.npz`（关节、机身、足端及接触计划等原始参考）、`mimic_motion.npz`（训练所需的全身参考格式）和 `metadata.json`（时序、实测参数、模型/源文件 SHA256 与生成检查结果）。历史源目录只同步 `motion.npz` 和 `metadata.json`。
+
+训练配置直接读取包内参考文件，克隆后无需重新生成或转换；它们与数据目录中的 `mimic_motion.npz` 完全一致：
+
+- 下蹲：[`tasks/mimic_task/task/nlegs_crouch/motions/stand_to_crouch_v3.npz`](source/legs_rl_lab/legs_rl_lab/tasks/mimic_task/task/nlegs_crouch/motions/stand_to_crouch_v3.npz)。
+- 起身：[`tasks/mimic_task/task/nlegs_stand/motions/crouch_to_stand_v2.npz`](source/legs_rl_lab/legs_rl_lab/tasks/mimic_task/task/nlegs_stand/motions/crouch_to_stand_v2.npz)。
+
+下蹲末帧与起身首帧的关节角、机身位置和姿态一致；起身任务在 3.35 s 参考结束后额外训练保持 5 s。这些 NPZ 是运动学参考，策略权重仍需训练和导出。
+
+`.gitignore` 仅放行上述 8 个数据文件；预览视频/图片/HTML、其他历史数据、测试/调试脚本和全部 `logs/` 继续忽略。元数据中的绝对模型路径、`crouch_snapshot` 是生成时的溯源记录；原始实测快照保留在本地，重新生成实测动作时需要它，使用已同步的参考训练不依赖它。
 
 ### sim2sim（MuJoCo 部署前验证）
 
@@ -95,9 +119,9 @@ python source/legs_rl_lab/legs_rl_lab/tasks/nlegs_task/task/flat/sim2sim.py [--r
 
 ```yaml
 tasks:
-  walk: logs/rsl_rl/nlegs_flat/2026-08-26_13-57-34
-  crouch: logs/rsl_rl/nlegs_mimic_crouch/2026-09-15_15-36-16
-  rise: logs/rsl_rl/nlegs_mimic_stand/2026-09-15_18-50-29
+  walk: logs/rsl_rl/nlegs_flat_static/2026-09-16_11-41-05
+  crouch: logs/rsl_rl/nlegs_mimic_crouch/2026-09-17_16-42-11
+  rise: logs/rsl_rl/nlegs_mimic_stand/2026-09-17_15-40-44
 ```
 
 各模型的观测、动作、PD 和参考参数仍从各自 `params/deploy.yaml` 读取，不能合并成一份；策略优先加载 `exported/policy.onnx`，否则加载 `policy.pt`。日志按当前模型存入其 `sim2real/`。公共硬件限位、输入配置和任务切换阈值只在 `common.yaml` 维护，不再叠加专用 YAML。
@@ -149,17 +173,18 @@ cd deploy && ./stop_real.sh
 
 ```
 legs_rl_lab/
+├── datasets/                      # 仅同步当前下蹲 v3、起身 v2 与所需 v2 源数据
 ├── scripts/
 │   ├── rsl_rl/                    # train.py / play.py / cli_args.py
 │   ├── sim2sim.py                 # 统一三任务仿真入口
 │   └── *.py                       # 任务列表、动作/姿态生成、数据准备与分析
-├── tests/                         # check_*.py：离线/仿真检查；零/随机动作冒烟测试
+├── tests/                         # 本地离线/仿真检查，不入库
 ├── deploy/                        # ROS 2 实机部署栈
 │   ├── imu_ws/                    # IMU 驱动工作区
 │   ├── control_ws/                # armcontrol 电机驱动工作区
 │   ├── rl_real_py/                # RL 策略节点 + configs/common.yaml
-│   │   └── test/                  # ROS 部署模块的离线 pytest 回归
-│   ├── tools/                     # 实机姿态插值、上电跳变诊断、重心/日志分析
+│   │   └── test/                  # 本地 ROS 离线回归，不入库
+│   ├── tools/                     # 本地实验/诊断工具，不入库
 │   ├── pose_logs/                 # 本地实验记录，不入库；工具迁移不移动数据
 │   ├── sync_pd.py                 # 从 deploy.yaml 同步 PD 到 armcontrol
 │   └── start_real.sh  stop_real.sh
@@ -167,13 +192,15 @@ legs_rl_lab/
     ├── actuators/                 # DelayedDCMotorCfg（延迟 + 转矩-转速滚降）
     ├── assets/nlegs/              # 自包含资产: nlegs.py(ArticulationCfg) + mjcf/ + meshes/
     │   ├── mjcf/nlegs.xml         #   MJCF 源（nlegs_scene.xml 供 sim2sim）
-    │   └── mjcf/nlegs/nlegs.usd   #   Isaac 用 USD（已入库, 相对路径加载）
+    │   └── mjcf/nlegs_limit/      #   当前 Isaac 用 USD（已入库, 相对路径加载）
     ├── tasks/nlegs_task/          # 自包含任务包
     │   ├── agents/                #   rsl_rl PPO 配置（flat / rough）
     │   ├── mdp/                   #   rewards / observations / events / gait / symmetry ...
     │   └── task/
     │       ├── flat/              #   nlegs_flat: 全量展开 env cfg + sim2sim.py
     │       └── rough/             #   nlegs_rough: 继承 flat, 地形生成器 + 课程
+    ├── tasks/mimic_task/          # 下蹲 / 起身动作跟踪
+    │   └── task/                 # nlegs_crouch / nlegs_stand，含训练参考 motions/
     └── utils/                     # parser_cfg / export_deploy_cfg（生成 deploy.yaml）
 ```
 
