@@ -125,10 +125,12 @@ def export_deploy_cfg(env: ManagerBasedRLEnv, log_dir, policy_action_clip=None):
         }
         cfg["commands"]["base_velocity"]["ranges"] = ranges
 
-    if hasattr(env.cfg.commands, "crouch_progress"):
-        command_cfg = env.cfg.commands.crouch_progress.to_dict()
+    if hasattr(env.cfg.commands, "motion"):
+        command_cfg = env.cfg.commands.motion.to_dict()
         command_cfg.pop("class_type")
-        cfg["commands"]["crouch_progress"] = command_cfg
+        cfg["commands"]["motion"] = command_cfg
+        cfg["task_type"] = "reference_motion_tracking"
+        cfg["real_deployment_supported"] = False
 
     # --- actions ---
     action_names = env.action_manager.active_terms
@@ -207,6 +209,7 @@ def export_deploy_cfg(env: ManagerBasedRLEnv, log_dir, policy_action_clip=None):
         os.makedirs(os.path.dirname(filename), exist_ok=True)
     if not isinstance(cfg, dict):
         cfg = class_to_dict(cfg)
-    cfg = format_value(yaml_safe(cfg))
+    cfg = yaml_safe(cfg)
+    cfg = format_value(cfg)
     with open(filename, "w") as f:
         yaml.dump(cfg, f, default_flow_style=None, sort_keys=False)

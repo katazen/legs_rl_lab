@@ -8,7 +8,7 @@ from isaaclab.managers import SceneEntityCfg
 if TYPE_CHECKING:
     from isaaclab.envs import ManagerBasedRLEnv
 
-from .gait import get_phase
+from .gait import command_is_moving, get_phase
 
 
 def joint_pos_rel_biased(
@@ -27,12 +27,14 @@ def joint_pos_rel_biased(
     return rel
 
 
-def gait_phase_obs(env: ManagerBasedRLEnv, gate_by_cmd: bool = False) -> torch.Tensor:
+def gait_phase_obs(
+    env: ManagerBasedRLEnv, gate_by_cmd: bool = False, command_threshold: float = 0.1
+) -> torch.Tensor:
     phase_linear = get_phase(env)
     phase_obs = torch.zeros(env.num_envs, 2, device=env.device)
     phase_obs[:, 0] = torch.sin(phase_linear.squeeze(1) * 2 * torch.pi)
     phase_obs[:, 1] = torch.cos(phase_linear.squeeze(1) * 2 * torch.pi)
     if gate_by_cmd:  # 零速命令时相位归零, 让策略据此保持静止(用于静止站立任务)
-        cmd_flag = (torch.norm(env.command_manager.get_command("base_velocity"), dim=1) >= 0.1).float()
+        cmd_flag = command_is_moving(env, command_threshold).float()
         phase_obs = phase_obs * cmd_flag.unsqueeze(1)
     return phase_obs

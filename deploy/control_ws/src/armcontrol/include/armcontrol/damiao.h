@@ -9,6 +9,7 @@
 #include <array>
 #include <variant>
 #include <cstdint>
+#include <stdexcept>
 #include <cmath>
 
 #define POS_MODE 0x100
@@ -181,6 +182,8 @@ namespace damiao
         float state_dq=0;
         float state_tau=0;
         uint8_t err_code = 0; // 新增：保存电机错误码（0..0xF）
+        std::chrono::steady_clock::time_point feedback_stamp{};
+        uint8_t mos_temp = 0, rotor_temp = 0;
         Limit_param limit_param{};
         DM_Motor_Type Motor_Type;
 
@@ -213,11 +216,21 @@ namespace damiao
             this->limit_param = damiao::limit_param[DM4310];
         }
 
-        void receive_data(float q, float dq, float tau)
+        void receive_data(float q, float dq, float tau, uint8_t mos, uint8_t rotor)
         {
             this->state_q = q;
             this->state_dq = dq;
             this->state_tau = tau;
+            feedback_stamp = std::chrono::steady_clock::now();
+            mos_temp = mos;
+            rotor_temp = rotor;
+        }
+
+        std::array<double, 4> feedback_health() const
+        {
+            const double age = feedback_stamp.time_since_epoch().count() == 0 ? 1e9 :
+                std::chrono::duration<double>(std::chrono::steady_clock::now() - feedback_stamp).count();
+            return {age, double(err_code), double(mos_temp), double(rotor_temp)};
         }
 
         // 新增：接收并保存错误码（4bits）
@@ -544,6 +557,9 @@ namespace damiao
         */
         void control_mit(Motor &DM_Motor, float kp, float kd, float q, float dq, float tau)
         {
+            if (!std::isfinite(kp) || !std::isfinite(kd) || kp < 0 || kp > 500 || kd < 0 || kd > 5) {
+                throw std::invalid_argument("MIT gains out of range: Kp must be 0..500 and Kd 0..5");
+            }
             // 位置、速度和扭矩采用线性映射的关系将浮点型数据转换成有符号的定点数据
             static auto float_to_uint = [](float x, float xmin, float xmax, uint8_t bits) -> uint16_t {
                 float span = xmax - xmin;
@@ -652,7 +668,7 @@ namespace damiao
          */
         void receive()
         {
-            serial_->recv((uint8_t*)&receive_data, 0xAA, sizeof(CAN_Receive_Frame));
+            if (!serial_->recv((uint8_t*)&receive_data, 0xAA, sizeof(CAN_Receive_Frame))) return;
 
             if(receive_data.CMD == 0x11 && receive_data.frameEnd == 0x55) // receive success
             {
@@ -729,7 +745,7 @@ namespace damiao
                     float receive_q = uint_to_float(q_uint, -limit_param_receive.Q_MAX, limit_param_receive.Q_MAX, 16);
                     float receive_dq = uint_to_float(dq_uint, -limit_param_receive.DQ_MAX, limit_param_receive.DQ_MAX, 12);
                     float receive_tau = uint_to_float(tau_uint, -limit_param_receive.TAU_MAX, limit_param_receive.TAU_MAX, 12);
-                    m->receive_data(receive_q, receive_dq, receive_tau);
+                    m->receive_data(receive_q, receive_dq, receive_tau, data[6], data[7]);
                 }
                 else //why the user set the masterid as 0x00 ???
                 {
@@ -743,7 +759,7 @@ namespace damiao
                     float receive_q = uint_to_float(q_uint, -limit_param_receive.Q_MAX, limit_param_receive.Q_MAX, 16);
                     float receive_dq = uint_to_float(dq_uint, -limit_param_receive.DQ_MAX, limit_param_receive.DQ_MAX, 12);
                     float receive_tau = uint_to_float(tau_uint, -limit_param_receive.TAU_MAX, limit_param_receive.TAU_MAX, 12);
-                    m->receive_data(receive_q, receive_dq, receive_tau);
+                    m->receive_data(receive_q, receive_dq, receive_tau, data[6], data[7]);
                 }
                 return;
             }
@@ -781,7 +797,7 @@ namespace damiao
 
         void receive_param()
         {
-            serial_->recv((uint8_t*)&receive_data, 0xAA, sizeof(CAN_Receive_Frame));
+            if (!serial_->recv((uint8_t*)&receive_data, 0xAA, sizeof(CAN_Receive_Frame))) return;
 
             if(receive_data.CMD == 0x11 && receive_data.frameEnd == 0x55) // receive success
             {

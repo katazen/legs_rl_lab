@@ -15,7 +15,7 @@
 - **训练任务** `tasks/nlegs_task`：`nlegs_flat` 平地速度跟踪；`nlegs_rough` rough 地形（继承 flat，台阶 ≤12 cm、坡 ≤17°，带难度课程）。策略盲走（仅 IMU + 关节观测），可直接部署。
 - **机器人资产** `assets/nlegs`：MJCF / USD / STL 全部入库，`usd_path` 相对包内解析，克隆即用；执行器用自定义 `DelayedDCMotorCfg`（通信延迟 + 转矩-转速滚降，参数来自实机辨识）。
 - **sim2sim** `task/flat/sim2sim.py`：MuJoCo 独立回放训练好的策略做部署前验证，配置全部读训练 run 的 `deploy.yaml`。
-- **实机部署** `deploy/`：ROS 2 Humble 三节点（IMU / 电机驱动 / RL 策略），键盘/手柄控速；部署参数从训练 run 的 `params/deploy.yaml` 自动读取，通常只需填一个 `run` 目录名。
+- **实机部署** `deploy/`：ROS 2 Humble 三节点（IMU / 电机驱动 / RL 策略），同一入口切换走路、下蹲、起身；在 `common.yaml` 集中选择三份模型。
 
 ---
 
@@ -53,11 +53,13 @@ python scripts/rsl_rl/train.py --task nlegs_rough --headless --num_envs 4096
 python scripts/rsl_rl/play.py --task nlegs_flat --num_envs 32 --real-time
 
 # 冒烟测试：确认环境能正常起（零动作 / 随机动作）
-python scripts/zero_agent.py --task nlegs_flat --num_envs 16
-python scripts/random_agent.py --task nlegs_flat --num_envs 16
+python tests/zero_agent.py --task nlegs_flat --num_envs 16
+python tests/random_agent.py --task nlegs_flat --num_envs 16
 ```
 
 常用训练参数：`--task {nlegs_flat,nlegs_rough}`、`--num_envs`、`--max_iterations`、`--seed`、`--headless`、`--video`（录制训练视频）。
+
+测试目录（`tests/`、各层 `test/`）、独立诊断/分析脚本和 `deploy/tools/` 仅供本地使用，不随 Git 同步；上面的冒烟测试命令需要本地保留这些脚本。全部 `logs/`（含参数、导出模型和检查点）也不入库，换机器回放或部署需单独复制所需 run 的 `params/` 和 `exported/`。
 
 训练产物默认写到 `logs/rsl_rl/<experiment_name>/<时间戳>/`（`nlegs_flat` / `nlegs_rough`）：
 - `params/env.yaml` —— 完整环境配置（含 `gait` 步态参数）。
@@ -87,16 +89,18 @@ python source/legs_rl_lab/legs_rl_lab/tasks/nlegs_task/task/flat/sim2sim.py [--r
 | `deploy/control_ws` | `armcontrol`        | 电机驱动，订阅关节位置指令 `/dog_joint_pos`，PD 由训练 run 同步 |
 | `deploy/rl_real_py` | `rl_real_common`    | RL 策略节点：读观测 → 推理 → 下发目标位置；键盘/手柄控速 |
 
-### 单一真源：只改一个 `run`
+### 一份公共配置，三份模型
 
-部署时**通常只改** `deploy/rl_real_py/configs/common.yaml` 里的 `run`（训练时间戳目录名）与 `logs_root`：
+部署时在 `deploy/rl_real_py/configs/common.yaml` 的 `tasks` 中选择模型，路径相对仓库根目录：
 
 ```yaml
-run: 2026-08-26_13-57-34
-logs_root: logs/rsl_rl/nlegs_flat
+tasks:
+  walk: logs/rsl_rl/nlegs_flat/2026-08-26_13-57-34
+  crouch: logs/rsl_rl/nlegs_mimic_crouch/2026-09-15_15-36-16
+  rise: logs/rsl_rl/nlegs_mimic_stand/2026-09-15_18-50-29
 ```
 
-模型侧参数（默认站姿、观测顺序+scale、history、action_scale、步态周期、step_dt、PD 增益）全部从 `<logs_root>/<run>/params/deploy.yaml` 自动读取；策略从 `<run>/exported/policy.onnx`（优先）或 `policy.pt` 加载；实机数据自动存到 `<run>/sim2real/<时间>.csv`。`common.yaml` 里其余项是**硬件相关**部署参数（下发率、EMA 平滑、关节顺序映射、安全限位、看门狗、指令零偏、键盘/手柄配置）。
+各模型的观测、动作、PD 和参考参数仍从各自 `params/deploy.yaml` 读取，不能合并成一份；策略优先加载 `exported/policy.onnx`，否则加载 `policy.pt`。日志按当前模型存入其 `sim2real/`。公共硬件限位、输入配置和任务切换阈值只在 `common.yaml` 维护，不再叠加专用 YAML。
 
 ### 编译
 
@@ -114,12 +118,14 @@ cd deploy/rl_real_py && colcon build && cd -
 ```bash
 # 启动：IMU → armcontrol（先由 sync_pd.py 从 deploy.yaml 同步 PD）→ RL 策略
 # 各开一个 gnome-terminal 窗口；RL 窗口是真终端，键盘可用
-cd deploy && ./start_real.sh
+cd deploy
+./start_real.sh --check-only  # 先离线预检：不启动驱动、不修改 PD
+./start_real.sh              # 现场保护与硬件检查完成后再运行
 ```
 
 `sync_pd.py` 在启动 `armcontrol` 前，把训练 run 的 `deploy.yaml` 里 `stiffness/damping` 换算顺序后写入 armcontrol 参数 yaml —— **PD 增益与训练严格一致，避免手改漂移**。
 
-流程：上电后缓慢进准备姿态（`prepare_time` 秒 smoothstep）→ 站立保持 → 在 RL 窗口按 `P` 开始行走。
+流程：保持当前姿态 → 识别站姿/蹲姿就绪 → 按键选择任务。旧单策略入口和上电自动回站立已退役；`P` 现在是中断，不是启动。
 
 ```bash
 # 关闭：RL → armcontrol → IMU 依次优雅停，兜底强杀
@@ -132,10 +138,10 @@ cd deploy && ./stop_real.sh
 
 | 输入 | 说明 |
 |------|------|
-| **键盘**（RL 窗口）| `W/S` vx±，`A/D` vy±，`Q/E` yaw±（累加式，每按一下加/减 `step`）；`空格` 清零；`P` 行走/暂停；`R` 复位 |
-| **手柄** | 满杆对应 `cmd_clip=[vx,vy,wz]`；`A`=行走 `B`=停 `X`=复位；`deadzone` 死区；松开 `ctrl_timeout` 秒归零 |
+| **键盘**（RL 窗口）| `1/2/3` 走路/下蹲/起身；`W/S A/D Q/E` 控速；`0` 停步减速，再 `Enter` 确认接地收脚；`P` 中断；`R` 重新验收 |
+| **手柄** | `LB+A/X/Y` 走路/下蹲/起身；`Start` 停步，再按一次确认接地；`B` 中断；`Back` 重新验收 |
 
-安全机制：数据新鲜度看门狗（关节/IMU 超 `state_timeout` 没更新则冻结指令，不拿过期观测推理）、发布安全限位、下发目标 EMA 平滑（`target_ema_alpha`，抑制推理 50Hz 与发布 200Hz 之间的阶梯抖动）。若零指令下持续漂移，可用 `cmd_bias` 做指令零偏修正。
+保留硬件与任务限位、反馈/推理超时保护和故障锁存。实机没有足底接触反馈，任务键和停步确认需要操作者确认落地；`P/B` 不是断电急停。完整流程见 [部署说明](deploy/README.md)。
 
 ---
 
@@ -145,11 +151,16 @@ cd deploy && ./stop_real.sh
 legs_rl_lab/
 ├── scripts/
 │   ├── rsl_rl/                    # train.py / play.py / cli_args.py
-│   └── list_envs.py  zero_agent.py  random_agent.py
+│   ├── sim2sim.py                 # 统一三任务仿真入口
+│   └── *.py                       # 任务列表、动作/姿态生成、数据准备与分析
+├── tests/                         # check_*.py：离线/仿真检查；零/随机动作冒烟测试
 ├── deploy/                        # ROS 2 实机部署栈
 │   ├── imu_ws/                    # IMU 驱动工作区
 │   ├── control_ws/                # armcontrol 电机驱动工作区
 │   ├── rl_real_py/                # RL 策略节点 + configs/common.yaml
+│   │   └── test/                  # ROS 部署模块的离线 pytest 回归
+│   ├── tools/                     # 实机姿态插值、上电跳变诊断、重心/日志分析
+│   ├── pose_logs/                 # 本地实验记录，不入库；工具迁移不移动数据
 │   ├── sync_pd.py                 # 从 deploy.yaml 同步 PD 到 armcontrol
 │   └── start_real.sh  stop_real.sh
 └── source/legs_rl_lab/legs_rl_lab/
@@ -164,6 +175,16 @@ legs_rl_lab/
     │       ├── flat/              #   nlegs_flat: 全量展开 env cfg + sim2sim.py
     │       └── rough/             #   nlegs_rough: 继承 flat, 地形生成器 + 课程
     └── utils/                     # parser_cfg / export_deploy_cfg（生成 deploy.yaml）
+```
+
+`tests/check_*sim2sim.py` 使用训练环境中的 MuJoCo/PyTorch；`check_stand_mimic_cfg.py` 不启动 Isaac Sim；其余任务检查通常需要 Isaac Lab。示例：
+
+```bash
+python tests/check_multi_sim2sim.py
+python tests/check_flat_static.py --headless --device cuda:0
+# ROS 模块离线回归，使用系统 Python；不启动电机控制节点
+source /opt/ros/humble/setup.bash
+PYTHONPATH="$PWD/deploy/rl_real_py:$PYTHONPATH" /usr/bin/python3 -m pytest deploy/rl_real_py/test -q
 ```
 
 ---

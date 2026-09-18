@@ -3,7 +3,7 @@
 # 路径相对仓库根目录；不自动选择最新模型。
 tasks:
   walk: logs/rsl_rl/nlegs_flat_static/2026-09-16_11-41-05
-  crouch: null  # 待 v3 下蹲重训、导出并通过 sim2sim 后填 run 路径；不要填旧 v2 模型。
+  crouch: logs/rsl_rl/nlegs_mimic_crouch/2026-09-17_16-42-11
   rise: logs/rsl_rl/nlegs_mimic_stand/2026-09-17_15-40-44
 
 publish_rate: 200

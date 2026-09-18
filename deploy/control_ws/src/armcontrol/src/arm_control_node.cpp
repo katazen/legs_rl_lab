@@ -315,6 +315,7 @@ public:
 
     // 1110 byf 电机故障码单话题
     motors_err_pub_ = this->create_publisher<std_msgs::msg::String>("/motor_warn", 10);
+    motor_health_pub_ = this->create_publisher<std_msgs::msg::Float64MultiArray>("/sysid_motor_health", 1);
     last_left_err_.fill(-1);
     last_right_err_.fill(-1);
 
@@ -381,9 +382,9 @@ public:
     RCLCPP_INFO(this->get_logger(), "Initializing Damiao motor control via Serial Communication");
     // 用串口通信初始化达妙电机控制对象 
     auto left_arm_serial =
-        std::make_shared<SerialPort>(left_arm_device, B921600);
+        std::make_shared<SerialPort>(left_arm_device, B921600, 0);
     auto right_arm_serial =
-        std::make_shared<SerialPort>(right_arm_device, B921600);
+        std::make_shared<SerialPort>(right_arm_device, B921600, 0);
     left_arm_mc_ = std::make_unique<damiao::Motor_Control>(left_arm_serial);
     right_arm_mc_ = std::make_unique<damiao::Motor_Control>(right_arm_serial);
 #endif
@@ -975,18 +976,7 @@ private:
       const auto lock_acquired = steady_clock::now();
       lock_wait_us = std::chrono::duration<double, std::micro>(lock_acquired - wait_lock_start).count();
 
-      if (!dog_joint_pos_enabled_) {
-        const auto enable_start = steady_clock::now();
-        for (int i = 0; i < 6; ++i) {
-          left_arm_mc_->enable(left_arm_motors_[i]);
-          right_arm_mc_->enable(right_arm_motors_[i]);
-        }
-        dog_joint_pos_enabled_ = true;
-        const double enable_ms =
-            std::chrono::duration<double, std::milli>(steady_clock::now() - enable_start).count();
-        RCLCPP_INFO(this->get_logger(),
-                    "joint_pos_dual_leg: 首帧 enable 12 个电机耗时 %.1f ms (持 writeLocker_)", enable_ms);
-      }
+      // 构造函数已统一使能；这里再次使能会持锁1.2秒，阻断新鲜反馈。
 
       for (int i = 0; i < 6; ++i) {
         const double dq_l = std::clamp(vel_cmd[i],     -config_max_vel_, config_max_vel_);
@@ -1050,6 +1040,19 @@ private:
   // 双腿模式 JointState 发布：12 维，前 6 = 左腿，后 6 = 右腿
   void publish_dual_leg_joint_states(const std::vector<std::string> & joint_names)
   {
+    std::unique_lock<std::mutex> lock(writeLocker_);
+#ifdef USE_SERIAL_COMMUNICATION
+    // 实机序 L1..L6,R1..R6，每关节 age_seconds/status/MOS温度/转子温度。
+    // age 仅由真实接收到的完整状态帧刷新，聚合消息周期不代表每台电机新鲜。
+    std_msgs::msg::Float64MultiArray health;
+    for (auto *motors : {left_arm_motors_.get(), right_arm_motors_.get()}) {
+      for (int i = 0; i < 6; ++i) {
+        const auto h = motors[i].feedback_health();
+        health.data.insert(health.data.end(), h.begin(), h.end());
+      }
+    }
+    motor_health_pub_->publish(health);
+#endif
     auto joint_state_msg = sensor_msgs::msg::JointState();
     auto joint_max_state_msg = sensor_msgs::msg::JointState();
     joint_state_msg.header.frame_id = "dual_leg";
@@ -1287,6 +1290,7 @@ private:
   // // 速度
   // 笛卡尔空间运动（模仿示例）：根据目标末端位姿一次IK求解目标关节，随后做轨迹执行
   rclcpp::Subscription<std_msgs::msg::Float64MultiArray>::SharedPtr dog_joint_pos_sub_;
+  rclcpp::Publisher<std_msgs::msg::Float64MultiArray>::SharedPtr motor_health_pub_;
   // rclcpp::Publisher<visualization_msgs::msg::MarkerArray>::SharedPtr gripperLeft_marker_pub_;//gripper test,jingyi
   // rclcpp::Publisher<visualization_msgs::msg::MarkerArray>::SharedPtr gripperRight_marker_pub_;//gripper test,jingyi
   // rclcpp::Publisher<visualization_msgs::msg::MarkerArray>::SharedPtr linkLeft_marker_pub_;//link envelope test,jingyi
@@ -1381,7 +1385,6 @@ private:
   std::vector<double> dog_joint_pos_last_cmd_ = std::vector<double>(DTOF, 0.0);
   rclcpp::Time dog_joint_pos_last_stamp_;
   bool dog_joint_pos_has_last_ = false;
-  bool dog_joint_pos_enabled_ = false;
   bool dual_leg_{true};
   bool enable_dual_leg_diag_{false};
   mutable std::mutex mutexPosition_left_;
@@ -1414,15 +1417,19 @@ int main(int argc, char *argv[]) {
   rclcpp::init(argc, argv);
 
   rclcpp::NodeOptions options;
+  bool explicit_params_file = false;
+  for (int i = 1; i < argc; ++i) {
+    if (std::strcmp(argv[i], "--params-file") == 0) explicit_params_file = true;
+  }
   try {
     const auto share_dir = ament_index_cpp::get_package_share_directory("armcontrol");
     const auto params_file = share_dir + std::string("/config/arm_control_node.yaml");
     std::ifstream ifs(params_file);
-    if (ifs.good()) {
+    if (ifs.good() && !explicit_params_file) {
       options.arguments({"--ros-args", "--params-file", params_file});
       RCLCPP_INFO(rclcpp::get_logger("armcontrol_node_main"),
                   "Default params file loaded: %s", params_file.c_str());
-    } else {
+    } else if (!ifs.good()) {
       RCLCPP_WARN(rclcpp::get_logger("armcontrol_node_main"),
                   "Default params file not found, continue with declared defaults: %s",
                   params_file.c_str());

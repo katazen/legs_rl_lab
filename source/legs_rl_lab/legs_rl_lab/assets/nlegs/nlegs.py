@@ -51,7 +51,7 @@ class UnitreeUsdFileCfg(sim_utils.UsdFileCfg):
 
 NLEGS_CFG = UnitreeArticulationCfg(
     spawn=UnitreeUsdFileCfg(
-        usd_path=os.path.join(_ASSET_DIR, "mjcf/nlegs/nlegs.usd"),
+        usd_path=os.path.join(_ASSET_DIR, "mjcf/nlegs_limit/nlegs_limit.usd"),
     ),
     # articulation root (PhysicsArticulationRootAPI) 在 `base` body 上,
     # 即 /<defaultPrim>/base/base, 相对 spawn 出的 Robot prim 是 /base/base。

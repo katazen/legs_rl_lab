@@ -132,6 +132,7 @@ class SimConfig:
     command_ranges: np.ndarray
     gait_period: float
     actuators: list[ActuatorGroup]
+    commands: dict
 
 
 def load_config(run):
@@ -144,13 +145,15 @@ def load_config(run):
         "format_version", "joint_names", "joint_ids_map", "physics_dt", "step_dt",
         "policy_action_clip", "stiffness", "damping", "default_joint_pos", "base_init_state",
         "armature", "friction", "dynamic_friction", "viscous_friction", "actuators",
-        "gait_period", "actions", "observations", "commands",
+        "actions", "observations", "commands",
     }
     missing = sorted(required - set(deploy))
     if missing:
         raise KeyError(f"{deploy_path} 缺字段 {missing}；请用新版导出器重新生成")
     if deploy["format_version"] != 2:
         raise ValueError(f"不支持 deploy.yaml format_version={deploy['format_version']}")
+    if "gait_period" not in deploy and "motion" not in deploy["commands"]:
+        raise KeyError("缺少 gait_period；仅无步态相位的动作跟踪任务可省略")
 
     joint_names = list(deploy["joint_names"])
     short_names = [name.removeprefix("joint_") for name in joint_names]
@@ -178,7 +181,12 @@ def load_config(run):
     unsupported = sorted(set(observations) - set(_OBS_FEATURES))
     if unsupported:
         raise KeyError(f"sim2sim 尚未实现观测项: {unsupported}")
-    command_ranges = deploy["commands"]["base_velocity"]["ranges"]
+    if "base_velocity" in deploy["commands"]:
+        command_ranges = deploy["commands"]["base_velocity"]["ranges"]
+    elif set(deploy["commands"]) == {"motion"}:
+        command_ranges = {key: (0.0, 0.0) for key in ("lin_vel_x", "lin_vel_y", "ang_vel_z")}
+    else:
+        raise ValueError("sim2sim 不支持该 commands 配置")
 
     actuators = []
     covered = []
@@ -238,8 +246,9 @@ def load_config(run):
         command_ranges=np.asarray([
             command_ranges["lin_vel_x"], command_ranges["lin_vel_y"], command_ranges["ang_vel_z"]
         ], dtype=np.float32),
-        gait_period=float(deploy["gait_period"]),
+        gait_period=float(deploy.get("gait_period", 1.0)),
         actuators=actuators,
+        commands=deploy["commands"],
     )
 
 
@@ -444,21 +453,27 @@ class MujocoRunner:
         qd_sdk = self.data.qvel[self.dof_adr].astype(np.float32)
         return q_sdk, qd_sdk
 
-    def _observation_terms(self):
+    def _observation_features(self):
         q_sdk, qd_sdk = self._joint_state()
-        phase = self.episode_step * self.cfg.step_dt / self.cfg.gait_period
+        phase = (self.episode_step * self.cfg.step_dt / self.cfg.gait_period
+                 if "gait_phase" in self.cfg.observations else 0.0)
         gait_params = self.cfg.observations.get("gait_phase", {}).get("params", {})
-        if gait_params.get("gate_by_cmd", False) and np.linalg.norm(self.command) < 1e-6:
-            phase = 0.0
-        features = {
+        gait = np.array([np.sin(2 * np.pi * phase), np.cos(2 * np.pi * phase)], dtype=np.float32)
+        if (gait_params.get("gate_by_cmd", False)
+                and np.linalg.norm(self.command) < np.float32(gait_params.get("command_threshold", 0.1))):
+            gait[:] = 0.0  # 与训练一致：整个 sin/cos 观测为零，而不是相位角 0 对应的 [0, 1]。
+        return {
             "ang_vel": self.data.sensor("imu_gyro").data.astype(np.float32),
             "gravity": gravity_from_quat(self.data.sensor("imu_quat").data),
             "command": self.command,
             "dof_pos": q_sdk[self.cfg.policy_to_sdk] - self.cfg.default_policy,
             "dof_vel": qd_sdk[self.cfg.policy_to_sdk],
             "last_action": self.last_action,
-            "gait": np.array([np.sin(2 * np.pi * phase), np.cos(2 * np.pi * phase)], dtype=np.float32),
+            "gait": gait,
         }
+
+    def _observation_terms(self):
+        features = self._observation_features()
         terms = {}
         for name, term_cfg in self.cfg.observations.items():
             value = features[_OBS_FEATURES[name]]

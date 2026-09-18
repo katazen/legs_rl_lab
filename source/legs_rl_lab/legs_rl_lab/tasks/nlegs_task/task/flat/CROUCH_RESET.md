@@ -61,7 +61,7 @@ python scripts/rsl_rl/train.py --task nlegs_flat_crouch --headless --num_envs 40
 
 ```bash
 python scripts/generate_crouch_pose_bank.py --check
-python scripts/check_crouch_reset.py --headless --device cuda:0
+python tests/check_crouch_reset.py --headless --device cuda:0
 python scripts/generate_crouch_pose_bank.py
 ```
 
@@ -116,5 +116,5 @@ python source/legs_rl_lab/legs_rl_lab/tasks/nlegs_task/task/flat/sim2sim_crouch.
 python source/legs_rl_lab/legs_rl_lab/tasks/nlegs_task/task/flat/sim2sim_crouch.py --headless --auto-start --duration 10 --save-data
 
 # 初姿态、等待/按键、首帧观测及真实策略短回放检查
-python scripts/check_crouch_sim2sim.py --run 2026-09-09_18-13-14
+python tests/check_crouch_sim2sim.py --run 2026-09-09_18-13-14
 ```

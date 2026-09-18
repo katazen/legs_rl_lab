@@ -36,6 +36,22 @@ docker/.container.cfg
 **/.idea/
 **/.vscode/
 .qoder/
+qoder_conversations.md
+
+# 本地测试、诊断与实验工具（不影响正式训练 / sim2sim / 实机部署入口）
+tests/
+test/
+debug/
+diagnostics/
+/scripts/check_*.py
+/scripts/analyze_*.py
+/scripts/random_agent.py
+/scripts/zero_agent.py
+/deploy/tools/
+/deploy/*_check.py
+/deploy/analyze_*.py
+/deploy/pose_move.py
+/deploy/pose_transition.py
 
 # MuJoCo 崩溃日志
 MUJOCO_LOG.TXT
@@ -61,26 +77,8 @@ _build
 
 # RL-Games
 **/runs/*
-**/logs/*
+logs/
 **/recordings/*
-
-# 仅同步指定训练记录的部署参数和导出策略；其余日志与训练检查点仍忽略。
-!/logs/rsl_rl/
-/logs/rsl_rl/*
-!/logs/rsl_rl/nlegs_rough/
-!/logs/rsl_rl/nlegs_flat/
-!/logs/rsl_rl/nlegs_flat_crouch/
-/logs/rsl_rl/*/*
-!/logs/rsl_rl/nlegs_rough/2026-08-26_20-37-55/
-!/logs/rsl_rl/nlegs_flat/2026-08-26_13-57-34/
-!/logs/rsl_rl/nlegs_flat_crouch/2026-09-09_20-27-00/
-/logs/rsl_rl/*/*/*
-!/logs/rsl_rl/nlegs_rough/2026-08-26_20-37-55/params/
-!/logs/rsl_rl/nlegs_rough/2026-08-26_20-37-55/exported/
-!/logs/rsl_rl/nlegs_flat/2026-08-26_13-57-34/params/
-!/logs/rsl_rl/nlegs_flat/2026-08-26_13-57-34/exported/
-!/logs/rsl_rl/nlegs_flat_crouch/2026-09-09_20-27-00/params/
-!/logs/rsl_rl/nlegs_flat_crouch/2026-09-09_20-27-00/exported/
 
 # 实机姿态工具的逐帧记录 (每次运行一个 CSV)
 deploy/pose_logs/
@@ -90,9 +88,6 @@ deploy/pose_logs/
 
 # Teleop Recorded Dataset
 /datasets/
-
-# Tests
-tests/
 
 # Docker history
 .isaac-lab-docker-history
@@ -106,6 +101,7 @@ tests/
 source/legs_rl_lab/legs_rl_lab/tasks/*
 !source/legs_rl_lab/legs_rl_lab/tasks/__init__.py
 !source/legs_rl_lab/legs_rl_lab/tasks/nlegs_task/
+!source/legs_rl_lab/legs_rl_lab/tasks/mimic_task/
 source/legs_rl_lab/legs_rl_lab/assets/*
 !source/legs_rl_lab/legs_rl_lab/assets/__init__.py
 !source/legs_rl_lab/legs_rl_lab/assets/nlegs/

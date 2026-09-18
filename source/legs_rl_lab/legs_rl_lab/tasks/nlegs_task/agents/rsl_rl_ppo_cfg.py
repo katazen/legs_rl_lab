@@ -73,8 +73,12 @@ class NlegsFlatPPORunnerCfg(RslRlOnPolicyRunnerCfg):
 
 @configclass
 class NlegsRoughPPORunnerCfg(NlegsFlatPPORunnerCfg):
-    """rough 地形变体，仅日志实验名不同。"""
+    """rough 地形变体：拆小 PPO 更新批次，降低 2490 维 critic 的显存峰值。"""
     experiment_name = "nlegs_rough"
+
+    def __post_init__(self):
+        # 4096 环境 × 24 步，镜像扩增后每批 12288 条；保留观测历史和 checkpoint 形状。
+        self.algorithm.num_mini_batches = 16
 
 
 @configclass
@@ -82,7 +86,7 @@ class NlegsRoughStepPPORunnerCfg(NlegsFlatPPORunnerCfg):
     """专用上台阶变体，仅日志实验名不同。
 
     critic 的 height_scan 只用当前帧（观测维度 807），镜像布局由 mdp/symmetry.py
-    按维度自动匹配，故算法配置与 flat/rough 完全一致。
+    按维度自动匹配，故算法配置与 flat 完全一致。
     """
     experiment_name = "nlegs_rough_step"
 

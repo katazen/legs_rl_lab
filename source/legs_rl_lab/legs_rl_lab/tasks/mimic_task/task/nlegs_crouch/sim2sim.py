@@ -1,8 +1,8 @@
 """nlegs_mimic_crouch 的 MuJoCo 策略回放，不启动 Isaac Sim、不连接实机。
 
 conda activate unitree_lab
-python source/legs_rl_lab/legs_rl_lab/tasks/mimic_task/task/nlegs_crouch/sim2sim.py --run 新训练目录
-必须指定已导出策略的 --run；也接受 run 的绝对路径，不再默认加载旧限位模型。
+python source/legs_rl_lab/legs_rl_lab/tasks/mimic_task/task/nlegs_crouch/sim2sim.py
+默认使用 2026-09-17_16-42-11；--run 可指定其他已导出模型的目录名或绝对路径。
 v3 为 341 帧 / 3.4s；以所选 run 的 deploy.yaml 记录的参考为准。
 站立等待时暂停物理与参考时钟，聚焦窗口按小键盘/主键盘 5 开始。
 参考播放一遍后停在最后一帧，策略继续控制，不自动重置机器人。
@@ -32,7 +32,7 @@ spec.loader.exec_module(flat)
 flat.LOGS_ROOT = str(Path(flat._REPO_ROOT) / "logs/rsl_rl/nlegs_mimic_crouch")
 flat.SCENE_XML = str(Path(flat.SCENE_XML).with_name("nlegs_limit_scene.xml"))
 flat._OBS_FEATURES.update(motion_command="motion_command", motion_anchor_ori_b="motion_anchor_ori_b")
-RUN = None
+RUN = "2026-09-17_16-42-11"
 
 
 def rotation_matrix(quat_wxyz):

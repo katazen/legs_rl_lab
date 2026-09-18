@@ -22,6 +22,7 @@ dual_leg_diag/
 *.jpeg
 *.svg
 *.md
+!README.md
 
 # ===== 模型二进制 =====
 *.onnx

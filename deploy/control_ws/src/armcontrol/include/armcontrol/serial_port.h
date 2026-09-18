@@ -61,7 +61,8 @@ public:
     FD_SET(fd_, &rSet_);
     ssize_t recv_len = 0;
 
-    switch (select(fd_ + 1, &rSet_, NULL, NULL, &timeout_))
+    auto timeout = timeout_;  // select mutates its timeout; preserve it for the next read.
+    switch (select(fd_ + 1, &rSet_, NULL, NULL, &timeout))
     {
     case -1: // error
       // std::cout << "communication error" << std::endl;
@@ -77,7 +78,7 @@ public:
     return recv_len;
   }
 
-  void recv(uint8_t* data, uint8_t head, ssize_t len)
+  bool recv(uint8_t* data, uint8_t head, ssize_t len)
   {
     // 存入队列
     ssize_t recv_len = this->recv(recv_buf.data(), len);
@@ -98,7 +99,7 @@ public:
       break;
     }
 
-    if(recv_queue.size() < len) return;
+    if(recv_queue.size() < len) return false;
 
     // 读取数据
     for(int i = 0; i < len; i++)
@@ -106,6 +107,7 @@ public:
       data[i] = recv_queue.front();
       recv_queue.pop();
     }
+    return true;
   }
 
   void set_timeout(int timeout_ms)

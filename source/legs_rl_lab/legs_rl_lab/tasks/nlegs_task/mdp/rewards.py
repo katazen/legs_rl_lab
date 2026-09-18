@@ -10,7 +10,7 @@ from isaaclab.assets import Articulation, RigidObject
 from isaaclab.managers import SceneEntityCfg
 from isaaclab.sensors import ContactSensor
 
-from .gait import get_phase
+from .gait import command_is_moving, get_phase
 
 if TYPE_CHECKING:
     from isaaclab.envs import ManagerBasedRLEnv
@@ -150,7 +150,9 @@ def _get_leg_phases(env: ManagerBasedRLEnv):
     return leg_phases
 
 
-def feet_gait(env: ManagerBasedRLEnv, sensor_cfg: SceneEntityCfg, moving_only: bool = False) -> torch.Tensor:
+def feet_gait(
+    env: ManagerBasedRLEnv, sensor_cfg: SceneEntityCfg, moving_only: bool = False, command_threshold: float = 0.1
+) -> torch.Tensor:
     contact_sensor = env.scene.sensors[sensor_cfg.name]
     is_contact = contact_sensor.data.current_contact_time[:, sensor_cfg.body_ids] > 0
     leg_phases = _get_leg_phases(env)
@@ -158,7 +160,7 @@ def feet_gait(env: ManagerBasedRLEnv, sensor_cfg: SceneEntityCfg, moving_only: b
     match = (should_be_stance == is_contact)
     reward = torch.mean(torch.where(match, 1.0, -0.5), dim=1)
     if moving_only:  # 速度开关: 零速命令时不奖励踏步(用于静止站立任务)
-        reward = reward * (torch.norm(env.command_manager.get_command("base_velocity"), dim=1) >= 0.1)
+        reward = reward * command_is_moving(env, command_threshold)
     return reward
 
 
@@ -171,7 +173,7 @@ def feet_slide(env, sensor_cfg: SceneEntityCfg, asset_cfg: SceneEntityCfg = Scen
     return reward
 
 
-def feet_clearance(env: ManagerBasedRLEnv, asset_cfg: SceneEntityCfg, target_height: float = 0.1, moving_only: bool = False, sensor_cfg: SceneEntityCfg | None = None) -> torch.Tensor:
+def feet_clearance(env: ManagerBasedRLEnv, asset_cfg: SceneEntityCfg, target_height: float = 0.1, moving_only: bool = False, sensor_cfg: SceneEntityCfg | None = None, command_threshold: float = 0.1) -> torch.Tensor:
     asset = env.scene[asset_cfg.name]
     feet_pos = asset.data.body_pos_w[:, asset_cfg.body_ids, :]
     feet_pos_z = feet_pos[:, :, 2] - 0.0135
@@ -191,7 +193,7 @@ def feet_clearance(env: ManagerBasedRLEnv, asset_cfg: SceneEntityCfg, target_hei
     error = weight * shortfall ** 2
     reward = torch.exp(-error / 0.005).mean(dim=1)
     if moving_only:  # 速度开关: 零速命令时不奖励抬脚(用于静止站立任务)
-        reward = reward * (torch.norm(env.command_manager.get_command("base_velocity"), dim=1) >= 0.1)
+        reward = reward * command_is_moving(env, command_threshold)
     return reward
 
 
