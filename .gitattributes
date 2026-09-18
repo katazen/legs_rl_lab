@@ -11,4 +11,8 @@
 *.jit filter=lfs diff=lfs merge=lfs -text
 *.hdf5 filter=lfs diff=lfs merge=lfs -text
 
+# README 的小型动作预览直接入 Git，供 GitHub / Gitee 显示。
+datasets/stand_to_crouch_v3/preview.* -filter -diff -merge -text
+datasets/crouch_to_stand_v2/preview.* -filter -diff -merge -text
+
 *.bat text eol=crlf

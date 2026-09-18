@@ -86,7 +86,7 @@ deploy/pose_logs/
 # Pre-Trained Checkpoints
 /.pretrained_checkpoints/
 
-# 仅同步当前 Mimic 数据及起身生成器引用的 v2 源数据；预览和其他历史版本留在本地。
+# 仅同步当前 Mimic 数据、两段动作预览及起身生成器引用的 v2 源数据。
 /datasets/*
 !/datasets/stand_to_crouch_v2/
 !/datasets/stand_to_crouch_v3/
@@ -97,9 +97,13 @@ deploy/pose_logs/
 !/datasets/stand_to_crouch_v3/motion.npz
 !/datasets/stand_to_crouch_v3/mimic_motion.npz
 !/datasets/stand_to_crouch_v3/metadata.json
+!/datasets/stand_to_crouch_v3/preview.mp4
+!/datasets/stand_to_crouch_v3/preview.gif
 !/datasets/crouch_to_stand_v2/motion.npz
 !/datasets/crouch_to_stand_v2/mimic_motion.npz
 !/datasets/crouch_to_stand_v2/metadata.json
+!/datasets/crouch_to_stand_v2/preview.mp4
+!/datasets/crouch_to_stand_v2/preview.gif
 
 # Docker history
 .isaac-lab-docker-history

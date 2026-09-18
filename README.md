@@ -88,7 +88,19 @@ python tests/random_agent.py --task nlegs_flat --num_envs 16
 
 下蹲末帧与起身首帧的关节角、机身位置和姿态一致；起身任务在 3.35 s 参考结束后额外训练保持 5 s。这些 NPZ 是运动学参考，策略权重仍需训练和导出。
 
-`.gitignore` 仅放行上述 8 个数据文件；预览视频/图片/HTML、其他历史数据、测试/调试脚本和全部 `logs/` 继续忽略。元数据中的绝对模型路径、`crouch_snapshot` 是生成时的溯源记录；原始实测快照保留在本地，重新生成实测动作时需要它，使用已同步的参考训练不依赖它。
+#### 参考动作预览
+
+下方动图展示两个 Mimic 任务使用的参考数据运动学回放；点击动图或 MP4 链接查看原始视频。画面左右分别为斜前方和侧视角。
+
+**下蹲 v3 · `nlegs_mimic_crouch` · 3.40 s** — [原始 MP4](datasets/stand_to_crouch_v3/preview.mp4)
+
+[![下蹲 v3 参考动作：站立、双脚向外迈步、下蹲并保持](datasets/stand_to_crouch_v3/preview.gif)](datasets/stand_to_crouch_v3/preview.mp4)
+
+**起身 v2 · `nlegs_mimic_stand` · 3.35 s** — [原始 MP4](datasets/crouch_to_stand_v2/preview.mp4)
+
+[![起身 v2 参考动作：蹲姿起身、依次收脚、站立并保持](datasets/crouch_to_stand_v2/preview.gif)](datasets/crouch_to_stand_v2/preview.mp4)
+
+`.gitignore` 放行上述 8 个数据文件及两段动作的 MP4/GIF 预览；其他预览图片/HTML、历史数据、测试/调试脚本和全部 `logs/` 继续忽略。元数据中的绝对模型路径、`crouch_snapshot` 是生成时的溯源记录；原始实测快照保留在本地，重新生成实测动作时需要它，使用已同步的参考训练不依赖它。
 
 ### sim2sim（MuJoCo 部署前验证）
 
