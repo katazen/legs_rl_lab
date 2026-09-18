@@ -1,0 +1,109 @@
+source/legs_rl_lab/legs_rl_lab/tasks/nlegs_task/mdp/gait.py
+  s_22f8ffc6662cf2::t_514502d821d51a 10-14
+source/legs_rl_lab/legs_rl_lab/tasks/nlegs_task/agents/rsl_rl_ppo_cfg.py
+  s_691089d81bb0a2::t_ffe31cc6c0d425 76,79-82,89
+source/legs_rl_lab/legs_rl_lab/tasks/nlegs_task/task/flat/static_mdp.py
+  s_22f8ffc6662cf2::t_514502d821d51a 1,8-9,12-13,16-17,20-22
+deploy/control_ws/src/armcontrol/include/armcontrol/serial_port.h
+  s_f9d788709686b7::t_10c205d2326f75 64-65,81,102,110
+deploy/rl_real_py/configs/common.yaml
+  s_22f8ffc6662cf2::t_2f5727146f1446 6
+deploy/control_ws/src/armcontrol/src/arm_control_node.cpp
+  s_f9d788709686b7::t_e8a4db0753e7e3 979
+  s_f9d788709686b7::t_2c85cb519ea961 385,387
+  s_f9d788709686b7::t_01647ada010d11 1420-1423,1428,1432
+  s_f9d788709686b7::t_a21e859221c08c 1048
+  s_f9d788709686b7::t_210e80d7574682 318,1043-1047,1049-1055,1293
+source/legs_rl_lab/legs_rl_lab/tasks/nlegs_task/task/rough/rough_env_cfg.py
+  h_d698c05df35737 1,3-5,8,10,12-15,17,20-21,27,38,48,50,52-67,69-71,77-79,89-90,94-98,101,104,114,117,142,145
+  h_d698c05df35737 9
+source/legs_rl_lab/legs_rl_lab/tasks/nlegs_task/mdp/rewards.py
+  s_22f8ffc6662cf2::t_514502d821d51a 13,153-155,163,176,196
+deploy/.gitignore
+  s_22f8ffc6662cf2::t_7af2687c2f8047 25
+source/legs_rl_lab/legs_rl_lab/tasks/nlegs_task/task/rough/sim2sim.py
+  h_d698c05df35737 38
+.gitignore
+  s_691089d81bb0a2::t_7bfb16281d08ee 39-54,80
+  s_22f8ffc6662cf2::t_e71449736c69c8 104
+source/legs_rl_lab/legs_rl_lab/tasks/mimic_task/task/nlegs_stand/sim2sim.py
+  s_22f8ffc6662cf2::t_2f5727146f1446 6
+deploy/README.md
+  s_22f8ffc6662cf2::t_911a4ad33b9bf7 8-11,18,21-22,28,30,53,83,94-95
+  s_691089d81bb0a2::t_7bfb16281d08ee 122-123,138
+  s_22f8ffc6662cf2::t_91c194b3b38c1e 148,151,155
+  s_691089d81bb0a2::t_84f16d2ddc3b51 139
+source/legs_rl_lab/legs_rl_lab/tasks/mimic_task/task/nlegs_crouch/sim2sim.py
+  s_22f8ffc6662cf2::t_2f5727146f1446 4-5,35
+source/legs_rl_lab/legs_rl_lab/assets/nlegs/nlegs.py
+  h_d698c05df35737 54
+source/legs_rl_lab/legs_rl_lab/tasks/nlegs_task/task/flat/CROUCH_RESET.md
+  s_22f8ffc6662cf2::t_7af2687c2f8047 64,119
+source/legs_rl_lab/legs_rl_lab/tasks/nlegs_task/mdp/observations.py
+  s_22f8ffc6662cf2::t_514502d821d51a 11,30-32,38
+README.md
+  s_691089d81bb0a2::t_7bfb16281d08ee 62-63
+  s_22f8ffc6662cf2::t_7af2687c2f8047 18,56-57,92,94,97-100,103,121-123,128,141-142,144,154-156,161-163,180-187
+  s_691089d81bb0a2::t_972f7b80a060b5 188-189
+source/legs_rl_lab/legs_rl_lab/tasks/nlegs_task/task/flat/__init__.py
+  s_22f8ffc6662cf2::t_514502d821d51a 4-13
+  s_22f8ffc6662cf2::t_4f0093b7001088 3
+source/legs_rl_lab/legs_rl_lab/utils/export_deploy_cfg.py
+  s_22f8ffc6662cf2::t_a8d65373f188d6 212-213
+  s_22f8ffc6662cf2::t_dd7c6b8d245a8f 132-133
+  s_22f8ffc6662cf2::t_d09e3f22b7b771 128-129,131
+source/legs_rl_lab/legs_rl_lab/tasks/nlegs_task/task/flat/sim2sim.py
+  s_22f8ffc6662cf2::t_bb956770493b6d 458-459
+  s_22f8ffc6662cf2::t_d09e3f22b7b771 155-156,186
+  s_22f8ffc6662cf2::t_27b9dcfe522def 135,184-185,187-189,251,456,465,474-476
+  s_22f8ffc6662cf2::t_a21bb342a8e0f7 463
+  s_22f8ffc6662cf2::t_b30d459fedf890 148,249
+  s_22f8ffc6662cf2::t_514502d821d51a 461-462,464,472
+deploy/control_ws/src/armcontrol/include/armcontrol/damiao.h
+  s_f9d788709686b7::t_210e80d7574682 185-186,219,224-233,671,748,762,800,1072
+  s_f9d788709686b7::t_5acb107f2e77c1 12,560-562
+source/legs_rl_lab/legs_rl_lab/tasks/nlegs_task/task/flat/static_env_cfg.py
+  s_22f8ffc6662cf2::t_514502d821d51a 1,5,10-11,15-30,34-42,46,50,54-55
+  s_22f8ffc6662cf2::t_2eb59c6728bc79 33
+deploy/control_ws/src/armcontrol/config/arm_control_node.yaml
+  h_d698c05df35737 3
+source/legs_rl_lab/legs_rl_lab/tasks/nlegs_task/task/rough/__init__.py
+  h_d698c05df35737 12
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.7.4",
+  "base_commit_sha": "374cc3a922ec7c1a606e6a956888bddc66b6a19b",
+  "prompts": {},
+  "humans": {
+    "h_d698c05df35737": {
+      "author": "woan <377801872@qq.com>"
+    }
+  },
+  "sessions": {
+    "s_22f8ffc6662cf2": {
+      "agent_id": {
+        "tool": "codex",
+        "id": "01a06a55-9d3a-7f52-b1dc-6c6e4d885f57",
+        "model": "gpt-6-astra"
+      },
+      "human_author": "woan <377801872@qq.com>"
+    },
+    "s_691089d81bb0a2": {
+      "agent_id": {
+        "tool": "codex",
+        "id": "01a0af4e-2f0a-72e2-9e87-220a91b434ac",
+        "model": "gpt-6-astra"
+      },
+      "human_author": "woan <377801872@qq.com>"
+    },
+    "s_f9d788709686b7": {
+      "agent_id": {
+        "tool": "codex",
+        "id": "01a0a95f-b45a-7101-8d19-84757cb4fb14",
+        "model": "gpt-6-astra"
+      },
+      "human_author": "woan <377801872@qq.com>"
+    }
+  }
+}
