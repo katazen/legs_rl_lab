@@ -1,0 +1,40 @@
+README.md
+  s_691089d81bb0a2::t_151b04a3ab6cb2 15-16,53-56,65,69,74-92,122-124,176,181,186-187,195,202-203
+.gitignore
+  s_691089d81bb0a2::t_151b04a3ab6cb2 89-102
+datasets/crouch_to_stand_v2/metadata.json
+  s_22f8ffc6662cf2::t_ecb65eb651ea40 1-133
+datasets/stand_to_crouch_v2/metadata.json
+  s_22f8ffc6662cf2::t_23082d2bf56c18 1-90
+datasets/stand_to_crouch_v3/metadata.json
+  s_22f8ffc6662cf2::t_8661f8b1a77ada 1-128
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.7.4",
+  "base_commit_sha": "75b90f126bd4529f4a7aa9a56bff0aa10379966a",
+  "prompts": {},
+  "humans": {
+    "h_d698c05df35737": {
+      "author": "woan <377801872@qq.com>"
+    }
+  },
+  "sessions": {
+    "s_22f8ffc6662cf2": {
+      "agent_id": {
+        "tool": "codex",
+        "id": "01a06a55-9d3a-7f52-b1dc-6c6e4d885f57",
+        "model": "gpt-6-astra"
+      },
+      "human_author": "woan <377801872@qq.com>"
+    },
+    "s_691089d81bb0a2": {
+      "agent_id": {
+        "tool": "codex",
+        "id": "01a0af4e-2f0a-72e2-9e87-220a91b434ac",
+        "model": "gpt-6-astra"
+      },
+      "human_author": "woan <377801872@qq.com>"
+    }
+  }
+}
