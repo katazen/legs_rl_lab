@@ -14,6 +14,23 @@ if TYPE_CHECKING:
     from isaaclab.envs import ManagerBasedRLEnv
 
 
+def set_joint_position_limits(env: ManagerBasedRLEnv, env_ids, joint_limits: dict):
+    """只改本次仿真的指定端点；None 保留资产原端点，不写 XML/USD。"""
+    asset = env.scene["robot"]
+    ids = slice(None) if env_ids is None else env_ids
+    limits = asset.data.joint_pos_limits[ids].clone()
+    for name, bounds in joint_limits.items():
+        joint = asset.joint_names.index(name)
+        for side, value in enumerate(bounds):
+            if value is not None:
+                limits[:, joint, side] = value
+    default = asset.data.default_joint_pos[ids]
+    if (not torch.isfinite(limits).all() or (limits[..., 0] >= limits[..., 1]).any()
+            or (default < limits[..., 0]).any() or (default > limits[..., 1]).any()):
+        raise ValueError("任务限位无效或排除了默认站姿")
+    asset.write_joint_position_limit_to_sim(limits, env_ids=env_ids)
+
+
 def randomize_joint_zero_bias(
     env: ManagerBasedRLEnv,
     env_ids: torch.Tensor,

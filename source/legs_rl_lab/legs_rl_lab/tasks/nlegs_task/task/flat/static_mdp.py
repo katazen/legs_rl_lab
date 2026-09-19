@@ -5,8 +5,10 @@ from isaaclab.managers import SceneEntityCfg
 from legs_rl_lab.tasks.nlegs_task import mdp
 
 
-def moving_base_height_l2(env, target_height: float, command_threshold: float):
-    return mdp.base_height_l2(env, target_height) * mdp.command_is_moving(env, command_threshold)
+def moving_base_height_l2(
+    env, target_height: float, command_threshold: float, sensor_cfg: SceneEntityCfg | None = None,
+):
+    return mdp.base_height_l2(env, target_height, sensor_cfg=sensor_cfg) * mdp.command_is_moving(env, command_threshold)
 
 
 def standing_joint_pos_l1(env, command_threshold: float):

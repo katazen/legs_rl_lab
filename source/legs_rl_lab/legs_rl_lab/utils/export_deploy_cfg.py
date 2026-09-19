@@ -210,6 +210,10 @@ def export_deploy_cfg(env: ManagerBasedRLEnv, log_dir, policy_action_clip=None):
     if not isinstance(cfg, dict):
         cfg = class_to_dict(cfg)
     cfg = yaml_safe(cfg)
-    cfg = format_value(cfg)
+    formatted = format_value(cfg)
+    # 边界不能为显示方便而舍入，否则可能把单侧机械限位向外放宽。
+    for name, action in cfg["actions"].items():
+        formatted["actions"][name]["clip"] = action.get("clip")
+    cfg = formatted
     with open(filename, "w") as f:
         yaml.dump(cfg, f, default_flow_style=None, sort_keys=False)

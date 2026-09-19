@@ -10,6 +10,7 @@
 | `nlegs_flat_static` | 行走与零速站稳 |
 | `nlegs_flat_crouch` | 从站立或蹲姿起步的行走策略 |
 | `nlegs_rough` | 台阶、坡面等地形上的速度跟踪，带难度课程 |
+| [`nlegs_rough_static`](source/legs_rl_lab/legs_rl_lab/tasks/nlegs_task/task/rough/README_static.md) | rough 行走＋零速站稳；实测下蹲侧限位与辨识驱动的执行器随机化，不修改 XML/USD |
 | `nlegs_mimic_crouch` | 跟踪下蹲参考动作 v3 |
 | `nlegs_mimic_stand` | 跟踪起身参考动作 v2 |
 
