@@ -1,0 +1,218 @@
+format_version: 2
+joint_names: [joint_R1, joint_R2, joint_R3, joint_R4, joint_R5, joint_R6, joint_L1,
+  joint_L2, joint_L3, joint_L4, joint_L5, joint_L6]
+joint_ids_map: [0, 6, 1, 7, 2, 8, 3, 9, 4, 10, 5, 11]
+physics_dt: 0.005
+step_dt: 0.02
+policy_action_clip: 5.0
+base_init_state:
+  pos: [0, 0, 0.582]
+  rot: [1.0, 0.0, 0.0, 0.0]
+stiffness: [200.0, 100.0, 100.0, 250.0, 40.0, 40.0, 200.0, 100.0, 100.0, 250.0, 40.0,
+  40.0]
+damping: [5.0, 5.0, 5.0, 5.0, 2.0, 0.5, 5.0, 5.0, 5.0, 5.0, 2.0, 0.5]
+default_joint_pos: [-0.1, -0.1, 0.0, 0.0, 0.0, 0.0, 0.2, 0.2, -0.1, -0.1, 0.0, 0.0]
+armature: [0.0509, 0.0509, 0.0509, 0.0509, 0.0509, 0.00219, 0.0509, 0.0509, 0.0509,
+  0.0509, 0.0509, 0.00219]
+effort: [1000000000.0, 1000000000.0, 1000000000.0, 1000000000.0, 1000000000.0, 5.8,
+  1000000000.0, 1000000000.0, 1000000000.0, 1000000000.0, 1000000000.0, 5.8]
+friction: [0.5, 0.5, 0.5, 0.5, 0.55, 0.0, 0.5, 0.5, 0.5, 0.5, 0.55, 0.0]
+dynamic_friction: [0.5, 0.5, 0.5, 0.5, 0.55, 0.0, 0.5, 0.5, 0.5, 0.5, 0.55, 0.0]
+viscous_friction: [0.0, 0.0, 0.0, 0.0, 0.0, 0.54, 0.0, 0.0, 0.0, 0.0, 0.0, 0.54]
+actuators:
+  legs:
+    joint_ids: [0, 6, 1, 7, 2, 8, 3, 9]
+    torque_model: dc_motor
+    effort_limit: [26.0, 26.0, 26.0, 26.0, 26.0, 26.0, 26.0, 26.0]
+    effort_limit_sim: [1000000000.0, 1000000000.0, 1000000000.0, 1000000000.0, 1000000000.0,
+      1000000000.0, 1000000000.0, 1000000000.0]
+    velocity_limit: [7.0, 7.0, 7.0, 7.0, 7.0, 7.0, 7.0, 7.0]
+    velocity_limit_sim: [5.94e+36, 5.94e+36, 5.94e+36, 5.94e+36, 5.94e+36, 5.94e+36,
+      5.94e+36, 5.94e+36]
+    saturation_effort: 26.0
+    delay: [4, 6]
+  ankle_pitch:
+    joint_ids: [4, 10]
+    torque_model: dc_motor
+    effort_limit: [26.0, 26.0]
+    effort_limit_sim: [1000000000.0, 1000000000.0]
+    velocity_limit: [7.0, 7.0]
+    velocity_limit_sim: [5.94e+36, 5.94e+36]
+    saturation_effort: 26.0
+    delay: [4, 8]
+  ankle_roll:
+    joint_ids: [5, 11]
+    torque_model: ideal_pd
+    effort_limit: [7.0, 7.0]
+    effort_limit_sim: [5.8, 5.8]
+    velocity_limit: [14.0, 14.0]
+    velocity_limit_sim: [14.0, 14.0]
+    saturation_effort: null
+    delay: [4, 6]
+action_delay: [4, 8]
+commands:
+  motion:
+    resampling_time_range: [1000000000.0, 1000000000.0]
+    debug_vis: false
+    asset_name: robot
+    motion_file: /home/woan/workspace/legs_rl_lab/source/legs_rl_lab/legs_rl_lab/tasks/mimic_task/task/nlegs_stand/motions/crouch_to_stand_v2.npz
+    model_file: /home/woan/workspace/legs_rl_lab/source/legs_rl_lab/legs_rl_lab/assets/nlegs/mjcf/nlegs_limit.xml
+    anchor_body_name: base
+    body_names: [base, Link_L2, Link_L4, Link_L6, Link_R2, Link_R4, Link_R6]
+    pose_range:
+      z: [0.001, 0.003]
+      roll: [-0.015, 0.015]
+      pitch: [-0.015, 0.015]
+    velocity_range:
+      x: [-0.03, 0.03]
+      y: [-0.03, 0.03]
+    joint_position_range: [-0.01, 0.01]
+    start_probability: 0.5
+    sample_until_s: 2.6
+    track_heading: false
+    end_hold_s: 5.0
+    adaptive_kernel_size: 1
+    adaptive_lambda: 0.8
+    adaptive_uniform_ratio: 0.1
+    adaptive_alpha: 0.001
+    anchor_visualizer_cfg:
+      prim_path: /Visuals/Command/pose
+      markers:
+        frame:
+          func: isaaclab.sim.spawners.from_files.from_files:spawn_from_usd
+          visible: true
+          semantic_tags: null
+          copy_from_source: true
+          mass_props: null
+          deformable_props: null
+          rigid_props: null
+          collision_props: null
+          activate_contact_sensors: false
+          scale: [0.2, 0.2, 0.2]
+          articulation_props: null
+          fixed_tendons_props: null
+          spatial_tendons_props: null
+          joint_drive_props: null
+          visual_material_path: material
+          visual_material: null
+          usd_path: https://omniverse-content-production.s3-us-west-2.amazonaws.com/Assets/Isaac/5.1/Isaac/Props/UIElements/frame_prim.usd
+          variants: null
+        connecting_line:
+          func: isaaclab.sim.spawners.shapes.shapes:spawn_cylinder
+          visible: true
+          semantic_tags: null
+          copy_from_source: true
+          mass_props: null
+          rigid_props: null
+          collision_props: null
+          activate_contact_sensors: false
+          visual_material_path: material
+          visual_material:
+            func: isaaclab.sim.spawners.materials.visual_materials:spawn_preview_surface
+            diffuse_color: [1.0, 1.0, 0.0]
+            emissive_color: [0.0, 0.0, 0.0]
+            roughness: 1.0
+            metallic: 0.0
+            opacity: 1.0
+          physics_material_path: material
+          physics_material: null
+          radius: 0.002
+          height: 1.0
+          axis: Z
+    body_visualizer_cfg:
+      prim_path: /Visuals/Command/pose
+      markers:
+        frame:
+          func: isaaclab.sim.spawners.from_files.from_files:spawn_from_usd
+          visible: true
+          semantic_tags: null
+          copy_from_source: true
+          mass_props: null
+          deformable_props: null
+          rigid_props: null
+          collision_props: null
+          activate_contact_sensors: false
+          scale: [0.1, 0.1, 0.1]
+          articulation_props: null
+          fixed_tendons_props: null
+          spatial_tendons_props: null
+          joint_drive_props: null
+          visual_material_path: material
+          visual_material: null
+          usd_path: https://omniverse-content-production.s3-us-west-2.amazonaws.com/Assets/Isaac/5.1/Isaac/Props/UIElements/frame_prim.usd
+          variants: null
+        connecting_line:
+          func: isaaclab.sim.spawners.shapes.shapes:spawn_cylinder
+          visible: true
+          semantic_tags: null
+          copy_from_source: true
+          mass_props: null
+          rigid_props: null
+          collision_props: null
+          activate_contact_sensors: false
+          visual_material_path: material
+          visual_material:
+            func: isaaclab.sim.spawners.materials.visual_materials:spawn_preview_surface
+            diffuse_color: [1.0, 1.0, 0.0]
+            emissive_color: [0.0, 0.0, 0.0]
+            roughness: 1.0
+            metallic: 0.0
+            opacity: 1.0
+          physics_material_path: material
+          physics_material: null
+          radius: 0.002
+          height: 1.0
+          axis: Z
+task_type: reference_motion_tracking
+real_deployment_supported: false
+actions:
+  JointPositionAction:
+    clip:
+    - [-1.0, 1.0]
+    - [-1.0, 1.0]
+    - [-0.55, 0.55]
+    - [-0.55, 0.55]
+    - [-0.7, 1.5]
+    - [-1.5, 0.7]
+    - [-1.2, 1.2]
+    - [-1.2, 1.2]
+    - [-0.45, 1.0]
+    - [-0.45, 1.0]
+    - [-0.5, 0.5]
+    - [-0.5, 0.5]
+    joint_names: [.*]
+    scale: [0.25, 0.25, 0.25, 0.25, 0.25, 0.25, 0.25, 0.25, 0.25, 0.25, 0.25, 0.25]
+    offset: [-0.1, -0.1, 0.0, 0.0, 0.0, 0.0, 0.2, 0.2, -0.1, -0.1, 0.0, 0.0]
+    joint_ids: null
+observations:
+  motion_command:
+    params: {command_name: motion}
+    clip: null
+    scale: [1.0, 1.0, 1.0, 1.0, 1.0, 1.0, 1.0, 1.0, 1.0, 1.0, 1.0, 1.0, 1.0, 1.0,
+      1.0, 1.0, 1.0, 1.0, 1.0, 1.0, 1.0, 1.0, 1.0, 1.0]
+    history_length: 1
+  motion_anchor_ori_b:
+    params: {command_name: motion}
+    clip: null
+    scale: [1.0, 1.0, 1.0, 1.0, 1.0, 1.0]
+    history_length: 1
+  base_ang_vel:
+    params: {}
+    clip: null
+    scale: [1.0, 1.0, 1.0]
+    history_length: 1
+  joint_pos_rel:
+    params: {}
+    clip: null
+    scale: [1.0, 1.0, 1.0, 1.0, 1.0, 1.0, 1.0, 1.0, 1.0, 1.0, 1.0, 1.0]
+    history_length: 1
+  joint_vel_rel:
+    params: {}
+    clip: null
+    scale: [1.0, 1.0, 1.0, 1.0, 1.0, 1.0, 1.0, 1.0, 1.0, 1.0, 1.0, 1.0]
+    history_length: 1
+  last_action:
+    params: {}
+    clip: null
+    scale: [1.0, 1.0, 1.0, 1.0, 1.0, 1.0, 1.0, 1.0, 1.0, 1.0, 1.0, 1.0]
+    history_length: 1
