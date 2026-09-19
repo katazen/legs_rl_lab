@@ -77,8 +77,9 @@ class NlegsRoughPPORunnerCfg(NlegsFlatPPORunnerCfg):
     experiment_name = "nlegs_rough"
 
     def __post_init__(self):
-        # 4096 环境 × 24 步，镜像扩增后每批 12288 条；保留观测历史和 checkpoint 形状。
+        # 保留小批次；实测左右单侧限位不同，不再强制镜像增强或镜像损失。
         self.algorithm.num_mini_batches = 16
+        self.algorithm.symmetry_cfg = None
 
 
 @configclass

@@ -25,6 +25,7 @@ height_scanner 用于 critic 特权观测 height_scan（非对称 actor-critic�
 
 import isaaclab.terrains as terrain_gen
 from isaaclab.managers import CurriculumTermCfg as CurrTerm
+from isaaclab.managers import EventTermCfg as EventTerm
 from isaaclab.managers import ObservationTermCfg as ObsTerm
 from isaaclab.managers import SceneEntityCfg
 from isaaclab.managers import TerminationTermCfg as DoneTerm
@@ -33,6 +34,21 @@ from isaaclab.utils import configclass
 
 from legs_rl_lab.tasks.nlegs_task import mdp
 from legs_rl_lab.tasks.nlegs_task.task.flat.flat_env_cfg import FlatEnvCfg, FlatPlayEnvCfg
+
+
+# 2026-09-17 实测下蹲端点，与部署 crouch_calibration 相同；另一端及踝 roll 不新增约束。
+CROUCH_LIMITS = {
+    "joint_L1": (-0.9752422370, None),
+    "joint_L2": (None, 0.4964904250),
+    "joint_L3": (None, 0.4983978027),
+    "joint_L4": (None, 1.0561150530),
+    "joint_L5": (-0.3763256275, None),
+    "joint_R1": (-0.9676127260, None),
+    "joint_R2": (-0.5270084688, None),
+    "joint_R3": (-0.6185626001, None),
+    "joint_R4": (None, 1.0912108034),
+    "joint_R5": (-0.4224841688, None),
+}
 
 
 # 按 0.58m 小机身温和缩放的 rough 地形。num_rows = 难度等级(课程沿行递增)，num_cols = 每级的变体数。
@@ -85,8 +101,38 @@ NLEGS_ROUGH_TERRAINS_CFG = TerrainGeneratorCfg(
 )
 
 
-def _apply_rough(cfg) -> None:
-    """把 nlegs_flat 平地配置改成生成器 rough 地形 + 地形课程 + 因地形调整奖励/观测/终止。"""
+def _apply_rough(cfg, knee_stops=False) -> None:
+    """rough 共用地形、单侧限位和辨识 DR；不改变调用任务的零速行为。"""
+    # rough 实机拆除膝限位块；static 保留原来的 10 个下蹲端点。
+    limits = {name: bounds for name, bounds in CROUCH_LIMITS.items()
+              if knee_stops or name not in ("joint_L4", "joint_R4")}
+    cfg.actions.JointPositionAction.clip = {
+        name: (lo if lo is not None else -float("inf"), hi if hi is not None else float("inf"))
+        for name, (lo, hi) in limits.items()
+    }
+    cfg.events.crouch_joint_limits = EventTerm(
+        func=mdp.set_joint_position_limits, mode="startup", params={"joint_limits": limits},
+    )
+    # 09-16/17 小幅辨识只支持扩展等效延迟与增益覆盖，保留名义 PD、惯量和摩擦。
+    actuators = cfg.scene.robot.actuators
+    actuators["knees"] = actuators["legs"].replace(
+        joint_names_expr=[".*4"], stiffness=250.0, damping=5.0, min_delay=1, max_delay=6,
+    )
+    actuators["legs"].joint_names_expr = [".*1", ".*2", ".*3"]
+    actuators["legs"].stiffness.pop(".*4")
+    actuators["legs"].damping.pop(".*4")
+    actuators["ankle_pitch"].min_delay = 1
+    actuators["ankle_roll"].min_delay = 2
+    cfg.events.randomize_ankle_gains.params["damping_distribution_params"] = (0.7, 1.2)
+    cfg.events.randomize_ankle_roll_gains = EventTerm(
+        func=mdp.randomize_actuator_gains, mode="reset",
+        params={
+            "asset_cfg": SceneEntityCfg("robot", joint_names=[".*6"]),
+            "stiffness_distribution_params": (0.85, 1.1),
+            "damping_distribution_params": (0.5, 1.0),
+            "operation": "scale", "distribution": "uniform",
+        },
+    )
     # --- 地形: plane -> generator(rough) ---
     # 用 .replace() 拿独立副本，避免 play/train 两个 env cfg 共享并互相改写同一个地形对象
     cfg.scene.terrain.terrain_type = "generator"
