@@ -40,8 +40,9 @@ def randomize_joint_zero_bias(
     """给每个环境抽一组"标0偏置":模拟实机编码器零位标定误差。
 
     每关节一个恒定偏置, 在 reset 时采样、整幕不变(区别于每步传感器噪声)。
-    仅写入 env._joint_zero_bias 缓冲, 由 observations.joint_pos_rel_biased 加到
-    策略观测的 joint_pos_rel 上(critic 不加, 保持真值)。
+    写入 env._joint_zero_bias 缓冲: joint_pos_rel_biased 给策略观测加 b,
+    ZeroBiasJointPositionAction 将编码器目标减 b 后送入仿真电机。
+    使用普通 JointPositionAction 的任务仍只有观测偏置。critic 保持物理真值。
 
     对称范围(mean=0)是有意为之: 目的是让策略对任意方向的恒定零偏都鲁棒,
     而不是去拟合当前实机那个特定偏置(重标0后偏置就变了)。

@@ -61,7 +61,7 @@ class MultiTaskController:
                 raise ValueError("下蹲和起身任务限位不一致")
         if not np.allclose(up.motion.positions[-1, up.sim2real], walk.default_real, atol=1e-5):
             raise ValueError("起身末帧必须与走路默认站姿一致")
-        # 同 sim2sim 共用 limit 机器人；不改 common，不读取或比较 XML 的限位。
+        # 下蹲/起身保留原任务边界；walk 的膝上限随后按自身训练 clip 与 common 解析。
         self.lo = np.maximum(node.lo, up.motion.limits[up.sim2real, 0])
         self.hi = np.minimum(node.hi, up.motion.limits[up.sim2real, 1])
         self.pose_q = {"stand": up.motion.positions[-1, up.sim2real],
@@ -69,6 +69,17 @@ class MultiTaskController:
         self.pose_rot = {"stand": up.motion.rotations[-1], "crouch": up.motion.rotations[0]}
         if cfg.get("crouch_calibration") is not None:
             self._calibrate_crouch(cfg["crouch_calibration"])
+        self.mimic_limits = (self.lo, self.hi)
+        self.walk_limits = (self.lo.copy(), self.hi.copy())
+        # 膝止挡已拆除：仅取消 walk 额外套用的下蹲膝上限，其他机械端点保持。
+        for joint in ("L4", "R4"):
+            i = node.real_joint_names.index(joint)
+            trained_hi = (walk.action_term_clip[walk.sim2real[i], 1]
+                          if walk.action_term_clip is not None else np.inf)
+            self.walk_limits[1][i] = min(node.hi[i], trained_hi)
+        lo, hi = self.walk_limits
+        if (np.any(lo >= hi) or np.any(walk.default_real < lo) or np.any(walk.default_real > hi)):
+            raise ValueError("walk 任务边界无效或排除了默认站姿")
         for name, p in self.policies.items():
             p.obs_raw[:] = 0.
             p.obs_raw[3:7] = p.motion.quaternions[0] if p.motion else [1., 0., 0., 0.]
@@ -163,7 +174,10 @@ class MultiTaskController:
         self.n._close_log()
         self.change("stopped", reason)
 
-    def state_error(self, task_bounds=False):
+    def _policy_limits(self, policy):
+        return self.walk_limits if policy is self.policies["walk"] else self.mimic_limits
+
+    def state_error(self, task_bounds=False, limits=None):
         n = self.n
         if not n._fresh():
             return "关节或 IMU 缺失/超时"
@@ -180,17 +194,18 @@ class MultiTaskController:
         if np.any(outside):
             return "反馈超出 common 硬件限位（rad）: " + n._joint_range_details(q, n.lo, n.hi, outside)
         if task_bounds:
+            lo, hi = (self.lo, self.hi) if limits is None else limits
             margin = self.cfg["joint_limit_tolerance"]
-            outside = (q < self.lo - margin) | (q > self.hi + margin)
+            outside = (q < lo - margin) | (q > hi + margin)
             if np.any(outside):
                 return (f"反馈超出任务限位（rad，容差 ±{margin:.3f}）: "
-                        + n._joint_range_details(q, self.lo, self.hi, outside))
+                        + n._joint_range_details(q, lo, hi, outside))
         if rot[2, 2] < np.cos(self.cfg["max_tilt"]):
             return "机身倾角过大"
         return None
 
-    def pose_error(self, pose, stopping=False):
-        if (reason := self.state_error(task_bounds=True)) is not None:
+    def pose_error(self, pose, stopping=False, limits=None):
+        if (reason := self.state_error(task_bounds=True, limits=limits)) is not None:
             return reason
         n = self.n
         tolerance = np.full(12, .45 if stopping else self.cfg["joint_tolerance"])
@@ -295,17 +310,19 @@ class MultiTaskController:
         if task not in required or self.state != required[task] or self.active == task:
             reason = None
             if task in required and self.state in ("wait_current", "wait_feedback", "checking", "stand_ready", "crouch_ready", "stopped"):
-                reason = self.pose_error("crouch" if task == "rise" else "stand")
+                reason = self.pose_error("crouch" if task == "rise" else "stand",
+                                         limits=self._policy_limits(self.policies[task]))
             label = {"walk": "走路", "crouch": "下蹲", "rise": "起身"}.get(task, task)
             return self.reject(f"{label}未启动：{reason or '当前状态不允许'}")
-        if (reason := self.pose_error("crouch" if task == "rise" else "stand")) is not None:
+        p = self.policies[task]
+        lo, hi = self._policy_limits(p)
+        if (reason := self.pose_error("crouch" if task == "rise" else "stand", limits=(lo, hi))) is not None:
             return self.reject(reason)
-        hold_violation = np.maximum(self.lo - n.target_pub, n.target_pub - self.hi)
+        hold_violation = np.maximum(lo - n.target_pub, n.target_pub - hi)
         if np.any(hold_violation > self.cfg["joint_limit_tolerance"]):
             return self.reject(f"当前保持目标超出任务限位（rad，容差 ±{self.cfg['joint_limit_tolerance']:.3f}）: "
-                               + n._joint_range_details(n.target_pub, self.lo, self.hi,
+                               + n._joint_range_details(n.target_pub, lo, hi,
                                                         hold_violation > self.cfg["joint_limit_tolerance"]))
-        p = self.policies[task]
         p.policy_step = 0
         p.last_action[:] = 0.
         p.hist = TermGroupedHistory(p.term_dims, p.num_history)
@@ -326,6 +343,8 @@ class MultiTaskController:
             return self.reject(f"策略接管预检失败: {exc}")
         n._close_log()
         n._clear_cmd_sources()
+        # 成功接管才换边界；中断保持、停步及慢回站姿继续沿用它，避免膝目标跳回旧上限。
+        self.lo, self.hi = lo, hi
         self.active, self.pending_target = task, target
         # 初始保持可能来自边界外少量测量偏差；策略接管起点也必须严格落在指令边界内。
         self.handover_from = np.clip(n.target_pub, self.lo, self.hi).astype(np.float32)
@@ -349,7 +368,8 @@ class MultiTaskController:
         self.policy_ms = (time.monotonic() - start) * 1000
         if time.monotonic() - start > self.cfg["max_policy_gap"] or not self.n._fresh():
             raise ValueError("推理超时或推理后反馈过期")
-        return np.clip(target, self.lo, self.hi).astype(np.float32), terms
+        lo, hi = self._policy_limits(p)
+        return np.clip(target, lo, hi).astype(np.float32), terms
 
     def update_state(self):
         now = time.monotonic()

@@ -17,7 +17,8 @@ def joint_pos_rel_biased(
     """joint_pos - default_joint_pos, 外加每环境恒定的"标0偏置"(模拟编码器零位标定误差)。
 
     偏置由 events.randomize_joint_zero_bias 在 reset 时写入 env._joint_zero_bias。
-    只用于策略观测(critic 用无偏的 mdp.joint_pos_rel), 让策略对恒定零偏鲁棒 ->  不再零速漂移。
+    策略读 q_phys + b - default_joint_pos；critic 用无偏的 mdp.joint_pos_rel。
+    rough 同时用 ZeroBiasJointPositionAction 换算目标；是否减少实机漂移需重新训练验证。
     """
     asset = env.scene[asset_cfg.name]
     rel = asset.data.joint_pos[:, asset_cfg.joint_ids] - asset.data.default_joint_pos[:, asset_cfg.joint_ids]

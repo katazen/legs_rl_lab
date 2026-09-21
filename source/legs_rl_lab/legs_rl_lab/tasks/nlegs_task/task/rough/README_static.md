@@ -1,7 +1,7 @@
 # nlegs_rough_static
 
 在原 rough 地形上训练“有速度命令行走，零命令站稳”，并考虑真实下蹲侧的单端限位。
-复用 `FlatStaticEnvCfg` 和 `_apply_rough`，不复制训练框架、不新增启动脚本。
+复用 `FlatStaticEnvCfg`，在本任务的 `_apply_rough_static` 中保留原 rough_static 参数，不跟随 rough 的新踝 pitch 候选。
 
 ## 使用
 
@@ -36,7 +36,7 @@ python source/legs_rl_lab/legs_rl_lab/tasks/nlegs_task/task/rough/sim2sim_static
 - 零命令增加默认站姿偏差惩罚（−1）、关节速度平方惩罚（−0.02）、双脚接地奖励（+0.5）。
 - 保留速度跟踪、平衡、防滑及扰动；站稳是软目标，受扰动仍允许迈步。非零小速度及纯转向仍执行行走逻辑。
 - actor 仍是 47×10=470 维盲走观测；critic 包含地形扫描，共 2490 维。
-- `rough_env_cfg.py` 的 `CROUCH_LIMITS` 取自 2026-09-17 实测标定；本任务保留 L/R 1–5 号关节的 10 个单侧端点，零速踏步 rough 因拆除膝限位块只取其中 8 个；踝 roll 不新增限制。
+- `static_env_cfg.py` 的 `CROUCH_LIMITS` 取自 2026-09-17 实测标定；本任务保留 L/R 1–5 号关节的 10 个单侧端点，零速踏步 rough 因拆除膝限位块只保留 8 个；踝 roll 不新增限制。
 - 同一张限位表同时用于**绝对目标角裁剪**和仿真 startup 写入 **PhysX 物理关节边界**，原有软限位奖励也会同步更新。
 - 另一端仍沿用 USD 已有值，不扩大、不重新辨识；XML/USD 文件均不修改。物理求解器存在数值容差，这不是实际反馈绝不越界的保证。
 - 实测左右限位不完全对称，因此 rough 和 rough_static 均关闭强制镜像增强/镜像损失。flat 等其他任务不变。
