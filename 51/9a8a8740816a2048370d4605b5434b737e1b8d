@@ -1,0 +1,26 @@
+.gitattributes
+  s_22f8ffc6662cf2::t_25ac3dd1007f25 18,20
+.gitignore
+  s_22f8ffc6662cf2::t_25ac3dd1007f25 85,90,96-97
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.7.4",
+  "base_commit_sha": "519a8a8740816a2048370d4605b5434b737e1b8d",
+  "prompts": {},
+  "humans": {
+    "h_d698c05df35737": {
+      "author": "woan <377801872@qq.com>"
+    }
+  },
+  "sessions": {
+    "s_22f8ffc6662cf2": {
+      "agent_id": {
+        "tool": "codex",
+        "id": "01a06a55-9d3a-7f52-b1dc-6c6e4d885f57",
+        "model": "gpt-6-astra"
+      },
+      "human_author": "woan <377801872@qq.com>"
+    }
+  }
+}
