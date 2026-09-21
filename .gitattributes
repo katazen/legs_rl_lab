@@ -15,8 +15,9 @@
 datasets/stand_to_crouch_v3/preview.* -filter -diff -merge -text
 datasets/crouch_to_stand_v2/preview.* -filter -diff -merge -text
 
-# 这三份部署策略单文件不足 2 MB，直接入 Git，机器人拉取无需 Git LFS。
+# 这些部署策略单文件不足 2 MB，直接入 Git，机器人拉取无需 Git LFS。
 logs/rsl_rl/nlegs_flat_static/2026-09-16_11-41-05/exported/*.pt -filter -diff -merge -text
+logs/rsl_rl/nlegs_rough/2026-09-20_19-15-58/exported/*.pt -filter -diff -merge -text
 logs/rsl_rl/nlegs_mimic_crouch/2026-09-17_16-42-11/exported/*.pt -filter -diff -merge -text
 logs/rsl_rl/nlegs_mimic_stand/2026-09-17_15-40-44/exported/*.pt -filter -diff -merge -text
 
