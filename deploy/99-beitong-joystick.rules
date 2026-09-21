@@ -1,0 +1,5 @@
+# 仅授权指定北通手柄的 joystick 输入；支持 SSH / 无显示器，保留原 KP20 规则。
+SUBSYSTEM=="input", ENV{ID_INPUT_JOYSTICK}=="1", ATTRS{idVendor}=="20bc", ATTRS{idProduct}=="5126", OWNER:="woan", MODE:="0660"
+SUBSYSTEM=="input", ENV{ID_INPUT_JOYSTICK}=="1", ATTRS{idVendor}=="20bc", ATTRS{idProduct}=="509c", OWNER:="woan", MODE:="0660"
+SUBSYSTEM=="input", ENV{ID_INPUT_JOYSTICK}=="1", ATTRS{idVendor}=="045e", ATTRS{idProduct}=="028e", ATTRS{manufacturer}=="BETOP", OWNER:="woan", MODE:="0660"
+SUBSYSTEM=="input", ENV{ID_INPUT_JOYSTICK}=="1", ATTRS{idVendor}=="045e", ATTRS{idProduct}=="028e", ATTRS{manufacturer}=="BEITONG*", OWNER:="woan", MODE:="0660"

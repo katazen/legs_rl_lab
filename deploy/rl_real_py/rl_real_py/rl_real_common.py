@@ -300,7 +300,8 @@ class RL_real(Node, Policy):
         # ---------- 通信 ----------
         self.create_subscription(JointState, "/left_joint_states", self._on_joint, 5)
         self.create_subscription(Imu, "/imu", self._on_imu, 5)
-        self.create_subscription(Joy, "/joy", self._on_joy, 5)
+        # 标准化输入与原始 /joy 隔离，避免 joy_node 的设备相关编号混入控制。
+        self.create_subscription(Joy, "/gamepad", self._on_joy, 5)
         # armcontrol 在主循环逐帧检查 12 个电机的 err_code(0x0=失能 0x1=使能 0xD=通讯丢失
         # 0xE=过载...), 并在状态跳变时往 /motor_warn 发 JSON。而 err_code 不在 JointState 里,
         # 只看位置/力矩发现不了电机失能(只会看到读数“安静”地偏掉) -> 此处订阅并告警。
@@ -417,11 +418,15 @@ class RL_real(Node, Policy):
         self._last_imu_rx = time.monotonic()
 
     def _on_joy(self, msg):
-        def ax(i):
-            v = msg.axes[i] if i < len(msg.axes) else 0.0
-            return v if abs(v) > self.deadzone else 0.0
+        axes = np.asarray(msg.axes, np.float32)
+        if (axes.shape != (6,) or len(msg.buttons) < 15 or not np.isfinite(axes).all()
+                or any(b not in (0, 1) for b in msg.buttons)):
+            self.multi.halt("手柄数据无效：/gamepad 仅接受 game_controller_node 的标准输入")
+            return
+        # SDL: LEFTY=1、LEFTX=0、RIGHTX=2；扳机 4/5 不参与速度控制。
+        axes = axes[[1, 0, 2]]
+        axes = np.where(np.abs(axes) > self.deadzone, axes, 0.0)
         # 比例式(回中即0)；手柄停发时由状态机归零。
-        axes = np.array([ax(1), ax(0), ax(2)], np.float32)
         self._joy_cmd[:] = axes * np.where(axes >= 0.0, self.cmd_max, -self.cmd_min)
         self._last_joy_rx = time.monotonic()
         if not np.isfinite(self._joy_cmd).all():

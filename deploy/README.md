@@ -59,8 +59,31 @@ RL 窗口在启动、状态切换（包括动作完成）、操作被拒绝及�
 | 重新验收，不自动复位或续播 | R | Back | `stopped` |
 
 W/S、A/D、Q/E 控制速度；空格清零速度，不等于退出走路策略。小键盘使用数字模式。
-手柄沿用已有 `/joy` 节点；按钮索引集中在 `gamepad_buttons`，默认 A/B/X/Y=0/1/2/3、LB=4、Back=6、Start=7，首次使用须根据实际 `/joy` 核对。
+手柄统一使用 ROS `game_controller_node` 的 SDL 标准映射，发布到专用 `/gamepad`；不再读取原始 `/joy`。
+机器人电脑另开终端运行一份手柄节点（`start_real.sh` 不重复启动它）：
+
+```bash
+source /opt/ros/humble/setup.bash
+ros2 run joy game_controller_node --ros-args -p autorepeat_rate:=20.0 -r joy:=/gamepad
+```
+
+左摇杆前后/左右控制前后/横移，右摇杆左右控制转向，扳机不控制速度。
+标准轴为 LEFTX/LEFTY/RIGHTX/RIGHTY/LT/RT=0/1/2/3/4/5；按钮 A/B/X/Y=0/1/2/3、LB=9、Back=4、Start=6。
+`gamepad_buttons` 已按此标准配置；不能把普通 `joy_node` 重映射到 `/gamepad`，原始轴序与标准轴序不同。
+首次连接或切换有线/无线后，先不运行机器人控制，用 `ros2 topic echo /gamepad` 核对回中、方向及按钮。
+摇杆回中仅归零速度命令，当前 rough 仍会踏步；站住要按 Start，再确认接地后再次按 Start。
 组合键由 A/X/Y/Start 的按下边沿触发，须先按住 LB，再按动作键；长按不会重复启动。
+
+北通手柄访问权限在机器人电脑安装一次（从仓库根目录执行），以后重插/重启仍生效：
+
+```bash
+sudo install -m 0644 deploy/99-beitong-joystick.rules /etc/udev/rules.d/99-beitong-joystick.rules
+sudo udevadm control --reload-rules
+```
+
+随后只重插手柄/接收器，再重启手柄节点；不重插电机 CAN。
+规则按 USB 身份匹配并保留旧型号，仅授权 joystick 输入，不依赖 `eventN` 编号，也不放开所有输入设备。
+权限与无线配对是两回事：接收器被识别不等于手柄已配对；未知 SDL 映射需先核对，不能猜测轴号。
 
 `4 / LB+Start` 是有支撑的手动复位，不是自主起身策略。无需匹配站姿/蹲姿模板，但须先扶稳或吊起，
 反馈新鲜、无电机故障、在硬件/任务允许范围内、倾角不超过 `max_tilt`，关节和机身角速度连续低于

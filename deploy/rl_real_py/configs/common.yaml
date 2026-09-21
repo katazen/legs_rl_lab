@@ -26,8 +26,8 @@ ctrl_timeout: 0.4          # s，手柄消息过期归零
 cmd_accel_limit: [0.5, 0.5, 1.0]  # 速度指令缓升/缓降
 keyboard:
   step: 0.05
-# 按实际手柄 /joy 核对；LB+A/X/Y 选择任务，B 中断，Back 重新验收。
-gamepad_buttons: {a: 0, b: 1, x: 2, y: 3, lb: 4, back: 6, start: 7}
+# game_controller_node 的 SDL 标准编号；LB+A/X/Y 选择任务，B 中断，Back 重新验收。
+gamepad_buttons: {a: 0, b: 1, x: 2, y: 3, lb: 9, back: 4, start: 6}
 
 # 2026-09-17 11:02 只读标定，机身前倾 29.729°；与 v2 起身的 10 个单侧端点一致。
 # 只覆盖蹲姿验收和指定的单侧任务边界，不改模型、参考动作或上方硬件限位。
