@@ -1,0 +1,44 @@
+deploy/README.md
+  s_22f8ffc6662cf2::t_5648b5997796f7 6,142
+  s_22f8ffc6662cf2::t_3a9ddf20a31686 125,140,152,162
+  s_22f8ffc6662cf2::t_ee49107db57618 8,43,46,54,57-58,88-89,93,96,99-101,103-104,107,110,118-120,123
+deploy/rl_real_py/rl_real_py/motion_reference.py
+  s_22f8ffc6662cf2::t_ee8102d520dfe0 133
+deploy/rl_real_py/rl_real_py/rl_real_common.py
+  s_22f8ffc6662cf2::t_354f2c9667b624 385-388
+  s_22f8ffc6662cf2::t_34778096e0b386 289,351,391-394,403-404
+  s_22f8ffc6662cf2::t_8e300a4d7b9173 248,267,300,303-304
+deploy/start_real.sh
+  s_22f8ffc6662cf2::t_6210be8a581913 72-74
+deploy/rl_real_py/configs/common.yaml
+  s_22f8ffc6662cf2::t_e1e3cf318c84e9 1,15,27,31
+deploy/rl_real_py/rl_real_py/multi_task.py
+  s_22f8ffc6662cf2::t_0bb5c3695c6349 88,240,262
+  s_22f8ffc6662cf2::t_fecf1e27ff8142 19,111,120
+  s_22f8ffc6662cf2::t_fe0e7205d3b621 14,93,137,163-165,198-199,208,217,263-266,272,275-276,283,285,319
+  s_22f8ffc6662cf2::t_58a6396e4a7b56 312
+  s_22f8ffc6662cf2::t_5d94f5df753141 1,89,97,121,127,135,168-169,206,245
+deploy/rl_real_py/test_manual_stop_only.py
+  s_22f8ffc6662cf2::t_66af8cfc2f5731 1-57
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.7.4",
+  "base_commit_sha": "d07ea5763cf7981e2d05bcd84f9066ffd7fbc257",
+  "prompts": {},
+  "humans": {
+    "h_d698c05df35737": {
+      "author": "woan <377801872@qq.com>"
+    }
+  },
+  "sessions": {
+    "s_22f8ffc6662cf2": {
+      "agent_id": {
+        "tool": "codex",
+        "id": "01a06a55-9d3a-7f52-b1dc-6c6e4d885f57",
+        "model": "gpt-6-sol"
+      },
+      "human_author": "woan <377801872@qq.com>"
+    }
+  }
+}
