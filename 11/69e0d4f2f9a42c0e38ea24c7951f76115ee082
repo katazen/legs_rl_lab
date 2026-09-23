@@ -1,0 +1,36 @@
+deploy/README.md
+  s_22f8ffc6662cf2::t_790ccdb19ca101 56,71
+deploy/rl_real_py/rl_real_py/multi_task.py
+  s_22f8ffc6662cf2::t_790ccdb19ca101 298,447
+deploy/rl_real_py/rl_real_py/rl_real_common.py
+  s_d61c4100a220bb::t_ae5aed213a0bdd 463
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.7.4",
+  "base_commit_sha": "1169e0d4f2f9a42c0e38ea24c7951f76115ee082",
+  "prompts": {},
+  "humans": {
+    "h_d698c05df35737": {
+      "author": "woan <377801872@qq.com>"
+    }
+  },
+  "sessions": {
+    "s_22f8ffc6662cf2": {
+      "agent_id": {
+        "tool": "codex",
+        "id": "01a06a55-9d3a-7f52-b1dc-6c6e4d885f57",
+        "model": "gpt-6-astra"
+      },
+      "human_author": "woan <377801872@qq.com>"
+    },
+    "s_d61c4100a220bb": {
+      "agent_id": {
+        "tool": "claude",
+        "id": "d691f429-1425-477a-86e4-c37933a46958",
+        "model": "unknown"
+      },
+      "human_author": "woan <377801872@qq.com>"
+    }
+  }
+}
