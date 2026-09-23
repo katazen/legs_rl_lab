@@ -295,7 +295,7 @@ class MultiTaskController:
                 command = n.cmd.copy()
                 n._clear_cmd_sources()
                 n.cmd[:] = command
-                self.change("stopping", "缓降速度；看到双脚落地后 Enter/再次 Start 确认收脚，不会自动接管")
+                self.change("stopping", "速度指令归零；看到双脚落地后 Enter/再次 Start 确认收脚，不会自动接管")
                 return True
             return self.reject("正常停步只用于走路；收脚确认用 Enter，中断其他动作请按 P/B")
         if task == "confirm_stop":
@@ -444,7 +444,7 @@ class MultiTaskController:
             p = self.policies[self.active]
             joy = n._joy_cmd if now - n._last_joy_rx < n.ctrl_timeout else np.zeros(3)
             desired = np.clip(n._kb_cmd + joy, n.cmd_min, n.cmd_max) if self.state == "walking" else np.zeros(3)
-            n.cmd += np.clip(desired - n.cmd, -n.cmd_accel_limit * n.pub_dt, n.cmd_accel_limit * n.pub_dt)
+            n.cmd[:] = desired
             p.cmd[:] = n.cmd
             if n.tick % n.decimation == 0:
                 try:

@@ -23,7 +23,6 @@ use_derived_vel: false     # 默认直接使用电机上报速度
 vel_ema_alpha: 0.5         # 仅差分速度模式使用
 deadzone: 0.12
 ctrl_timeout: 0.4          # s，手柄消息过期归零
-cmd_accel_limit: [0.5, 0.5, 1.0]  # 速度指令缓升/缓降
 keyboard:
   step: 0.05
 # game_controller_node 的 SDL 标准编号；LB+A/X/Y 选择任务，B 中断，Back 重新验收。

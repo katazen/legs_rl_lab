@@ -258,9 +258,6 @@ class RL_real(Node, Policy):
         self.use_derived_vel = bool(cfg.get("use_derived_vel", False))
         self.vel_alpha = float(cfg.get("vel_ema_alpha", 0.5))
         self.state_timeout = float(cfg.get("state_timeout", 0.2))
-        self.cmd_accel_limit = np.array(cfg.get("cmd_accel_limit", [0.5, 0.5, 1.0]), np.float32)
-        if self.cmd_accel_limit.shape != (3,) or np.any(self.cmd_accel_limit <= 0):
-            raise ValueError("cmd_accel_limit 必须是 3 个正数 [vx, vy, yaw]")
         if not np.isfinite(self.state_timeout) or self.state_timeout <= 0:
             raise ValueError("state_timeout 必须是有限正数")
         # 手柄消息超时后归零；键盘指令由空格清零。
@@ -463,7 +460,7 @@ class RL_real(Node, Policy):
             + [f"q{i}" for i in range(12)]                     # 关节位置(实机序)
             + [f"qd{i}" for i in range(12)]                    # obs 用的关节速度(实机序; derived 或电机)
             + [f"mvel{i}" for i in range(12)]                  # 电机上报原始速度 msg.velocity(实机序)
-            + [f"tau{i}" for i in range(12)]                   # 电机上报力矩 msg.effort(实机序)
+            + [f"tau{i}" for i in range(12)]                   # 电机上报力矩 msg.effort(实机序; 与 q/mvel 同关节帧)
             + [f"obs{i}" for i in range(p.num_obs)]         # 单帧观测(仿真序)
             + [f"act{i}" for i in range(p.num_actions)]     # 策略动作(仿真序)
             + [f"cmd{i}" for i in range(p.num_actions)])    # 下发目标角(实机序)

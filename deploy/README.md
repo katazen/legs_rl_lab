@@ -53,7 +53,7 @@ RL 窗口在启动、状态切换（包括动作完成）、操作被拒绝及�
 | 下蹲 | 2 | LB+X | `stand_ready` |
 | 起身 | 3 | LB+Y | `crouch_ready` |
 | 手动慢回准备站姿 | 4 | LB+Start | 稳定的 `checking` / `stand_ready` / `crouch_ready` / `stopped` |
-| 正常停步，速度缓降归零 | 0 | Start | `walking` |
+| 正常停步，速度指令立即归零 | 0 | Start | `walking` |
 | 人工确认接地，平滑收脚 | Enter | 再次按 Start | `stopping` |
 | 中断并锁存，保持最后下发目标 | P | B | 任意阶段 |
 | 重新验收，不自动复位或续播 | R | Back | `stopped` |
@@ -68,6 +68,7 @@ ros2 run joy game_controller_node --ros-args -p autorepeat_rate:=20.0 -r joy:=/g
 ```
 
 左摇杆前后/左右控制前后/横移，右摇杆左右控制转向，扳机不控制速度。
+速度指令不做缓升/缓降，摇杆回中后下一控制周期归零；保留死区、失联归零和任务接管过渡。
 标准轴为 LEFTX/LEFTY/RIGHTX/RIGHTY/LT/RT=0/1/2/3/4/5；按钮 A/B/X/Y=0/1/2/3、LB=9、Back=4、Start=6。
 `gamepad_buttons` 已按此标准配置；不能把普通 `joy_node` 重映射到 `/gamepad`，原始轴序与标准轴序不同。
 首次连接或切换有线/无线后，先不运行机器人控制，用 `ros2 topic echo /gamepad` 核对回中、方向及按钮。
