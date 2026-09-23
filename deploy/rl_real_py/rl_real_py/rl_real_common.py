@@ -13,7 +13,6 @@ import threading
 import termios
 import tty
 import fcntl
-import json
 from pathlib import Path
 
 import numpy as np
@@ -211,12 +210,6 @@ class Policy:
             target = np.clip(target, self.action_term_clip[:, 0], self.action_term_clip[:, 1])
         if target.shape != (12,) or not np.isfinite(target).all():
             raise ValueError("策略目标维度错误或含 NaN/Inf")
-        if self.motion is not None:
-            real_target = target[self.sim2real]
-            outside = (real_target < self.lo - 1e-6) | (real_target > self.hi + 1e-6)
-            if np.any(outside):
-                raise ValueError("策略目标超过 common 硬件限位，拒绝下发（rad）: "
-                                 + self._joint_range_details(real_target, self.lo, self.hi, outside))
         self.last_action = action
         return np.clip(target[self.sim2real], self.lo, self.hi).astype(np.float32)
 
@@ -231,8 +224,6 @@ class Policy:
             durations.append(time.monotonic() - begin)
         self.last_action[:] = 0.
         self.hist = TermGroupedHistory(self.term_dims, self.num_history)
-        if max(durations) >= self.step_dt:
-            raise ValueError(f"推理未满足 {1/self.step_dt:g}Hz：最慢 {max(durations)*1000:.1f}ms")
         print(f"[policy-check] {x.size}D → {self.num_actions}D；策略 {1/self.step_dt:g}Hz；"
               f"预热后推理最慢 {max(durations)*1000:.2f}ms")
 
@@ -254,12 +245,9 @@ class RL_real(Node, Policy):
 
         Policy.__init__(self, cfg, run_dir, repo)
 
-        # ---------- 速度来源 / 交互 / 安全 ----------
+        # ---------- 速度来源 / 交互 ----------
         self.use_derived_vel = bool(cfg.get("use_derived_vel", False))
         self.vel_alpha = float(cfg.get("vel_ema_alpha", 0.5))
-        self.state_timeout = float(cfg.get("state_timeout", 0.2))
-        if not np.isfinite(self.state_timeout) or self.state_timeout <= 0:
-            raise ValueError("state_timeout 必须是有限正数")
         # 手柄消息超时后归零；键盘指令由空格清零。
         self.ctrl_timeout = float(cfg.get("ctrl_timeout", 0.4))
         self.deadzone = float(cfg.get("deadzone", 0.12))
@@ -276,7 +264,7 @@ class RL_real(Node, Policy):
         self._motor_tau = np.zeros(12, np.float32)   # 电机上报力矩 msg.effort (实机序, 始终记录)
         self._prev_q = None
         self._prev_t = None
-        self._last_joint_rx = None     # 最近一次收到关节/IMU 的墙钟时间 (看门狗)
+        self._last_joint_rx = None     # 首次接管前要求收到关节和 IMU
         self._last_imu_rx = None
         self._prev_buttons = []
         # 指令源由统一状态机合成。
@@ -285,7 +273,6 @@ class RL_real(Node, Policy):
         self._kb_cmd = np.zeros(3, np.float32)          # 键盘累加指令(空格清零)
         self._log_queue = self._log_path = None
         self._log_threads = []
-        self._motor_faults = {}
 
         from .multi_task import MultiTaskController
         self.multi = MultiTaskController(self, cfg, repo)
@@ -299,9 +286,7 @@ class RL_real(Node, Policy):
         self.create_subscription(Imu, "/imu", self._on_imu, 5)
         # 标准化输入与原始 /joy 隔离，避免 joy_node 的设备相关编号混入控制。
         self.create_subscription(Joy, "/gamepad", self._on_joy, 5)
-        # armcontrol 在主循环逐帧检查 12 个电机的 err_code(0x0=失能 0x1=使能 0xD=通讯丢失
-        # 0xE=过载...), 并在状态跳变时往 /motor_warn 发 JSON。而 err_code 不在 JointState 里,
-        # 只看位置/力矩发现不了电机失能(只会看到读数“安静”地偏掉) -> 此处订阅并告警。
+        # 电机状态仅记录告警，不自动中断策略。
         self.create_subscription(String, "/motor_warn", self._on_motor_warn, 20)
         self.pub = self.create_publisher(Float64MultiArray, "/dog_joint_pos", QoSProfile(depth=1))
         self.create_timer(self.pub_dt, self._tick)
@@ -311,18 +296,12 @@ class RL_real(Node, Policy):
             f"pub={1/self.pub_dt:.0f}Hz  policy={1/(self.pub_dt*self.decimation):.0f}Hz  "
             f"period={self.gait_period}s")
 
-    def _fresh(self):
-        """关节与 IMU 是否都在 state_timeout 内更新过。"""
-        now = time.monotonic()
-        return (self._last_joint_rx is not None and now - self._last_joint_rx < self.state_timeout
-                and self._last_imu_rx is not None and now - self._last_imu_rx < self.state_timeout)
-
     def _current_state_ready(self):
-        """当前姿态入口的最低检查；话题新鲜不等于每台电机反馈都新鲜。"""
+        """首次接管需要一组可用反馈，以原样保持当前角度。"""
         reason = None
         quat_norm = np.linalg.norm(self.obs_raw[3:7].astype(np.float64))
-        if not self._fresh():
-            reason = "关节或 IMU 缺失/超时"
+        if self._last_joint_rx is None or self._last_imu_rx is None:
+            reason = "尚未收到完整关节或 IMU 反馈"
         elif not np.all(np.isfinite(self.obs_raw)):
             reason = "关节/速度/IMU 含 NaN 或 Inf"
         elif not np.isfinite(quat_norm) or abs(quat_norm - 1.0) > 0.1:
@@ -369,20 +348,8 @@ class RL_real(Node, Policy):
 
     # ------------------------------------------------------------------ 回调
     def _on_motor_warn(self, msg):
-        """故障锁存后保持最后目标；反馈恢复不自动续播。"""
+        """只报告电机状态，不改变控制状态。"""
         self.get_logger().error(f"/motor_warn: {msg.data}")
-        try:
-            report = json.loads(msg.data)
-            for item in report["errors"]:
-                key = f"{report['arm'].lower()}:{item['id']}"
-                if item["err"] == "使能":
-                    self._motor_faults.pop(key, None)
-                else:
-                    self._motor_faults[key] = item["err"]
-        except (ValueError, KeyError, TypeError, AttributeError):
-            self._motor_faults["invalid_report"] = "无法解析电机告警"
-        if self._motor_faults and self.multi.state not in ("wait_current", "stopped"):
-            self.multi.halt(f"电机告警: {self._motor_faults}")
 
     def _on_joint(self, msg):
         if len(msg.position) < 12 or len(msg.velocity) < 12:
@@ -415,10 +382,16 @@ class RL_real(Node, Policy):
         self._last_imu_rx = time.monotonic()
 
     def _on_joy(self, msg):
-        axes = np.asarray(msg.axes, np.float32)
+        try:
+            axes = np.asarray(msg.axes, np.float32)
+        except (TypeError, ValueError):
+            axes = np.empty(0, np.float32)
         if (axes.shape != (6,) or len(msg.buttons) < 15 or not np.isfinite(axes).all()
                 or any(b not in (0, 1) for b in msg.buttons)):
-            self.multi.halt("手柄数据无效：/gamepad 仅接受 game_controller_node 的标准输入")
+            b = self.multi.buttons["b"]
+            if b < len(msg.buttons) and msg.buttons[b] == 1:
+                self.multi.request("halt")
+            self.get_logger().warn("忽略格式错误的 /gamepad 消息", throttle_duration_sec=1.0)
             return
         # SDL: LEFTY=1、LEFTX=0、RIGHTX=2；扳机 4/5 不参与速度控制。
         axes = axes[[1, 0, 2]]
@@ -427,7 +400,8 @@ class RL_real(Node, Policy):
         self._joy_cmd[:] = axes * np.where(axes >= 0.0, self.cmd_max, -self.cmd_min)
         self._last_joy_rx = time.monotonic()
         if not np.isfinite(self._joy_cmd).all():
-            self.multi.halt("手柄速度含 NaN/Inf")
+            self._joy_cmd[:] = 0.
+            self.get_logger().warn("忽略非有限手柄速度", throttle_duration_sec=1.0)
             return
         self.multi.joy(msg)
 

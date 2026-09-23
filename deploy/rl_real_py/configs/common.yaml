@@ -1,4 +1,4 @@
-# 统一三任务配置：只在这里选择模型、配置硬件和切换阈值。
+# 统一三任务配置：只在这里选择模型、配置硬件和动作过渡。
 # 模型的观测、动作、PD、参考轨迹仍读取各 run 的 params/deploy.yaml。
 # 路径相对仓库根目录；不自动选择最新模型。
 tasks:
@@ -9,11 +9,10 @@ tasks:
 publish_rate: 200
 target_ema_alpha: 1.0       # 统一部署与 sim2sim 一致，不叠加目标 EMA
 cmd_bias: [0.0, 0.0, 0.0]   # 统一部署不叠加速度零偏
-state_timeout: 0.06        # s，关节/IMU 反馈超时则锁存停止
 
 # 话题中的实机顺序；策略顺序从各模型按关节名读取。
 joint_index_in_real: ["L1","L2","L3","L4","L5","L6","R1","R2","R3","R4","R5","R6"]
-# 硬件边界；任务 clip 不能放宽它。R5 下限保留此前实测设置。
+# 目标角度裁剪边界；运行中不再因实测角越界自动中断。
 joint_lower_limits: [-1.05, -0.26, -1.0, -0.5, -0.45, -0.5,
                      -1.05, -1.05, -1.0, -0.5, -0.45, -0.5]
 joint_upper_limits: [ 1.05,  1.05,  1.0, 1.92, 1.0,  0.5,
@@ -25,12 +24,11 @@ deadzone: 0.12
 ctrl_timeout: 0.4          # s，手柄消息过期归零
 keyboard:
   step: 0.05
-# game_controller_node 的 SDL 标准编号；LB+A/X/Y 选择任务，B 中断，Back 重新验收。
+# game_controller_node 的 SDL 标准编号；LB+A/X/Y 选择任务，B 中断，Back 解锁。
 gamepad_buttons: {a: 0, b: 1, x: 2, y: 3, lb: 9, back: 4, start: 6}
 
 # 2026-09-17 11:02 只读标定，机身前倾 29.729°；与 v2 起身的 10 个单侧端点一致。
-# 只覆盖蹲姿验收和指定的单侧任务边界，不改模型、参考动作或上方硬件限位。
-# ankle roll / IMU 使用实测值验收，参考动作仍使用仿真几何求解值。
+# 用于初始姿态分类和 10 个单侧任务目标边界，不改模型、参考动作或上方目标裁剪边界。
 crouch_calibration:
   joint_pos:
     L1: -0.9752422370
@@ -50,18 +48,6 @@ crouch_calibration:
               R1: lower, R2: lower, R3: lower, R4: upper, R5: lower}
 
 multi_task:
-  stable_time: 0.30
-  joint_tolerance: 0.12
-  ankle_roll_tolerance: 0.20
-  joint_speed: 0.35
-  tilt_error: 0.15
-  angular_speed: 0.40
-  max_tilt: 0.80
-  joint_limit_tolerance: 0.03  # 仅任务反馈容差，不放宽指令或硬件边界
-  max_policy_gap: 0.06
   handover_time: 0.20
-  handover_max_delta: 0.60
   stop_blend_time: 0.50
   return_max_speed: 0.15   # rad/s，4 / LB+Start 手动回准备站姿的目标峰值速度
-  stop_timeout: 6.0
-  end_timeout: 4.0

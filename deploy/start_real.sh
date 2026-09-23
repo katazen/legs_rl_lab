@@ -69,6 +69,6 @@ gnome-terminal --title="RL policy ($RL_NODE)" -- bash -c \
    echo; echo '[RL 已退出, 回车关闭]'; read"
 
 echo "统一入口：1/LB+A 走路，2/LB+X 下蹲（须在配置中启用），3/LB+Y 起身；任务键表示已人工确认落地。"
-echo "0/Start 先停步减速，Enter/再次 Start 确认接地收脚；P/B 中断锁存，R/Back 重新验收。"
-echo "4/LB+Start：稳定保持后慢回准备站姿；执行动作中无效，须先扶稳/吊起。"
-echo "只接管当前姿态，不自动插值回站立；P/B 不是断电急停。"
+echo "0/Start 停步，Enter/再次 Start 确认接地收脚；手柄 B 中断并保持最后目标，R/Back 解锁。"
+echo "4/LB+Start：保持状态下慢回准备站姿；执行动作中无效，须先扶稳/吊起。"
+echo "只接管当前姿态；自动异常不锁停。手柄 B 不切断电机电源。"

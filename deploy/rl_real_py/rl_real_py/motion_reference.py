@@ -130,7 +130,7 @@ class MotionReference:
             raise ValueError("参考动作超过硬件软件限位，必须先核实模型与硬件配置")
         narrowed = (safe_lo > self.limits[:, 0] + 1e-6) | (safe_hi < self.limits[:, 1] - 1e-6)
         if narrowed.any():
-            print("[mimic] 保留更窄的硬件软件限位，策略越界将锁存停止: "
+            print("[mimic] 保留更窄的目标角裁剪边界: "
                   + ", ".join(self.joint_names[i] for i in np.flatnonzero(narrowed)))
         if not np.allclose(self.velocities[-1], 0., atol=1e-5):
             raise ValueError("末帧保持要求参考末帧关节速度为零")
