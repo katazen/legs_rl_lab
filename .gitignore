@@ -121,7 +121,7 @@ deploy/pose_logs/
 **/tactile_record/*
 **/gelsight_r15_data/*
 
-# ===== 只同步 nlegs 主线: tasks 只留 nlegs_task, assets 只留 nlegs;
+# ===== 只同步 nlegs 主线: tasks 只留 nlegs_task, assets 保留 nlegs 和 nlegs_body 的 XML/meshes;
 # amp/amp_engineai/sysid 及其脚本不再入库 (本地文件保留) =====
 source/legs_rl_lab/legs_rl_lab/tasks/*
 !source/legs_rl_lab/legs_rl_lab/tasks/__init__.py
@@ -130,6 +130,12 @@ source/legs_rl_lab/legs_rl_lab/tasks/*
 source/legs_rl_lab/legs_rl_lab/assets/*
 !source/legs_rl_lab/legs_rl_lab/assets/__init__.py
 !source/legs_rl_lab/legs_rl_lab/assets/nlegs/
+!source/legs_rl_lab/legs_rl_lab/assets/nlegs_body/
+source/legs_rl_lab/legs_rl_lab/assets/nlegs_body/*
+!source/legs_rl_lab/legs_rl_lab/assets/nlegs_body/meshes/
+!source/legs_rl_lab/legs_rl_lab/assets/nlegs_body/mjcf/
+source/legs_rl_lab/legs_rl_lab/assets/nlegs_body/mjcf/*
+!source/legs_rl_lab/legs_rl_lab/assets/nlegs_body/mjcf/*.xml
 source/legs_rl_lab/legs_rl_lab/amp/
 source/legs_rl_lab/legs_rl_lab/amp_engineai/
 scripts/amp/
