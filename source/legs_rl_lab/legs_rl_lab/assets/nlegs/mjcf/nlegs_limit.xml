@@ -53,23 +53,23 @@
         <inertial pos="0.0000344 -0.0297324 0.0000527" mass="0.7356663" fullinertia="0.0004923 0.0004979 0.0005018 0.0000010 -0.0000000 -0.0000010"/>
         <geom class="visual" material="Link_R0_mat" mesh="Link_R0" />
         <body name="Link_R1" pos="0 -0.06025 0">
-          <joint name="joint_R1" type="hinge" axis="0 1 0" limited="true" range="-1.0 1.0" damping="0" frictionloss="0"/>
+          <joint name="joint_R1" type="hinge" axis="0 1 0" limited="true" range="-0.97 0.97" damping="0" frictionloss="0"/>
           <inertial pos="-0.0016623 -0.0489172 0.0000772" mass="0.5080125" fullinertia="0.0002054 0.0002450 0.0002534 -0.0000110 0.0000003 0.0000000"/>
           <geom class="visual" material="Link_R1_mat" mesh="Link_R1" />
           <body name="Link_R2" pos="0 -0.0581444 0">
-            <joint name="joint_R2" type="hinge" axis="1 0 0" limited="true" range="-0.55 0.55" damping="0" frictionloss="0"/>
+            <joint name="joint_R2" type="hinge" axis="1 0 0" limited="true" range="-0.5 0.5" damping="0" frictionloss="0"/>
             <inertial pos="0.0046774 0 -0.0743865" mass="0.5459822" fullinertia="0.0003158 0.0003989 0.0003074 -0.0000000 -0.0000331 0.0000000"/>
             <geom class="visual" material="Link_R2_mat" mesh="Link_R2" />
             <body name="Link_R3" pos="0.0001 0 -0.1215">
-              <joint name="joint_R3" type="hinge" axis="0 0 1" limited="true" range="-0.7 1.5" damping="0" frictionloss="0"/>
+              <joint name="joint_R3" type="hinge" axis="0 0 1" limited="true" range="-0.5 1" damping="0" frictionloss="0"/>
               <inertial pos="0.0000000 0.0001813 -0.0958044" mass="0.5207862" fullinertia="0.0004243 0.0003483 0.0002701 0.0000000 -0.0000000 0.0000153"/>
               <geom class="visual" material="Link_R3_mat" mesh="Link_R3" />
               <body name="Link_R4" pos="0 0.0001 -0.112">
-                <joint name="joint_R4" type="hinge" axis="0 1 0" limited="true" range="-1.2 1.2" damping="0" frictionloss="0"/>
+                <joint name="joint_R4" type="hinge" axis="0 1 0" limited="true" range="-0.2 1.05" damping="0" frictionloss="0"/>
                 <inertial pos="0.0000000 -0.0025001 -0.1405535" mass="0.8551582" fullinertia="0.0005475 0.0004903 0.0003860 0.0000000 -0.0000000 0.0000278"/>
                 <geom class="visual" material="Link_R4_mat" mesh="Link_R4" />
                 <body name="Link_R5" pos="0 -0.0001 -0.221">
-                  <joint name="joint_R5" type="hinge" axis="0 1 0" limited="true" range="-0.45 1.0" damping="0" frictionloss="0"/>
+                  <joint name="joint_R5" type="hinge" axis="0 1 0" limited="true" range="-0.37 1.0" damping="0" frictionloss="0"/>
                   <inertial pos="0.0527104 0.0050326 -0.0065677" mass="0.5033846" fullinertia="0.0002571 0.0002633 0.0002396 0.0000093 -0.0000260 -0.0000190"/>
                   <geom class="visual" material="Link_R5_mat" mesh="Link_R5" />
                   <body name="Link_R6" pos="0 0 -0.0551148">
@@ -90,23 +90,23 @@
         <inertial pos="0.0000344 0.0297324 -0.0000527" mass="0.7356663" fullinertia="0.0004923 0.0004979 0.0005018 -0.0000010 0.0000000 -0.0000010"/>
         <geom class="visual" material="Link_L0_mat" mesh="Link_L0" />
         <body name="Link_L1" pos="0 0.06025 0">
-          <joint name="joint_L1" type="hinge" axis="0 1 0" limited="true" range="-1.0 1.0" damping="0" frictionloss="0"/>
+          <joint name="joint_L1" type="hinge" axis="0 1 0" limited="true" range="-0.97 0.97" damping="0" frictionloss="0"/>
           <inertial pos="0.0003881 0.0489172 0.0000772" mass="0.5080125" fullinertia="0.0002054 0.0002450 0.0002534 -0.0000110 0.0000003 -0.0000000"/>
           <geom class="visual" material="Link_L1_mat" mesh="Link_L1" />
           <body name="Link_L2" pos="0 0.0581444 0">
-            <joint name="joint_L2" type="hinge" axis="1 0 0" limited="true" range="-0.55 0.55" damping="0" frictionloss="0"/>
+            <joint name="joint_L2" type="hinge" axis="1 0 0" limited="true" range="-0.5 0.5" damping="0" frictionloss="0"/>
             <inertial pos="0.0044774 0 -0.0743865" mass="0.5459822" fullinertia="0.0003158 0.0003989 0.0003074 -0.0000000 -0.0000331 0.0000000"/>
             <geom class="visual" material="Link_L2_mat" mesh="Link_L2" />
             <body name="Link_L3" pos="-0.0001 0 -0.1215">
-              <joint name="joint_L3" type="hinge" axis="0 0 1" limited="true" range="-1.5 0.7" damping="0" frictionloss="0"/>
+              <joint name="joint_L3" type="hinge" axis="0 0 1" limited="true" range="-1 0.5" damping="0" frictionloss="0"/>
               <inertial pos="0.0000000 -0.0001081 -0.0958044" mass="0.5207862" fullinertia="0.0004243 0.0003483 0.0002701 -0.0000000 -0.0000000 -0.0000153"/>
               <geom class="visual" material="Link_L3_mat" mesh="Link_L3" />
               <body name="Link_L4" pos="0 0 -0.112">
-                <joint name="joint_L4" type="hinge" axis="0 1 0" limited="true" range="-1.2 1.2" damping="0" frictionloss="0"/>
+                <joint name="joint_L4" type="hinge" axis="0 1 0" limited="true" range="-0.2 1.05" damping="0" frictionloss="0"/>
                 <inertial pos="0.0000002 0.0024635 -0.1405535" mass="0.8551582" fullinertia="0.0005475 0.0004903 0.0003860 -0.0000000 -0.0000000 -0.0000278"/>
                 <geom class="visual" material="Link_L4_mat" mesh="Link_L4" />
                 <body name="Link_L5" pos="0 0 -0.221">
-                  <joint name="joint_L5" type="hinge" axis="0 1 0" limited="true" range="-0.45 1.0" damping="0" frictionloss="0"/>
+                  <joint name="joint_L5" type="hinge" axis="0 1 0" limited="true" range="-0.37 1.0" damping="0" frictionloss="0"/>
                   <inertial pos="0.0527759 -0.0054647 -0.0065610" mass="0.5033853" fullinertia="0.0002571 0.0002633 0.0002396 -0.0000093 -0.0000260 0.0000190"/>
                   <geom class="visual" material="Link_L5_mat" mesh="Link_L5" />
                   <body name="Link_L6" pos="0 0 -0.055093">
