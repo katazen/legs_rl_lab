@@ -1,0 +1,221 @@
+scripts/generate_stair_descent_motion.py
+  s_22f8ffc6662cf2::t_966b142799e85b 1-33,35-79,81-151,153-182,184-198,201-231
+  s_22f8ffc6662cf2::t_6fb51c007daf70 34,80,152
+  s_22f8ffc6662cf2::t_44751b811209f5 183,199-200
+deploy/README.md
+  s_f9d788709686b7::t_e9c86e5c0f13b6 55,73,94,98
+  s_f9d788709686b7::t_551676e9b1febe 89-91
+deploy/start_real.sh
+  s_f9d788709686b7::t_e9c86e5c0f13b6 72
+  s_f9d788709686b7::t_551676e9b1febe 73
+  s_f9d788709686b7::t_0117cb35746c0c 3,23,71
+tests/check_rough_static.py
+  s_f9d788709686b7::t_91268780f37642 36-45
+  s_f9d788709686b7::t_85610287766cc4 26,31-32,46-62,85-102,105-107,112
+  s_f9d788709686b7::t_1f30751261f1a3 33,63-64,67,69-70
+  s_f9d788709686b7::t_6f254fabd1f641 65
+  s_f9d788709686b7::t_6064fdefa24d6a 113,116
+  s_f9d788709686b7::t_35a4d8a3ac949b 34-35,66,68,71-84
+.gitignore
+  s_22f8ffc6662cf2::t_a7f491f1bacab2 84,86,88-89
+  s_22f8ffc6662cf2::t_b97940cd94892d 80
+deploy/sync_pd.py
+  s_f9d788709686b7::t_f863c9c6062b87 59
+deploy/rl_real_py/rl_real_py/deployment_config.py
+  s_f9d788709686b7::t_0117cb35746c0c 14
+  s_f9d788709686b7::t_f863c9c6062b87 16,19,33
+deploy/rl_real_py/rl_real_py/multi_task.py
+  s_f9d788709686b7::t_4df2e459958efd 14
+  s_f9d788709686b7::t_18526b49b06a14 68-69
+  s_22f8ffc6662cf2::t_c12615062516a7 178,180-181,199,201,286-288,335
+  s_f9d788709686b7::t_e9c86e5c0f13b6 137,214-217,219-222,224,378
+  s_f9d788709686b7::t_1c930c2f23aedf 198,200,204,273-274
+  s_f9d788709686b7::t_0117cb35746c0c 1,39-41,128,191
+  s_f9d788709686b7::t_f863c9c6062b87 31-32,35,55-65
+source/legs_rl_lab/legs_rl_lab/tasks/nlegs_task/task/rough/rough_env_cfg.py
+  s_f9d788709686b7::t_84fa88031492e9 25
+  s_f9d788709686b7::t_5a1794ef60ae7a 132,204-222,224,227-229
+  s_f9d788709686b7::t_ddcf22f4fd4ebd 1,21,108
+  s_f9d788709686b7::t_97334b3d6dfbf4 313,364,377,439,442
+  h_d698c05df35737 41,45,48,52,56-58,64-66,98-99,140-141,154,164,254,257
+  s_f9d788709686b7::t_0b81800d199f7b 50,54
+  s_f9d788709686b7::t_91268780f37642 493-496
+source/legs_rl_lab/legs_rl_lab/tasks/nlegs_task/task/rough/sim2sim.py
+  h_d698c05df35737 38
+deploy/rl_real_py/test_manual_stop_only.py
+  s_22f8ffc6662cf2::t_651383cd60b207 66-67,70,79-80,83-84,86,91,95,97,101-102
+  s_f9d788709686b7::t_24e9eebbe4e2e6 68,71-74,77,81,85,88-90,92-94,96,98-100,103-107
+  s_f9d788709686b7::t_4df2e459958efd 69,82,108-118
+  s_f9d788709686b7::t_b24440df31449d 119-128
+  s_22f8ffc6662cf2::t_3d3bdc3610c6a2 11-18
+  s_f9d788709686b7::t_b56547cf30db5d 75-76
+  s_f9d788709686b7::t_9d393f08aa413d 87
+  s_22f8ffc6662cf2::t_67e2584e72444b 78
+scripts/prepare_crouch_mimic.py
+  s_22f8ffc6662cf2::t_bda4bc25c77156 1
+  s_22f8ffc6662cf2::t_9f472700d4e655 16,21,54
+source/legs_rl_lab/legs_rl_lab/tasks/nlegs_task/task/flat/sim2sim.py
+  h_d698c05df35737 48-49
+  s_f9d788709686b7::t_dac3fc301ed43f 559-578,582,584-586,617-623,625,627-629
+source/legs_rl_lab/legs_rl_lab/assets/nlegs/nlegs.py
+  s_f9d788709686b7::t_97334b3d6dfbf4 47
+  s_f9d788709686b7::t_0b81800d199f7b 1
+  h_d698c05df35737 43,63-64,76-77,87-90,99-100
+deploy/rl_real_py/configs/common.yaml
+  h_d698c05df35737 5
+  s_f9d788709686b7::t_18526b49b06a14 18-19
+  s_f9d788709686b7::t_f863c9c6062b87 1,6-7
+scripts/generate_stair_descent_one_step.py
+  s_22f8ffc6662cf2::t_ff3a274f934e27 94
+  s_22f8ffc6662cf2::t_e6f2e02db2ff32 1-14,16,18-23,25-54,57-70,72-84,87-93,98-149,152-161
+  s_22f8ffc6662cf2::t_39e8eeed148610 17,24,71
+  s_22f8ffc6662cf2::t_3bbfe9f1563f62 150-151
+  s_22f8ffc6662cf2::t_dd58a27af2da3a 85-86
+  s_22f8ffc6662cf2::t_5fc2210f44994e 15,55-56
+  s_22f8ffc6662cf2::t_00e6ffcdf24691 95-97
+deploy/control_ws/src/armcontrol/src/arm_control_node.cpp
+  s_d61c4100a220bb::t_95254d2bc8ff1d 1066-1071,1086-1087,1093,1098-1099,1105
+deploy/control_ws/src/armcontrol/config/arm_control_node.yaml
+  h_d698c05df35737 3
+logs/rsl_rl/nlegs_flat/2026-08-26_13-57-34/params/agent.yaml
+  h_d698c05df35737 1-61
+logs/rsl_rl/nlegs_flat/2026-08-26_13-57-34/params/deploy.yaml
+  h_d698c05df35737 1-103
+logs/rsl_rl/nlegs_flat/2026-08-26_13-57-34/params/env.yaml
+  h_d698c05df35737 1-1382
+logs/rsl_rl/nlegs_flat/2026-08-26_13-57-34/params/flat_env_cfg.py
+  h_d698c05df35737 1-405
+logs/rsl_rl/nlegs_flat/2026-08-27_10-14-28/params/agent.yaml
+  h_d698c05df35737 1-61
+logs/rsl_rl/nlegs_flat/2026-08-27_10-14-28/params/deploy.yaml
+  h_d698c05df35737 1-103
+logs/rsl_rl/nlegs_flat/2026-08-27_10-14-28/params/env.yaml
+  h_d698c05df35737 1-1405
+logs/rsl_rl/nlegs_flat/2026-08-27_10-14-28/params/flat_env_cfg.py
+  h_d698c05df35737 1-409
+logs/rsl_rl/nlegs_flat_crouch/2026-09-09_18-13-14/params/agent.yaml
+  h_d698c05df35737 1-61
+logs/rsl_rl/nlegs_flat_crouch/2026-09-09_18-13-14/params/crouch_env_cfg.py
+  h_d698c05df35737 1-44
+logs/rsl_rl/nlegs_flat_crouch/2026-09-09_18-13-14/params/deploy.yaml
+  h_d698c05df35737 1-109
+logs/rsl_rl/nlegs_flat_crouch/2026-09-09_18-13-14/params/env.yaml
+  h_d698c05df35737 1-1362
+logs/rsl_rl/nlegs_flat_crouch/2026-09-09_20-27-00/params/agent.yaml
+  h_d698c05df35737 1-61
+logs/rsl_rl/nlegs_flat_crouch/2026-09-09_20-27-00/params/crouch_env_cfg.py
+  h_d698c05df35737 1-45
+logs/rsl_rl/nlegs_flat_crouch/2026-09-09_20-27-00/params/deploy.yaml
+  h_d698c05df35737 1-109
+logs/rsl_rl/nlegs_flat_crouch/2026-09-09_20-27-00/params/env.yaml
+  h_d698c05df35737 1-1362
+logs/rsl_rl/nlegs_mimic_crouch/2026-09-14_20-26-06/params/agent.yaml
+  h_d698c05df35737 1-57
+logs/rsl_rl/nlegs_mimic_crouch/2026-09-14_20-26-06/params/deploy.yaml
+  h_d698c05df35737 1-216
+logs/rsl_rl/nlegs_mimic_crouch/2026-09-14_20-26-06/params/env.yaml
+  h_d698c05df35737 1-1080
+logs/rsl_rl/nlegs_mimic_crouch/2026-09-14_20-26-06/params/tracking_env_cfg.py
+  h_d698c05df35737 1-192
+logs/rsl_rl/nlegs_mimic_crouch/2026-09-15_15-36-16/params/agent.yaml
+  h_d698c05df35737 1-57
+logs/rsl_rl/nlegs_mimic_crouch/2026-09-15_15-36-16/params/deploy.yaml
+  h_d698c05df35737 1-216
+logs/rsl_rl/nlegs_mimic_crouch/2026-09-15_15-36-16/params/env.yaml
+  h_d698c05df35737 1-1140
+logs/rsl_rl/nlegs_mimic_crouch/2026-09-15_15-36-16/params/tracking_env_cfg.py
+  h_d698c05df35737 1-202
+logs/rsl_rl/nlegs_mimic_stand/2026-09-15_18-50-29/params/agent.yaml
+  h_d698c05df35737 1-57
+logs/rsl_rl/nlegs_mimic_stand/2026-09-15_18-50-29/params/deploy.yaml
+  h_d698c05df35737 1-216
+logs/rsl_rl/nlegs_mimic_stand/2026-09-15_18-50-29/params/env.yaml
+  h_d698c05df35737 1-1140
+logs/rsl_rl/nlegs_mimic_stand/2026-09-15_18-50-29/params/tracking_env_cfg.py
+  h_d698c05df35737 1-30
+logs/rsl_rl/nlegs_mimic_stand/2026-09-17_12-30-38/params/agent.yaml
+  h_d698c05df35737 1-57
+logs/rsl_rl/nlegs_mimic_stand/2026-09-17_12-30-38/params/deploy.yaml
+  h_d698c05df35737 1-216
+logs/rsl_rl/nlegs_mimic_stand/2026-09-17_12-30-38/params/env.yaml
+  h_d698c05df35737 1-1140
+logs/rsl_rl/nlegs_mimic_stand/2026-09-17_12-30-38/params/tracking_env_cfg.py
+  h_d698c05df35737 1-30
+logs/rsl_rl/nlegs_rough/2026-08-26_20-37-55/params/agent.yaml
+  h_d698c05df35737 1-61
+logs/rsl_rl/nlegs_rough/2026-08-26_20-37-55/params/deploy.yaml
+  h_d698c05df35737 1-103
+logs/rsl_rl/nlegs_rough/2026-08-26_20-37-55/params/env.yaml
+  h_d698c05df35737 1-1610
+logs/rsl_rl/nlegs_rough/2026-08-26_20-37-55/params/rough_env_cfg.py
+  h_d698c05df35737 1-145
+logs/rsl_rl/nlegs_rough/2026-09-18_10-10-59/params/agent.yaml
+  h_d698c05df35737 1-61
+logs/rsl_rl/nlegs_rough/2026-09-18_10-10-59/params/deploy.yaml
+  h_d698c05df35737 1-109
+logs/rsl_rl/nlegs_rough/2026-09-18_10-10-59/params/env.yaml
+  h_d698c05df35737 1-1610
+logs/rsl_rl/nlegs_rough/2026-09-18_10-10-59/params/rough_env_cfg.py
+  h_d698c05df35737 1-145
+logs/rsl_rl/nlegs_rough/2026-09-19_16-53-50/params/agent.yaml
+  h_d698c05df35737 1-57
+logs/rsl_rl/nlegs_rough/2026-09-19_16-53-50/params/deploy.yaml
+  h_d698c05df35737 1-129
+logs/rsl_rl/nlegs_rough/2026-09-19_16-53-50/params/env.yaml
+  h_d698c05df35737 1-1719
+logs/rsl_rl/nlegs_rough/2026-09-19_16-53-50/params/rough_env_cfg.py
+  h_d698c05df35737 1-191
+logs/rsl_rl/nlegs_rough/2026-09-21_14-27-47/params/agent.yaml
+  h_d698c05df35737 1-57
+logs/rsl_rl/nlegs_rough/2026-09-21_14-27-47/params/deploy.yaml
+  h_d698c05df35737 1-138
+logs/rsl_rl/nlegs_rough/2026-09-21_14-27-47/params/env.yaml
+  h_d698c05df35737 1-1738
+logs/rsl_rl/nlegs_rough/2026-09-21_14-27-47/params/rough_env_cfg.py
+  h_d698c05df35737 1-619
+logs/rsl_rl/nlegs_rough/2026-09-23_23-45-47/params/agent.yaml
+  h_d698c05df35737 1-61
+logs/rsl_rl/nlegs_rough/2026-09-23_23-45-47/params/deploy.yaml
+  h_d698c05df35737 1-109
+logs/rsl_rl/nlegs_rough/2026-09-23_23-45-47/params/env.yaml
+  h_d698c05df35737 1-1571
+logs/rsl_rl/nlegs_rough/2026-09-23_23-45-47/params/rough_env_cfg.py
+  h_d698c05df35737 1-500
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.7.4",
+  "base_commit_sha": "d3245b8e090c2fc112fc4648f36ac4dbe43e294f",
+  "prompts": {},
+  "humans": {
+    "h_d698c05df35737": {
+      "author": "woan <377801872@qq.com>"
+    }
+  },
+  "sessions": {
+    "s_22f8ffc6662cf2": {
+      "agent_id": {
+        "tool": "codex",
+        "id": "01a06a55-9d3a-7f52-b1dc-6c6e4d885f57",
+        "model": "gpt-6-sol"
+      },
+      "human_author": "woan <377801872@qq.com>"
+    },
+    "s_d61c4100a220bb": {
+      "agent_id": {
+        "tool": "claude",
+        "id": "d691f429-1425-477a-86e4-c37933a46958",
+        "model": "unknown"
+      },
+      "human_author": "woan <377801872@qq.com>"
+    },
+    "s_f9d788709686b7": {
+      "agent_id": {
+        "tool": "codex",
+        "id": "01a0a95f-b45a-7101-8d19-84757cb4fb14",
+        "model": "gpt-6-sol"
+      },
+      "human_author": "woan <377801872@qq.com>"
+    }
+  }
+}
