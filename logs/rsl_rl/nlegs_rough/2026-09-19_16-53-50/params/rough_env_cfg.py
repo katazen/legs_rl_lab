@@ -1,0 +1,191 @@
+"""nlegs rough —— 在 nlegs_flat(平地)基础上换成生成器 rough 地形 + 地形课程，并按地形调整奖励/观测/终止。
+
+地形与奖励调整照搬 legs_task 旧版 nlegs_rough（已迁移至此并删除旧注册）：
+子地形按 0.58m 小机身**温和缩放**，不照搬 g1/IsaacLab 默认的 0.23m 台阶、0.4 坡度：
+  台阶 ≤0.12m、坡 ≤0.3、方块 0.02~0.08m、随机起伏 0.02~0.06m，并保留 20% 平地。
+actor 保持**盲走**（仅 IMU+关节，可直接部署到真机；真机无地形传感器）；
+height_scanner 用于 critic 特权观测 height_scan（非对称 actor-critic，降价值估计方差）
+和 base_height / feet_clearance 奖励（地形相对高度），不进 actor 观测。
+
+因地形改动的奖励（相对 nlegs_flat）：
+  - base_height          : 加 height_scanner 传感器 -> 地形相对高度；权重 -5 -> -2
+                           （否则起伏地形上 base 的世界系绝对高度会被恒定惩罚）
+  - flat_orientation     : -4.0 -> -1.0   （上坡时身体自然倾斜，重罚会与爬坡冲突）
+  - base_linear_velocity : -2.0 -> -0.5   （爬台阶/坡需要竖直方向速度，别罚太狠）
+  - feet_flat            : -1.0 -> -0.3   （坡/台阶上脚无法始终贴平地面）
+  - feet_clearance       : 加 height_scanner 传感器 -> 脚高地形相对化（否则凸起地形自动
+                           满分/凹陷地形恒零分）；target 0.1 -> 0.12（抬高摆动腿跨越起伏）
+  - lateral_move         : -5.0 -> -2.0   （地形上需要一定横向调整来平衡，别压死）
+新增：
+  - curriculum.terrain_levels  （走得远 -> 升难度；走不动 -> 降难度）
+  - observations.critic.height_scan（187 点局部高度图，仅训练用；镜像增强见 mdp/symmetry.py）
+  - terminations.bad_orientation（摔倒即终止，平地版里没有）
+注：flat 的 base_height 终止项已是相对量 base_z - min(feet_z)，与地形无关，这里直接继承。
+"""
+
+import isaaclab.terrains as terrain_gen
+from isaaclab.managers import CurriculumTermCfg as CurrTerm
+from isaaclab.managers import EventTermCfg as EventTerm
+from isaaclab.managers import ObservationTermCfg as ObsTerm
+from isaaclab.managers import SceneEntityCfg
+from isaaclab.managers import TerminationTermCfg as DoneTerm
+from isaaclab.terrains import TerrainGeneratorCfg
+from isaaclab.utils import configclass
+
+from legs_rl_lab.tasks.nlegs_task import mdp
+from legs_rl_lab.tasks.nlegs_task.task.flat.flat_env_cfg import FlatEnvCfg, FlatPlayEnvCfg
+
+
+# 2026-09-17 实测下蹲端点，与部署 crouch_calibration 相同；另一端及踝 roll 不新增约束。
+CROUCH_LIMITS = {
+    "joint_L1": (-0.9752422370, None),
+    "joint_L2": (None, 0.4964904250),
+    "joint_L3": (None, 0.4983978027),
+    "joint_L4": (None, 1.0561150530),
+    "joint_L5": (-0.3763256275, None),
+    "joint_R1": (-0.9676127260, None),
+    "joint_R2": (-0.5270084688, None),
+    "joint_R3": (-0.6185626001, None),
+    "joint_R4": (None, 1.0912108034),
+    "joint_R5": (-0.4224841688, None),
+}
+
+
+# 按 0.58m 小机身温和缩放的 rough 地形。num_rows = 难度等级(课程沿行递增)，num_cols = 每级的变体数。
+NLEGS_ROUGH_TERRAINS_CFG = TerrainGeneratorCfg(
+    size=(8.0, 8.0),
+    border_width=20.0,
+    num_rows=10,
+    num_cols=20,
+    horizontal_scale=0.1,
+    vertical_scale=0.005,
+    slope_threshold=0.75,
+    use_cache=False,
+    curriculum=True,  # 行=难度，配合 terrain_levels_vel 课程
+    sub_terrains={
+        # 20% 平地：保底，避免一上来全是难地形
+        "flat": terrain_gen.MeshPlaneTerrainCfg(proportion=0.2),
+        # 随机起伏(碎石感)：温和 2~6cm
+        "random_rough": terrain_gen.HfRandomUniformTerrainCfg(
+            proportion=0.2, noise_range=(0.02, 0.06), noise_step=0.02, border_width=0.25
+        ),
+        # 金字塔坡 / 反金字塔坡：坡度 ≤0.3(≈17°)
+        "hf_pyramid_slope": terrain_gen.HfPyramidSlopedTerrainCfg(
+            proportion=0.15, slope_range=(0.0, 0.3), platform_width=2.0, border_width=0.25
+        ),
+        "hf_pyramid_slope_inv": terrain_gen.HfInvertedPyramidSlopedTerrainCfg(
+            proportion=0.15, slope_range=(0.0, 0.3), platform_width=2.0, border_width=0.25
+        ),
+        # 随机方块：矮块 2~8cm
+        "boxes": terrain_gen.MeshRandomGridTerrainCfg(
+            proportion=0.15, grid_width=0.45, grid_height_range=(0.02, 0.08), platform_width=2.0
+        ),
+        # 台阶 / 反台阶：单级高 3~12cm(远低于 g1 的 5~23cm)
+        "pyramid_stairs": terrain_gen.MeshPyramidStairsTerrainCfg(
+            proportion=0.075,
+            step_height_range=(0.03, 0.12),
+            step_width=0.3,
+            platform_width=3.0,
+            border_width=1.0,
+            holes=False,
+        ),
+        "pyramid_stairs_inv": terrain_gen.MeshInvertedPyramidStairsTerrainCfg(
+            proportion=0.075,
+            step_height_range=(0.03, 0.12),
+            step_width=0.3,
+            platform_width=3.0,
+            border_width=1.0,
+            holes=False,
+        ),
+    },
+)
+
+
+def _apply_rough(cfg, knee_stops=False) -> None:
+    """rough 共用地形、单侧限位和辨识 DR；不改变调用任务的零速行为。"""
+    # rough 实机拆除膝限位块；static 保留原来的 10 个下蹲端点。
+    limits = {name: bounds for name, bounds in CROUCH_LIMITS.items()
+              if knee_stops or name not in ("joint_L4", "joint_R4")}
+    cfg.actions.JointPositionAction.clip = {
+        name: (lo if lo is not None else -float("inf"), hi if hi is not None else float("inf"))
+        for name, (lo, hi) in limits.items()
+    }
+    cfg.events.crouch_joint_limits = EventTerm(
+        func=mdp.set_joint_position_limits, mode="startup", params={"joint_limits": limits},
+    )
+    # 09-16/17 小幅辨识只支持扩展等效延迟与增益覆盖，保留名义 PD、惯量和摩擦。
+    actuators = cfg.scene.robot.actuators
+    actuators["knees"] = actuators["legs"].replace(
+        joint_names_expr=[".*4"], stiffness=250.0, damping=5.0, min_delay=1, max_delay=6,
+    )
+    actuators["legs"].joint_names_expr = [".*1", ".*2", ".*3"]
+    actuators["legs"].stiffness.pop(".*4")
+    actuators["legs"].damping.pop(".*4")
+    actuators["ankle_pitch"].min_delay = 1
+    actuators["ankle_roll"].min_delay = 2
+    cfg.events.randomize_ankle_gains.params["damping_distribution_params"] = (0.7, 1.2)
+    cfg.events.randomize_ankle_roll_gains = EventTerm(
+        func=mdp.randomize_actuator_gains, mode="reset",
+        params={
+            "asset_cfg": SceneEntityCfg("robot", joint_names=[".*6"]),
+            "stiffness_distribution_params": (0.85, 1.1),
+            "damping_distribution_params": (0.5, 1.0),
+            "operation": "scale", "distribution": "uniform",
+        },
+    )
+    # --- 地形: plane -> generator(rough) ---
+    # 用 .replace() 拿独立副本，避免 play/train 两个 env cfg 共享并互相改写同一个地形对象
+    cfg.scene.terrain.terrain_type = "generator"
+    cfg.scene.terrain.terrain_generator = NLEGS_ROUGH_TERRAINS_CFG.replace()
+    cfg.scene.terrain.terrain_generator.curriculum = True
+    cfg.scene.terrain.max_init_terrain_level = 5  # 初始铺在 0~5 级，course 再上下调
+
+    # --- 地形课程: 走得远升难度、走不动降难度 ---
+    cfg.curriculum.terrain_levels = CurrTerm(func=mdp.terrain_levels_vel)
+
+    # --- critic 特权观测: 187 点局部高度图(非对称 actor-critic, actor 仍盲走) ---
+    # offset=0.58(名义 base 高度)使数值围绕 0; clip 兜住未命中射线的 inf
+    cfg.observations.critic.height_scan = ObsTerm(
+        func=mdp.height_scan,
+        params={"sensor_cfg": SceneEntityCfg("height_scanner"), "offset": 0.58},
+        clip=(-1.0, 1.0),
+    )
+
+    # --- 因地形调整的奖励 ---
+    # base_height 用高度扫描做地形相对(否则起伏地形上 base 世界系绝对高度恒被罚)
+    cfg.rewards.base_height.params["sensor_cfg"] = SceneEntityCfg("height_scanner")
+    cfg.rewards.base_height.weight = -2.0
+    cfg.rewards.flat_orientation.weight = -1.0
+    cfg.rewards.base_linear_velocity.weight = -0.5
+    cfg.rewards.feet_flat.weight = -0.3
+    # feet_clearance 同样地形相对化(每只脚取扫描点中水平最近命中点作脚下地面高度)
+    cfg.rewards.feet_clearance.params["sensor_cfg"] = SceneEntityCfg("height_scanner")
+    cfg.rewards.feet_clearance.params["target_height"] = 0.12
+    cfg.rewards.lateral_move.weight = -2.0
+
+    # --- 终止: 摔倒(躯干严重倾斜)即终止 ---
+    cfg.terminations.bad_orientation = DoneTerm(
+        func=mdp.bad_orientation, params={"limit_angle": 1.0}
+    )
+
+
+@configclass
+class RoughEnvCfg(FlatEnvCfg):
+    """nlegs_flat + rough 地形。"""
+
+    def __post_init__(self):
+        super().__post_init__()
+        _apply_rough(self)
+
+
+@configclass
+class RoughPlayEnvCfg(FlatPlayEnvCfg):
+    """play/eval：继承 flat play(少环境)，同样切 rough 地形，但地形块更少便于可视化。"""
+
+    def __post_init__(self):
+        super().__post_init__()
+        _apply_rough(self)
+        # play: 少量地形行列 + 固定较低初始难度，便于观察
+        self.scene.terrain.terrain_generator.num_rows = 5
+        self.scene.terrain.terrain_generator.num_cols = 5
+        self.scene.terrain.max_init_terrain_level = 4

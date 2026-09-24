@@ -56,7 +56,7 @@ def main():
         max_vel = params.get("max_vel", 0.0)
         enable_diag = params.get("enable_dual_leg_diag", False)
     if max_vel != 0.0:
-        raise ValueError("mimic 训练为零目标速度 PD；armcontrol max_vel 必须为 0，不能额外添加差分速度前馈")
+        raise ValueError("训练为零目标速度 PD；armcontrol max_vel 必须为 0，不能额外添加差分速度前馈")
 
     text = (
         "armcontrol_node:\n"

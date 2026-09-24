@@ -1,6 +1,6 @@
 #!/usr/bin/env bash
 # 一键启动实机部署全栈: IMU -> armcontrol -> RL 策略。
-# 各开一个 gnome-terminal 窗口；RL 统一管理走路/下蹲/起身。
+# 各开一个 gnome-terminal 窗口；默认配置只启用 rough 走路。
 # 注: 不在脚本里 build, 编译自行处理; 各节点只 source + 启动。
 #
 # 关闭全栈: 先支撑机器人，再执行 stop_real.sh。
@@ -20,7 +20,7 @@ while (($#)); do
     --check-only) CHECK_ONLY=true; shift ;;
     -h|--help)
       echo "用法: $0 [--config YAML] [--check-only]"
-      echo "统一切换走路/下蹲/起身；保持当前姿态，不自动回站立。"
+      echo "默认只启用 rough 走路；保持当前姿态，不自动回站立。"
       echo "--check-only: 仅检查配置/策略/PD，不启动驱动、不修改 PD 文件。"
       exit 0 ;;
     *) echo "错误: 未知参数 $1" >&2; exit 2 ;;
@@ -68,7 +68,7 @@ gnome-terminal --title="RL policy ($RL_NODE)" -- bash -c \
    ros2 run rl_real_py $RL_NODE $RL_ARGS_TEXT; \
    echo; echo '[RL 已退出, 回车关闭]'; read"
 
-echo "统一入口：1/LB+A 走路，2/LB+X 下蹲（须在配置中启用），3/LB+Y 起身；任务键表示已人工确认落地。"
-echo "0/Start 停步，Enter/再次 Start 确认接地收脚；手柄 B 中断并保持最后目标，R/Back 解锁。"
-echo "4/LB+Start：保持状态下慢回准备站姿；执行动作中无效，须先扶稳/吊起。"
+echo "统一入口：默认仅 1/LB+A 启动 rough 走路；2、3 已禁用。"
+echo "0/Start 立即停止走路策略并下发默认站姿；手柄 B 中断并保持最后目标，R/Back 解锁。"
+echo "4/LB+Start：保持状态下慢回准备站姿；完成后按 1/LB+A 走路。执行动作中无效，须先扶稳/吊起。"
 echo "只接管当前姿态；自动异常不锁停。手柄 B 不切断电机电源。"

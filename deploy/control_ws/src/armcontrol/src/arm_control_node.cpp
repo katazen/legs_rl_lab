@@ -1063,7 +1063,12 @@ private:
     joint_state_msg.effort.reserve(12);
 
     // 双腿反馈方向修正表（idx 0..5=左腿1..6，6..11=右腿1..6；+1 不变，-1 取反）。
-    // 按 /left_joint_states 实测取反：左3(idx2)、左5(idx4)、右1(idx6)、右3(idx8)、右4(idx9)。位置与速度一并取反。
+    // 按 /left_joint_states 实测取反：左3(idx2)、左5(idx4)、右1(idx6)、右3(idx8)、右4(idx9)。
+    // 位置/速度/力矩三者同处关节帧，必须乘同一张表：编码器与电机安装方向相反时
+    // q_joint=s·q_motor、dq_joint=s·dq_motor；功率共轭要求 τ_joint·dq_joint=τ_motor·dq_motor，
+    // 于是 τ_joint=s·τ_motor，符号与位置、速度一致（s=±1）。
+    // 漏乘会让 effort 与同一消息里的 position/velocity 落在两个坐标系，任何左右对比、
+    // 摩擦/惯量/转矩标定都会得到错误结论。
     static constexpr double kLegFbSign[12] = {
         +1, +1, -1, +1, -1, +1,   // 左腿 1..6（idx2=左3、idx4=左5 取反）
         -1, +1, -1, -1, +1, +1    // 右腿 1..6（idx6=右1、idx8=右3、idx9=右4 取反）
@@ -1078,26 +1083,26 @@ private:
 
     for (int i = 0; i < 6; ++i) {
       joint_state_msg.velocity.push_back(kLegFbSign[i] * left_arm_motors_[i].Get_Velocity());
-      const float tau_l = left_arm_motors_[i].Get_tau();
-      joint_state_msg.effort.push_back(tau_l);
+      const float tau_l = left_arm_motors_[i].Get_tau();   // 电机帧裸值
+      joint_state_msg.effort.push_back(kLegFbSign[i] * tau_l);
       {
         std::lock_guard<std::mutex> lock(max_tau_mutex_);
         if (std::fabs(tau_l) > std::fabs(left_max_tau_[i])) {
           left_max_tau_[i] = tau_l;
         }
-        joint_max_state_msg.effort.push_back(left_max_tau_[i]);
+        joint_max_state_msg.effort.push_back(kLegFbSign[i] * left_max_tau_[i]);
       }
     }
     for (int i = 0; i < 6; ++i) {
       joint_state_msg.velocity.push_back(kLegFbSign[i + 6] * right_arm_motors_[i].Get_Velocity());
-      const float tau_r = right_arm_motors_[i].Get_tau();
-      joint_state_msg.effort.push_back(tau_r);
+      const float tau_r = right_arm_motors_[i].Get_tau();  // 电机帧裸值
+      joint_state_msg.effort.push_back(kLegFbSign[i + 6] * tau_r);
       {
         std::lock_guard<std::mutex> lock(max_tau_mutex_);
         if (std::fabs(tau_r) > std::fabs(right_max_tau_[i])) {
           right_max_tau_[i] = tau_r;
         }
-        joint_max_state_msg.effort.push_back(right_max_tau_[i]);
+        joint_max_state_msg.effort.push_back(kLegFbSign[i + 6] * right_max_tau_[i]);
       }
     }
 

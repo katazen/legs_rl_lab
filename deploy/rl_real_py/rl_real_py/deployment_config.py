@@ -11,12 +11,12 @@ def load_settings(config_file):
     with path.open() as stream:
         cfg = yaml.safe_load(stream)
     if not isinstance(cfg, dict) or not isinstance(cfg.get("tasks"), dict) or set(cfg["tasks"]) != {"walk", "crouch", "rise"}:
-        raise ValueError("配置必须包含 walk / crouch / rise 三个 tasks 路径；旧单策略配置已退役")
+        raise ValueError("配置必须包含 walk / crouch / rise 三个任务；后两者可设为 null 禁用")
     for name, value in cfg["tasks"].items():
-        if name == "crouch" and value is None:
+        if name != "walk" and value is None:
             continue
         if not isinstance(value, str) or not value.strip():
-            raise ValueError(f"tasks.{name} 必须是模型路径；仅 crouch 可设为 null 禁用")
+            raise ValueError(f"tasks.{name} 必须是模型路径；仅 crouch / rise 可设为 null 禁用")
     roots = (*path.parents, *Path(__file__).resolve().parents)
     root = next((p for p in roots if (p / "source/legs_rl_lab").is_dir()), None)
     if root is None:
@@ -30,7 +30,7 @@ def check_multi_pd(cfg):
     """驱动只设一次 PD；按关节名核对启用的模型，禁止带着旧 PD 切模型。"""
     baseline = None
     for name, path in cfg["tasks"].items():
-        if name == "crouch" and path is None:
+        if path is None:
             continue
         with (Path(path) / "params/deploy.yaml").open() as stream:
             dep = yaml.safe_load(stream)

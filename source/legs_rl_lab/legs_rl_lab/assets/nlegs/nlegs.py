@@ -1,15 +1,4 @@
-"""nlegs 窄本体机器人定义(自包含资产包).
-
-从 assets/legs_narrow 复制并改名而来, 只保留 nlegs_flat 任务实际使用的配置链:
-nlegs.xml(MJCF) -> mjcf/nlegs/nlegs.usd(--import-sites 转换, 与 legs_narrow.usd 逐字节同源).
-
-与 legs_narrow.NLEGS_FIX_CFG 的差异: 踝 pitch(.*5) 从 4340 组拆出单独的 "ankle" 组,
-参数直接在这里定义(原先在 env cfg 的 __post_init__ 里运行时拆分):
-- 摩擦 0.5->0.55 (48V 辨识回线复现)
-- 延迟 max 6->8 (20~40ms, 覆盖实测起动延迟 14-18ms + 余量)
-- 明确不碰 armature —— 抬它会欠阻尼过冲、放大幅值, 与实机磨圆衰减反向。
-踝增益域随机化(randomize_ankle_gains)属于 DR, 放在任务的 EventCfg 里, 不在这里。
-"""
+"""nlegs_body 资产及腿、踝执行器的名义配置；域随机化由任务 EventCfg 定义。"""
 
 import os
 
@@ -51,13 +40,11 @@ class UnitreeUsdFileCfg(sim_utils.UsdFileCfg):
 
 NLEGS_CFG = UnitreeArticulationCfg(
     spawn=UnitreeUsdFileCfg(
-        usd_path=os.path.join(_ASSET_DIR, "mjcf/nlegs/nlegs.usd"),
+        usd_path="/home/woan/workspace/legs_rl_lab/source/legs_rl_lab/legs_rl_lab/assets/nlegs_body/mjcf/nlegs_body/nlegs_body.usd",
     ),
-    # articulation root (PhysicsArticulationRootAPI) 在 `base` body 上,
-    # 即 /<defaultPrim>/base/base, 相对 spawn 出的 Robot prim 是 /base/base。
     articulation_root_prim_path='/base/base',
     init_state=ArticulationCfg.InitialStateCfg(
-        pos=(0.0, 0.0, 0.62),  # 次姿态站立本体高度大约0.58
+        pos=(0.0, 0.0, 0.50),  # 新资产默认站姿脚底距平地约 4 cm
         joint_pos={
             ".*1": -0.1,
             ".*4": 0.2,
@@ -73,8 +60,8 @@ NLEGS_CFG = UnitreeArticulationCfg(
             velocity_limit=7.0,
             stiffness={
                 ".*1": 200.0,
-                ".*2": 100.0,
-                ".*3": 100.0,
+                ".*2": 200.0,
+                ".*3": 200.0,
                 ".*4": 250.0,
             },
             damping={
@@ -86,10 +73,9 @@ NLEGS_CFG = UnitreeArticulationCfg(
             armature=0.0509,
             friction=0.5,
             dynamic_friction=0.5,
-            min_delay=4,
-            max_delay=6,
+            min_delay=3,
+            max_delay=7,
         ),
-        # 踝 pitch 单独一组(原 _apply_ankle_dr 运行时拆分, 现直接定义)
         "ankle_pitch": DelayedDCMotorCfg(
             joint_names_expr=[".*5"],
             effort_limit=26.0,
@@ -98,10 +84,10 @@ NLEGS_CFG = UnitreeArticulationCfg(
             stiffness=40.0,
             damping=2.0,
             armature=0.0509,
-            friction=0.55,
-            dynamic_friction=0.55,
-            min_delay=4,
-            max_delay=8,
+            friction=0.5,
+            dynamic_friction=0.5,
+            min_delay=3,
+            max_delay=7,
         ),
         "ankle_roll": DelayedPDActuatorCfg(
             joint_names_expr=[".*6"],
@@ -110,9 +96,8 @@ NLEGS_CFG = UnitreeArticulationCfg(
             armature=0.00219,
             effort_limit_sim=5.8,
             velocity_limit_sim=14.0,
-            viscous_friction=0.54,  # 踝roll 粘滞摩擦, Stage3B 回放验证(RMSE 0.19->0.05)
-            min_delay=4,
-            max_delay=6,
+            min_delay=3,
+            max_delay=7,
         ),
     },
     joint_sdk_names=['joint_R1',

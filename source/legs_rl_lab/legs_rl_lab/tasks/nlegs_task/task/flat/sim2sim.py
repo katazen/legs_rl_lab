@@ -45,8 +45,8 @@ RUN = "2026-08-26_13-57-34"
 LOGS_ROOT = os.path.join(_REPO_ROOT, "logs", "rsl_rl", "nlegs_flat")
 # MuJoCo 场景文件（机器人 + 地面）
 SCENE_XML = os.path.join(
-    _REPO_ROOT, "source", "legs_rl_lab", "legs_rl_lab", "assets", "nlegs", "mjcf",
-    "nlegs_scene.xml",
+    _REPO_ROOT, "source", "legs_rl_lab", "legs_rl_lab", "assets", "nlegs_body", "mjcf",
+    "nlegs_body_scene.xml",
 )
 # 各关节零位偏置(实机标定用, 短关节名 -> rad)，仿真一般留空
 ZERO_OFFSET = {}
@@ -556,10 +556,34 @@ class MujocoRunner:
                     self.data.ctrl[self.actuator_ids] = self.last_torque
                     mujoco.mj_step(self.model, self.data)
                 if self.save_data:
+                    # 足底竖直接触力(世界系) + 足端高度: 用来切分支撑相/摆动相, 判定"受载时的跟踪"
+                    foot_ids = getattr(self, "_foot_ids", None)
+                    if foot_ids is None:
+                        foot_ids = [mujoco.mj_name2id(self.model, mujoco.mjtObj.mjOBJ_BODY, n)
+                                    for n in ("Link_R6", "Link_L6")]
+                        self._foot_ids = foot_ids
+                    fz = np.zeros(2, dtype=np.float32)
+                    buf = np.zeros(6)
+                    for ci in range(self.data.ncon):
+                        con = self.data.contact[ci]
+                        for k, b in enumerate(foot_ids):
+                            if b < 0:
+                                continue
+                            if (self.model.geom_bodyid[con.geom1] == b
+                                    or self.model.geom_bodyid[con.geom2] == b):
+                                mujoco.mj_contactForce(self.model, self.data, ci, buf)
+                                # buf[0:3] 在接触系; frame 行主序, 行0 = 法向 -> 转到世界系取 z
+                                fz[k] += float((con.frame.reshape(3, 3).T @ buf[0:3])[2])
+                                break
+                    footz = np.array([self.data.xpos[b][2] for b in foot_ids], dtype=np.float32)
                     self.track_log.append((
                         float(self.data.time), target_sdk.copy(),
                         self.data.qpos[self.qpos_adr].astype(np.float32).copy(),
+                        self.data.qvel[self.dof_adr].astype(np.float32).copy(),
                         self.last_torque.copy(), self.command.copy(),
+                        np.concatenate((fz, footz)),
+                        self.data.qpos[self.base_qpos_adr:self.base_qpos_adr + 7].copy(),
+                        self.data.qvel[self.base_dof_adr:self.base_dof_adr + 6].copy(),
                     ))
                 self.episode_step += 1
                 if self.viewer is not None:
@@ -590,13 +614,19 @@ class MujocoRunner:
         t = np.array([row[0] for row in rows])
         target = np.array([row[1] for row in rows])
         actual = np.array([row[2] for row in rows])
-        torque = np.array([row[3] for row in rows])
-        command = np.array([row[4] for row in rows])
-        data = np.column_stack((t, target, actual, torque, command))
+        qvel = np.array([row[3] for row in rows])
+        torque = np.array([row[4] for row in rows])
+        command = np.array([row[5] for row in rows])
+        fz = np.array([row[6] for row in rows])
+        base_pose = np.array([row[7] for row in rows])
+        base_vel = np.array([row[8] for row in rows])
+        data = np.column_stack((t, target, actual, qvel, torque, command, fz, base_pose, base_vel))
         header = ["t"]
-        for prefix in ("target", "sim", "tau"):
+        for prefix in ("target", "sim", "qd", "tau"):
             header.extend(f"{prefix}_{name}" for name in self.cfg.short_joint_names)
-        header.extend(("cmd_vx", "cmd_vy", "cmd_yaw"))
+        header.extend(("cmd_vx", "cmd_vy", "cmd_yaw", "fz_R6", "fz_L6", "z_R6", "z_L6"))
+        header.extend(("base_x", "base_y", "base_z", "base_qw", "base_qx", "base_qy", "base_qz",
+                       "base_vx", "base_vy", "base_vz", "base_wx", "base_wy", "base_wz"))
         np.savetxt(os.path.join(out_dir, "tracking.csv"), data, delimiter=",", header=",".join(header), comments="")
 
         fig, axes = plt.subplots(4, 3, figsize=(20, 12), sharex=True)

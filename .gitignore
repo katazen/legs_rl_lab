@@ -77,28 +77,16 @@ _build
 
 # RL-Games
 **/runs/*
-# 仅同步指定部署模型的 exported / params；训练检查点、日志、实机数据仍忽略。
+# 仅同步策略的 exported / params；训练检查点、日志、实机数据仍忽略。
 /logs/*
 !/logs/rsl_rl/
 /logs/rsl_rl/*
-!/logs/rsl_rl/nlegs_flat_static/
-!/logs/rsl_rl/nlegs_rough/
-!/logs/rsl_rl/nlegs_mimic_crouch/
-!/logs/rsl_rl/nlegs_mimic_stand/
+!/logs/rsl_rl/*/
 /logs/rsl_rl/*/*
-!/logs/rsl_rl/nlegs_flat_static/2026-09-16_11-41-05/
-!/logs/rsl_rl/nlegs_rough/2026-09-20_19-15-58/
-!/logs/rsl_rl/nlegs_mimic_crouch/2026-09-17_16-42-11/
-!/logs/rsl_rl/nlegs_mimic_stand/2026-09-17_15-40-44/
+!/logs/rsl_rl/*/*/
 /logs/rsl_rl/*/*/*
-!/logs/rsl_rl/nlegs_flat_static/2026-09-16_11-41-05/exported/
-!/logs/rsl_rl/nlegs_flat_static/2026-09-16_11-41-05/params/
-!/logs/rsl_rl/nlegs_rough/2026-09-20_19-15-58/exported/
-!/logs/rsl_rl/nlegs_rough/2026-09-20_19-15-58/params/
-!/logs/rsl_rl/nlegs_mimic_crouch/2026-09-17_16-42-11/exported/
-!/logs/rsl_rl/nlegs_mimic_crouch/2026-09-17_16-42-11/params/
-!/logs/rsl_rl/nlegs_mimic_stand/2026-09-17_15-40-44/exported/
-!/logs/rsl_rl/nlegs_mimic_stand/2026-09-17_15-40-44/params/
+!/logs/rsl_rl/*/*/exported/
+!/logs/rsl_rl/*/*/params/
 **/recordings/*
 
 # 实机姿态工具的逐帧记录 (每次运行一个 CSV)

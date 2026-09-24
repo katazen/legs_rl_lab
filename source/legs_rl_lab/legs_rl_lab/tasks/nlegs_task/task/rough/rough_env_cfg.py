@@ -1,16 +1,7 @@
-"""nlegs_rough：零速原地踏步；机器人、执行器、地形和全部 MDP 配置在本文件定义。
-
-不继承 flat 或公共机器人配置。复用 USD 几何资产和 mdp/执行器实现。
-2026-09-20 左右踝 pitch 使用悬空步态回放的等效候选，固定 PD 与延迟作对照；
-7 rad/s、26 N·m 仍是未辨识的模型假设，不代表实测速度/力矩上限。
-膝限位块已拆除，L4/R4 不加目标裁剪或实测端点，保留 USD 原有活动范围。
-"""
-
-from pathlib import Path
+"""nlegs_rough：使用 NLEGS_CFG 机器人资产的零速原地踏步任务。"""
 
 import isaaclab.sim as sim_utils
 import isaaclab.terrains as terrain_gen
-from isaaclab.actuators import DelayedPDActuatorCfg
 from isaaclab.assets import ArticulationCfg, AssetBaseCfg
 from isaaclab.envs import ManagerBasedRLEnvCfg
 from isaaclab.managers import CurriculumTermCfg as CurrTerm
@@ -27,24 +18,11 @@ from isaaclab.utils import configclass
 from isaaclab.utils.assets import ISAAC_NUCLEUS_DIR, ISAACLAB_NUCLEUS_DIR
 from isaaclab.utils.noise import AdditiveUniformNoiseCfg as Unoise
 
-from legs_rl_lab.actuators import DelayedDCMotorCfg
+from legs_rl_lab.assets.nlegs.nlegs import NLEGS_CFG
 from legs_rl_lab.tasks.nlegs_task import mdp
 
 
-# 实测单侧止挡；未列出的端点保留 USD 原值。膝 L4/R4 不在本表中。
-CROUCH_LIMITS = {
-    "joint_L1": (-0.9752422370, None),
-    "joint_L2": (None, 0.4964904250),
-    "joint_L3": (None, 0.4983978027),
-    "joint_L5": (-0.3763256275, None),
-    "joint_R1": (-0.9676127260, None),
-    "joint_R2": (-0.5270084688, None),
-    "joint_R3": (-0.6185626001, None),
-    "joint_R5": (-0.4224841688, None),
-}
-
-
-# 按 0.58m 小机身温和缩放的 rough 地形。num_rows = 难度等级(课程沿行递增)，num_cols = 每级的变体数。
+# 新资产默认站姿高度约 0.46m。num_rows = 难度等级(课程沿行递增)，num_cols = 每级的变体数。
 NLEGS_ROUGH_TERRAINS_CFG = TerrainGeneratorCfg(
     size=(8.0, 8.0),
     border_width=20.0,
@@ -60,47 +38,38 @@ NLEGS_ROUGH_TERRAINS_CFG = TerrainGeneratorCfg(
         "flat": terrain_gen.MeshPlaneTerrainCfg(proportion=0.2),
         # 随机起伏(碎石感)：温和 2~6cm
         "random_rough": terrain_gen.HfRandomUniformTerrainCfg(
-            proportion=0.2, noise_range=(0.02, 0.06), noise_step=0.02, border_width=0.25
+            proportion=0.1, noise_range=(0.02, 0.06), noise_step=0.02, border_width=0.25
         ),
         # 金字塔坡 / 反金字塔坡：坡度 ≤0.3(≈17°)
         "hf_pyramid_slope": terrain_gen.HfPyramidSlopedTerrainCfg(
-            proportion=0.15, slope_range=(0.0, 0.3), platform_width=2.0, border_width=0.25
+            proportion=0.15, slope_range=(0.1, 0.3), platform_width=2.0, border_width=0.25
         ),
         "hf_pyramid_slope_inv": terrain_gen.HfInvertedPyramidSlopedTerrainCfg(
-            proportion=0.15, slope_range=(0.0, 0.3), platform_width=2.0, border_width=0.25
+            proportion=0.15, slope_range=(0.1, 0.3), platform_width=2.0, border_width=0.25
         ),
-        # 随机方块：矮块 2~8cm
+        # 随机方块：矮块 2~5cm
         "boxes": terrain_gen.MeshRandomGridTerrainCfg(
-            proportion=0.15, grid_width=0.45, grid_height_range=(0.02, 0.08), platform_width=2.0
+            proportion=0.1, grid_width=0.45, grid_height_range=(0.02, 0.05), platform_width=2.0
         ),
-        # 台阶 / 反台阶：单级高 3~12cm(远低于 g1 的 5~23cm)
+        # 台阶 / 反台阶：单级高 4~10cm
         "pyramid_stairs": terrain_gen.MeshPyramidStairsTerrainCfg(
-            proportion=0.075,
-            step_height_range=(0.03, 0.12),
-            step_width=0.3,
+            proportion=0.15,
+            step_height_range=(0.04, 0.1),
+            step_width=0.2,
             platform_width=3.0,
             border_width=1.0,
             holes=False,
         ),
         "pyramid_stairs_inv": terrain_gen.MeshInvertedPyramidStairsTerrainCfg(
-            proportion=0.075,
-            step_height_range=(0.03, 0.12),
-            step_width=0.3,
+            proportion=0.15,
+            step_height_range=(0.04, 0.1),
+            step_width=0.2,
             platform_width=3.0,
             border_width=1.0,
             holes=False,
         ),
     },
 )
-
-
-@configclass
-class RoughRobotCfg(ArticulationCfg):
-    joint_sdk_names: list[str] = [
-        "joint_R1", "joint_R2", "joint_R3", "joint_R4", "joint_R5", "joint_R6",
-        "joint_L1", "joint_L2", "joint_L3", "joint_L4", "joint_L5", "joint_L6",
-    ]
-    soft_joint_pos_limit_factor: float = 0.95
 
 
 @configclass
@@ -126,8 +95,8 @@ class RoughSceneCfg(InteractiveSceneCfg):
         physics_material=sim_utils.RigidBodyMaterialCfg(
             friction_combine_mode="multiply",
             restitution_combine_mode="multiply",
-            static_friction=1.0,
-            dynamic_friction=1.0,
+            static_friction=0.6,
+            dynamic_friction=0.6,
         ),
         visual_material=sim_utils.MdlFileCfg(
             mdl_path=f"{ISAACLAB_NUCLEUS_DIR}/Materials/TilesMarbleSpiderWhiteBrickBondHoned/TilesMarbleSpiderWhiteBrickBondHoned.mdl",
@@ -136,106 +105,7 @@ class RoughSceneCfg(InteractiveSceneCfg):
         ),
         debug_vis=False,
     )
-    robot: RoughRobotCfg = RoughRobotCfg(
-        prim_path="{ENV_REGEX_NS}/Robot",
-        spawn=sim_utils.UsdFileCfg(
-            usd_path=str(Path(__file__).resolve().parents[4] / "assets/nlegs/mjcf/nlegs/nlegs.usd"),
-            activate_contact_sensors=True,
-            rigid_props=sim_utils.RigidBodyPropertiesCfg(
-                disable_gravity=False,
-                retain_accelerations=False,
-                linear_damping=0.0,
-                angular_damping=0.0,
-                max_linear_velocity=1000.0,
-                max_angular_velocity=1000.0,
-                max_depenetration_velocity=1.0,
-            ),
-            articulation_props=sim_utils.ArticulationRootPropertiesCfg(
-                enabled_self_collisions=True,
-                solver_position_iteration_count=8,
-                solver_velocity_iteration_count=4,
-            ),
-        ),
-        articulation_root_prim_path="/base/base",
-        init_state=ArticulationCfg.InitialStateCfg(
-            pos=(0.0, 0.0, 0.62),
-            joint_pos={".*1": -0.1, ".*4": 0.2, ".*5": -0.1},
-            joint_vel={".*": 0.0},
-        ),
-        # delay 单位为 5 ms 物理步。髋/膝/踝 roll 保留原参数。
-        # pitch 的 26/7 是暂用假设；本轮只支持下列整组等效参数，不支持真实上限或 DR 区间。
-        actuators={
-            "legs": DelayedDCMotorCfg(
-                joint_names_expr=[".*1", ".*2", ".*3"],
-                effort_limit=26.0,
-                saturation_effort=26.0,
-                velocity_limit=7.0,
-                stiffness={".*1": 200.0, ".*2": 100.0, ".*3": 100.0},
-                damping={".*1": 5.0, ".*2": 5.0, ".*3": 5.0},
-                armature=0.0509,
-                friction=0.5,
-                dynamic_friction=0.5,
-                viscous_friction=0.0,
-                min_delay=4,
-                max_delay=6,
-            ),
-            "knees": DelayedDCMotorCfg(
-                joint_names_expr=[".*4"],
-                effort_limit=26.0,
-                saturation_effort=26.0,
-                velocity_limit=7.0,
-                stiffness=250.0,
-                damping=5.0,
-                armature=0.0509,
-                friction=0.5,
-                dynamic_friction=0.5,
-                viscous_friction=0.0,
-                min_delay=1,
-                max_delay=6,
-            ),
-            "ankle_pitch_left": DelayedDCMotorCfg(
-                joint_names_expr=["joint_L5"],
-                effort_limit=26.0,
-                saturation_effort=26.0,
-                velocity_limit=7.0,
-                stiffness=40.0,
-                damping=2.0,
-                armature=0.035,
-                friction=0.51,
-                dynamic_friction=0.26,
-                viscous_friction=0.0,
-                min_delay=3,
-                max_delay=3,
-            ),
-            "ankle_pitch_right": DelayedDCMotorCfg(
-                joint_names_expr=["joint_R5"],
-                effort_limit=26.0,
-                saturation_effort=26.0,
-                velocity_limit=7.0,
-                stiffness=40.0,
-                damping=2.0,
-                armature=0.0509,
-                friction=0.55,
-                dynamic_friction=0.385,
-                viscous_friction=0.0,
-                min_delay=2,
-                max_delay=2,
-            ),
-            "ankle_roll": DelayedPDActuatorCfg(
-                joint_names_expr=[".*6"],
-                stiffness=40.0,
-                damping=0.5,
-                armature=0.00219,
-                effort_limit_sim=5.8,
-                velocity_limit_sim=14.0,
-                friction=0.0,
-                dynamic_friction=0.0,
-                viscous_friction=0.54,
-                min_delay=2,
-                max_delay=6,
-            ),
-        },
-    )
+    robot: ArticulationCfg = NLEGS_CFG.replace(prim_path="{ENV_REGEX_NS}/Robot")
 
     # sensors
     height_scanner = RayCasterCfg(
@@ -259,7 +129,7 @@ class RoughSceneCfg(InteractiveSceneCfg):
 
 @configclass
 class EventCfg:
-    """rough 的全部事件；保留既有扰动，踝 pitch 固定为本轮候选 PD。"""
+    """rough 的全部事件；执行器名义 PD 来自 NLEGS_CFG。"""
 
     # startup
     physics_material = EventTerm(
@@ -267,15 +137,11 @@ class EventCfg:
         mode="startup",
         params={
             "asset_cfg": SceneEntityCfg("robot", body_names=".*"),
-            "static_friction_range": (0.1, 1.3),
-            "dynamic_friction_range": (0.1, 1.3),
+            "static_friction_range": (0.1, 2.0),
+            "dynamic_friction_range": (0.1, 2.0),
             "restitution_range": (0.0, 0.0),
             "num_buckets": 64,
         },
-    )
-
-    crouch_joint_limits = EventTerm(
-        func=mdp.set_joint_position_limits, mode="startup", params={"joint_limits": CROUCH_LIMITS},
     )
 
     # 机身局部坐标系的质心偏移（m）；工程初始范围，非实测辨识区间。
@@ -285,7 +151,7 @@ class EventCfg:
         mode="startup",
         params={
             "asset_cfg": SceneEntityCfg("robot", body_names="base"),
-            "com_range": {"x": (-0.03, 0.03), "y": (-0.01, 0.01), "z": (-0.02, 0.02)},
+            "com_range": {"x": (-0.03, 0.03), "y": (-0.02, 0.02), "z": (-0.04, 0.04)},
         },
     )
 
@@ -295,7 +161,7 @@ class EventCfg:
         mode="reset",
         params={
             "asset_cfg": SceneEntityCfg("robot", body_names="base"),
-            "mass_distribution_params": (1.0, 5.0),
+            "mass_distribution_params": (-1.0, 2.0),
             "operation": "add",
         },
     )
@@ -335,17 +201,32 @@ class EventCfg:
         params={"bias_range": (-0.05, 0.05)},
     )
 
-    # 对照配置固定 pitch 的 Kp=40、Kd=2；没有已验证的增益随机化范围。
-    randomize_ankle_gains = None
+    # 每关节、每环境、每回合独立采样；scale 始终基于 NLEGS_CFG 名义值，不逐回合累乘。
+    randomize_leg_gains = EventTerm(
+        func=mdp.randomize_actuator_gains, mode="reset",
+        params={
+            "asset_cfg": SceneEntityCfg("robot", joint_names=[".*[1-4]"]),
+            "stiffness_distribution_params": (0.8, 1.2),
+            "damping_distribution_params": (0.8, 1.2),
+            "operation": "scale", "distribution": "uniform",
+        },
+    )
+    randomize_ankle_pitch_gains = EventTerm(
+        func=mdp.randomize_actuator_gains, mode="reset",
+        params={
+            "asset_cfg": SceneEntityCfg("robot", joint_names=[".*5"]),
+            "stiffness_distribution_params": (0.7, 1.1),
+            "damping_distribution_params": (0.8, 1.3),
+            "operation": "scale", "distribution": "uniform",
+        },
+    )
     randomize_ankle_roll_gains = EventTerm(
-        func=mdp.randomize_actuator_gains,
-        mode="reset",
+        func=mdp.randomize_actuator_gains, mode="reset",
         params={
             "asset_cfg": SceneEntityCfg("robot", joint_names=[".*6"]),
-            "stiffness_distribution_params": (0.85, 1.1),
-            "damping_distribution_params": (0.5, 1.0),
-            "operation": "scale",
-            "distribution": "uniform",
+            "stiffness_distribution_params": (0.8, 1.2),
+            "damping_distribution_params": (0.7, 1.3),
+            "operation": "scale", "distribution": "uniform",
         },
     )
 
@@ -370,10 +251,10 @@ class CommandsCfg:
         heading_command=False,
         debug_vis=True,
         ranges=mdp.UniformLevelVelocityCommandCfg.Ranges(
-            lin_vel_x=(-0.3, 0.5), lin_vel_y=(-0.3, 0.3), ang_vel_z=(-0.5, 0.5)
+            lin_vel_x=(-0.3, 0.3), lin_vel_y=(-0.3, 0.3), ang_vel_z=(-0.3, 0.3)
         ),
         limit_ranges=mdp.UniformLevelVelocityCommandCfg.Ranges(
-            lin_vel_x=(-0.3, 0.5), lin_vel_y=(-0.3, 0.3), ang_vel_z=(-0.5, 0.5)
+            lin_vel_x=(-0.3, 0.3), lin_vel_y=(-0.3, 0.3), ang_vel_z=(-0.3, 0.3)
         ),
     )
 
@@ -385,10 +266,6 @@ class ActionsCfg:
     JointPositionAction = mdp.JointPositionActionCfg(
         class_type=mdp.ZeroBiasJointPositionAction,
         asset_name="robot", joint_names=[".*"], scale=0.25, use_default_offset=True,
-        clip={
-            name: (lo if lo is not None else -float("inf"), hi if hi is not None else float("inf"))
-            for name, (lo, hi) in CROUCH_LIMITS.items()
-        },
     )
 
 
@@ -433,7 +310,7 @@ class ObservationsCfg:
         # 187 点高度图只进入 critic，actor 保持盲走。
         height_scan = ObsTerm(
             func=mdp.height_scan,
-            params={"sensor_cfg": SceneEntityCfg("height_scanner"), "offset": 0.58},
+            params={"sensor_cfg": SceneEntityCfg("height_scanner"), "offset": 0.46},
             clip=(-1.0, 1.0),
         )
 
@@ -484,7 +361,7 @@ class RewardsCfg:
     # -- robot
     base_height = RewTerm(
         func=mdp.base_height_l2, weight=-2.0,
-        params={"target_height": 0.58, "sensor_cfg": SceneEntityCfg("height_scanner")},
+        params={"target_height": 0.46, "sensor_cfg": SceneEntityCfg("height_scanner")},
     )
 
     # -- feet
@@ -497,7 +374,7 @@ class RewardsCfg:
     feet_y_distance = RewTerm(
         func=mdp.feet_y_distance,
         weight=-2.0,
-        params={"threshold": 0.222, "asset_cfg": SceneEntityCfg("robot", body_names=".*6")},
+        params={"threshold": 0.266, "asset_cfg": SceneEntityCfg("robot", body_names=".*6")},
     )
 
     feet_x_distance = RewTerm(
@@ -559,10 +436,10 @@ class TerminationsCfg:
 
     time_out = DoneTerm(func=mdp.time_out, time_out=True)
     bad_orientation = DoneTerm(func=mdp.bad_orientation, params={"limit_angle": 1.0})
-    # 相对量 base_z - min(feet_z) < 0.2m 即终止(身体塌到脚边), 与地形绝对高度无关
+    # 新资产默认 base 到脚部 body 约 0.445m，按旧资产 0.2/0.568 的塌陷比例取 0.16m。
     base_height = DoneTerm(
         func=mdp.base_height_below_feet,
-        params={"minimum_height": 0.2, "asset_cfg": SceneEntityCfg("robot", body_names=".*6")},
+        params={"minimum_height": 0.16, "asset_cfg": SceneEntityCfg("robot", body_names=".*6")},
     )
 
 
@@ -613,6 +490,10 @@ class RoughEnvCfg(ManagerBasedRLEnvCfg):
 class RoughPlayEnvCfg(RoughEnvCfg):
     def __post_init__(self):
         super().__post_init__()
+        # Play 使用名义 PD，避免回放对照每次重置得到不同的执行器。
+        self.events.randomize_leg_gains = None
+        self.events.randomize_ankle_pitch_gains = None
+        self.events.randomize_ankle_roll_gains = None
         self.scene.num_envs = 32
         self.scene.terrain.terrain_generator.num_rows = 5
         self.scene.terrain.terrain_generator.num_cols = 5

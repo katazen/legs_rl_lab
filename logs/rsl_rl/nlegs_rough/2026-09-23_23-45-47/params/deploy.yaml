@@ -1,0 +1,109 @@
+format_version: 2
+joint_names: [joint_R1, joint_R2, joint_R3, joint_R4, joint_R5, joint_R6, joint_L1,
+  joint_L2, joint_L3, joint_L4, joint_L5, joint_L6]
+joint_ids_map: [0, 6, 1, 7, 2, 8, 3, 9, 4, 10, 5, 11]
+physics_dt: 0.005
+step_dt: 0.02
+policy_action_clip: 5.0
+base_init_state:
+  pos: [0.0, 0.0, 0.5]
+  rot: [1.0, 0.0, 0.0, 0.0]
+stiffness: [200.0, 200.0, 200.0, 250.0, 40.0, 40.0, 200.0, 200.0, 200.0, 250.0, 40.0,
+  40.0]
+damping: [5.0, 5.0, 5.0, 5.0, 2.0, 0.5, 5.0, 5.0, 5.0, 5.0, 2.0, 0.5]
+default_joint_pos: [-0.1, -0.1, 0.0, 0.0, 0.0, 0.0, 0.2, 0.2, -0.1, -0.1, 0.0, 0.0]
+armature: [0.0509, 0.0509, 0.0509, 0.0509, 0.0509, 0.00219, 0.0509, 0.0509, 0.0509,
+  0.0509, 0.0509, 0.00219]
+effort: [1000000000.0, 1000000000.0, 1000000000.0, 1000000000.0, 1000000000.0, 5.8,
+  1000000000.0, 1000000000.0, 1000000000.0, 1000000000.0, 1000000000.0, 5.8]
+friction: [0.5, 0.5, 0.5, 0.5, 0.5, 0.0, 0.5, 0.5, 0.5, 0.5, 0.5, 0.0]
+dynamic_friction: [0.5, 0.5, 0.5, 0.5, 0.5, 0.0, 0.5, 0.5, 0.5, 0.5, 0.5, 0.0]
+viscous_friction: [0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0]
+actuators:
+  legs:
+    joint_ids: [0, 6, 1, 7, 2, 8, 3, 9]
+    torque_model: dc_motor
+    effort_limit: [26.0, 26.0, 26.0, 26.0, 26.0, 26.0, 26.0, 26.0]
+    effort_limit_sim: [1000000000.0, 1000000000.0, 1000000000.0, 1000000000.0, 1000000000.0,
+      1000000000.0, 1000000000.0, 1000000000.0]
+    velocity_limit: [7.0, 7.0, 7.0, 7.0, 7.0, 7.0, 7.0, 7.0]
+    velocity_limit_sim: [5.94e+36, 5.94e+36, 5.94e+36, 5.94e+36, 5.94e+36, 5.94e+36,
+      5.94e+36, 5.94e+36]
+    saturation_effort: 26.0
+    delay: [3, 7]
+  ankle_pitch:
+    joint_ids: [4, 10]
+    torque_model: dc_motor
+    effort_limit: [26.0, 26.0]
+    effort_limit_sim: [1000000000.0, 1000000000.0]
+    velocity_limit: [7.0, 7.0]
+    velocity_limit_sim: [5.94e+36, 5.94e+36]
+    saturation_effort: 26.0
+    delay: [3, 7]
+  ankle_roll:
+    joint_ids: [5, 11]
+    torque_model: ideal_pd
+    effort_limit: [0.0, 0.0]
+    effort_limit_sim: [5.8, 5.8]
+    velocity_limit: [14.0, 14.0]
+    velocity_limit_sim: [14.0, 14.0]
+    saturation_effort: null
+    delay: [3, 7]
+gait_period: 0.6
+action_delay: [3, 7]
+commands:
+  base_velocity:
+    ranges:
+      lin_vel_x: [-0.3, 0.3]
+      lin_vel_y: [-0.3, 0.3]
+      ang_vel_z: [-0.3, 0.3]
+      heading: null
+actions:
+  JointPositionAction:
+    clip: null
+    joint_names: [.*]
+    scale: [0.25, 0.25, 0.25, 0.25, 0.25, 0.25, 0.25, 0.25, 0.25, 0.25, 0.25, 0.25]
+    offset: [-0.1, -0.1, 0.0, 0.0, 0.0, 0.0, 0.2, 0.2, -0.1, -0.1, 0.0, 0.0]
+    joint_ids: null
+height_scanner:
+  offset: [0.0, 0.0, 20.0]
+  ray_alignment: yaw
+  resolution: 0.1
+  size: [1.6, 1.0]
+  ordering: xy
+observations:
+  base_ang_vel:
+    params: {}
+    clip: null
+    scale: [0.2, 0.2, 0.2]
+    history_length: 10
+  projected_gravity:
+    params: {}
+    clip: null
+    scale: [1.0, 1.0, 1.0]
+    history_length: 10
+  velocity_commands:
+    params: {command_name: base_velocity}
+    clip: null
+    scale: [1.0, 1.0, 1.0]
+    history_length: 10
+  joint_pos_rel:
+    params: {}
+    clip: null
+    scale: [1.0, 1.0, 1.0, 1.0, 1.0, 1.0, 1.0, 1.0, 1.0, 1.0, 1.0, 1.0]
+    history_length: 10
+  joint_vel_rel:
+    params: {}
+    clip: null
+    scale: [0.05, 0.05, 0.05, 0.05, 0.05, 0.05, 0.05, 0.05, 0.05, 0.05, 0.05, 0.05]
+    history_length: 10
+  last_action:
+    params: {}
+    clip: null
+    scale: [1.0, 1.0, 1.0, 1.0, 1.0, 1.0, 1.0, 1.0, 1.0, 1.0, 1.0, 1.0]
+    history_length: 10
+  gait_phase:
+    params: {}
+    clip: null
+    scale: [1.0, 1.0]
+    history_length: 10

@@ -1,4 +1,4 @@
-"""三策略的实机切换状态机；自动异常只报告，手柄 B 中断并保持目标。"""
+"""实机策略切换状态机；自动异常只报告，手柄 B 中断并保持目标。"""
 
 from pathlib import Path
 import time
@@ -11,8 +11,7 @@ from .rl_real_common import Policy, TermGroupedHistory
 
 
 class MultiTaskController:
-    KEYS = {"1": "walk", "2": "crouch", "3": "rise", "4": "return_stand", "0": "stop", "r": "reset",
-            "\n": "confirm_stop", "\r": "confirm_stop"}
+    KEYS = {"1": "walk", "2": "crouch", "3": "rise", "4": "return_stand", "0": "stop", "r": "reset"}
 
     def __init__(self, node, cfg, root):
         self.n, self.cfg = node, cfg["multi_task"]
@@ -29,15 +28,17 @@ class MultiTaskController:
         check_multi_pd(cfg)
         self.policies = {"walk": node}
         for name in ("crouch", "rise"):
-            if name == "crouch" and cfg["tasks"][name] is None:
-                print("[multi] 下蹲已禁用：2 / LB+X 不可用；仅启用走路和起身。")
+            if cfg["tasks"][name] is None:
+                print(f"[multi] {name} 已禁用")
                 continue
             self.policies[name] = Policy(cfg, Path(cfg["tasks"][name]), root)
-        walk, up = self.policies["walk"], self.policies["rise"]
+        walk, up = self.policies["walk"], self.policies.get("rise")
         down = self.policies.get("crouch")
         if walk.motion is not None or set(walk.deploy["commands"]) != {"base_velocity"}:
             raise ValueError("walk 必须是速度控制策略")
-        if up.motion is None or (down is not None and down.motion is None):
+        if down is not None and up is None:
+            raise ValueError("启用 crouch 时必须同时启用 rise")
+        if (up is not None and up.motion is None) or (down is not None and down.motion is None):
             raise ValueError("crouch / rise 必须是参考动作跟踪策略")
         for p in self.policies.values():
             if not np.array_equal(p.default_real, walk.default_real):
@@ -51,15 +52,21 @@ class MultiTaskController:
                     raise ValueError("下蹲、起身参考端点不衔接")
             if not np.allclose(down.motion.limits[down.sim2real], up.motion.limits[up.sim2real], atol=1e-6):
                 raise ValueError("下蹲和起身任务限位不一致")
-        if not np.allclose(up.motion.positions[-1, up.sim2real], walk.default_real, atol=1e-5):
-            raise ValueError("起身末帧必须与走路默认站姿一致")
-        # 下蹲/起身保留原任务边界；walk 的膝上限随后按自身训练 clip 与 common 解析。
-        self.lo = np.maximum(node.lo, up.motion.limits[up.sim2real, 0])
-        self.hi = np.minimum(node.hi, up.motion.limits[up.sim2real, 1])
-        self.pose_q = {"stand": up.motion.positions[-1, up.sim2real],
-                       "crouch": up.motion.positions[0, up.sim2real]}
+        if up is not None:
+            if not np.allclose(up.motion.positions[-1, up.sim2real], walk.default_real, atol=1e-5):
+                raise ValueError("起身末帧必须与走路默认站姿一致")
+            # 下蹲/起身保留原任务边界；walk 的膝上限随后按自身训练 clip 与 common 解析。
+            self.lo = np.maximum(node.lo, up.motion.limits[up.sim2real, 0])
+            self.hi = np.minimum(node.hi, up.motion.limits[up.sim2real, 1])
+            self.pose_q = {"stand": up.motion.positions[-1, up.sim2real],
+                           "crouch": up.motion.positions[0, up.sim2real]}
+        else:
+            self.lo, self.hi = node.lo.copy(), node.hi.copy()
+            self.pose_q = {"stand": walk.default_real.copy()}
         if cfg.get("crouch_calibration") is not None:
             self._calibrate_crouch(cfg["crouch_calibration"])
+            if up is None:
+                self.pose_q.pop("crouch")
         self.mimic_limits = (self.lo, self.hi)
         self.walk_limits = (self.lo.copy(), self.hi.copy())
         # 膝止挡已拆除：仅取消 walk 额外套用的下蹲膝上限，其他机械端点保持。
@@ -118,7 +125,7 @@ class MultiTaskController:
             raise ValueError("实测任务边界无效，或不能同时包含蹲姿与站姿")
         self.lo, self.hi = lo, hi
         self.pose_q["crouch"] = q
-        print("[multi] 使用实测蹲姿和 10 个单侧任务目标边界；ankle roll 不设实测限位；"
+        print("[multi] 保留实测的 10 个单侧任务目标边界；ankle roll 不设实测限位；"
               "common、训练 clip、参考动作与真实观测不变。")
 
     def show_status(self):
@@ -127,8 +134,7 @@ class MultiTaskController:
             "wait_current": ("等待关节/IMU", "收到后保持当前姿态"),
             "stand_ready": ("站立就绪", f"1/LB+A 走路{crouch_key}；4/LB+Start 慢回站姿"),
             "crouch_ready": ("下蹲就绪", "3/LB+Y 起身；4/LB+Start 慢回站姿"),
-            "walking": ("行走中", "0/Start 停步；W/S 前后 A/D 左右 Q/E 转向（或摇杆）；空格零速"),
-            "stopping": ("停步待确认", "速度归零、双脚落地后 Enter/再次 Start 收脚"),
+            "walking": ("行走中", "0/Start 立即停策略并回站姿；W/S 前后 A/D 左右 Q/E 转向（或摇杆）；空格零速"),
             "standing_transition": ("慢回站姿中", "请等待，不能切换"),
             "lowering": ("下蹲中", "请等待，不能切换"),
             "rising": ("起身中", "请等待，不能切换"),
@@ -169,8 +175,10 @@ class MultiTaskController:
             return "慢回站姿只允许保持状态；执行动作中无效，不排队"
         return None
 
-    def start_stand_blend(self, duration, reason):
+    def start_blend(self, duration, reason, goal, done_state):
         self.blend_start = np.clip(self.n.target_pub, self.lo, self.hi).astype(np.float32)
+        self.blend_goal = goal
+        self.blend_done_state = done_state
         self.stand_blend_time = duration
         self.active = self.pending_target = None
         self.n._clear_cmd_sources()
@@ -180,17 +188,20 @@ class MultiTaskController:
     def request(self, task):
         n, now = self.n, time.monotonic()
         if task in ("walk", "crouch", "rise") and task not in self.policies:
-            return self.reject("下蹲任务已禁用，等待新模型")
+            return self.reject(f"{task} 任务已禁用")
         if task == "halt":
             self.halt("操作员中断")
             return True
         if task == "return_stand":
             if (reason := self.return_error()) is not None:
                 return self.reject(reason)
-            distance = np.max(np.abs(np.clip(n.target_pub, self.lo, self.hi) - self.pose_q["stand"]))
+            goal = self.pose_q["stand"]
+            if np.any(goal < self.lo) or np.any(goal > self.hi):
+                return self.reject("站姿超出当前关节目标边界，拒绝回站姿")
+            distance = np.max(np.abs(np.clip(n.target_pub, self.lo, self.hi) - goal))
             # smoothstep 的峰值导数是 1.5；限制的是目标速度，不是电机实际速度。
             duration = max(self.cfg["stop_blend_time"], 1.5 * distance / self.cfg["return_max_speed"])
-            self.start_stand_blend(duration, f"操作者确认已支撑；{duration:.1f}s 同步慢回准备站姿，不运行策略")
+            self.start_blend(duration, f"操作者确认已支撑；{duration:.1f}s 同步慢回站姿，不运行策略", goal, "stand_ready")
             return True
         if task == "reset":
             if self.state != "stopped":
@@ -200,17 +211,17 @@ class MultiTaskController:
             return True
         if task == "stop":
             if self.state == "walking":
-                command = n.cmd.copy()
+                goal = self.pose_q["stand"]
+                if np.any(goal < self.lo) or np.any(goal > self.hi):
+                    return self.reject("站姿超出当前关节目标边界，拒绝停步回站姿")
+                self.active = self.pending_target = None
                 n._clear_cmd_sources()
-                n.cmd[:] = command
-                self.change("stopping", "速度指令归零；看到双脚落地后 Enter/再次 Start 确认收脚")
+                n._close_log()
+                n.target_real = n.target_pub = goal.copy()
+                self.change("stand_ready", "走路策略已停止，直接下发默认站姿")
+                n._publish_target()
                 return True
-            return self.reject("正常停步只用于走路；收脚确认用 Enter，其他动作可按手柄 B 中断")
-        if task == "confirm_stop":
-            if self.state == "stopping":
-                self.start_stand_blend(self.cfg["stop_blend_time"], "操作者确认接地，0.5s 平滑收回站姿")
-                return True
-            return self.reject("尚未进入正常停步，不接受收脚确认")
+            return self.reject("停步回站姿只用于走路；其他动作可按手柄 B 中断")
         required = {"walk": "stand_ready", "crouch": "stand_ready", "rise": "crouch_ready"}
         if task not in required or self.state != required[task] or self.active == task:
             label = {"walk": "走路", "crouch": "下蹲", "rise": "起身"}.get(task, task)
@@ -259,9 +270,8 @@ class MultiTaskController:
 
     def update_state(self):
         now = time.monotonic()
-        if self.state in ("stand_ready", "crouch_ready"):
-            pose = ({"crouch": "crouch", "rise": "stand"}[self.active]
-                    if self.active in ("crouch", "rise") else self.closest_pose())
+        if self.state in ("stand_ready", "crouch_ready") and self.active in ("crouch", "rise"):
+            pose = {"crouch": "crouch", "rise": "stand"}[self.active]
             if self.state != pose + "_ready":
                 self.change(pose + "_ready", "按当前关节角选择就近任务入口")
         elif self.state in ("lowering", "rising"):
@@ -273,7 +283,9 @@ class MultiTaskController:
         elif self.state == "standing_transition":
             elapsed = now - self.state_since
             if elapsed >= self.stand_blend_time:
-                self.change("stand_ready", "插值结束，不自动启动走路")
+                self.n.target_pub = self.blend_goal.copy()
+                self.n.target_real = self.blend_goal.copy()
+                self.change(self.blend_done_state, "插值结束，不自动启动走路")
 
     def tick(self):
         n, now = self.n, time.monotonic()
@@ -320,7 +332,7 @@ class MultiTaskController:
         elif self.state == "standing_transition":
             a = np.clip((now - self.state_since) / self.stand_blend_time, 0., 1.)
             s = a*a*(3-2*a)
-            n.target_pub = np.clip((1-s)*self.blend_start + s*self.pose_q["stand"], self.lo, self.hi).astype(np.float32)
+            n.target_pub = np.clip((1-s)*self.blend_start + s*self.blend_goal, self.lo, self.hi).astype(np.float32)
             n.target_real = n.target_pub.copy()
         n._publish_target()
 
@@ -363,8 +375,7 @@ class MultiTaskController:
         elif pressed("back"):
             self.request("reset")
         elif pressed("start"):
-            self.request("return_stand" if down("lb", msg.buttons)
-                         else "confirm_stop" if self.state == "stopping" else "stop")
+            self.request("return_stand" if down("lb", msg.buttons) else "stop")
         elif down("lb", msg.buttons):
             for button, task in (("a", "walk"), ("x", "crouch"), ("y", "rise")):
                 if pressed(button):

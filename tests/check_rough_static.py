@@ -23,23 +23,97 @@ from pxr import Usd, UsdPhysics
 import legs_rl_lab.tasks
 from isaaclab_tasks.utils import load_cfg_from_registry
 from legs_rl_lab.tasks.nlegs_task import mdp
-from legs_rl_lab.tasks.nlegs_task.task.rough.rough_env_cfg import CROUCH_LIMITS
+from legs_rl_lab.assets.nlegs.nlegs import NLEGS_CFG
 from legs_rl_lab.tasks.nlegs_task.task.rough.static_env_cfg import CROUCH_LIMITS as STATIC_LIMITS
 from legs_rl_lab.utils.export_deploy_cfg import export_deploy_cfg
 
 
+def check_rough(cfg):
+    robot_cfg = cfg.scene.robot
+    play = load_cfg_from_registry("nlegs_rough", "play_env_cfg_entry_point")
+    for config in (cfg, play):
+        assert not hasattr(config, "action_mix_range") and not hasattr(config, "action_noise_std")
+    for name, kp, kd in (
+        ("randomize_leg_gains", (0.8, 1.2), (0.8, 1.2)),
+        ("randomize_ankle_pitch_gains", (0.7, 1.1), (0.8, 1.3)),
+        ("randomize_ankle_roll_gains", (0.8, 1.2), (0.7, 1.3)),
+    ):
+        term = getattr(cfg.events, name)
+        assert term.func is mdp.randomize_actuator_gains and term.mode == "reset"
+        assert term.params["stiffness_distribution_params"] == kp
+        assert term.params["damping_distribution_params"] == kd
+        assert getattr(play.events, name) is None
+    assert robot_cfg.spawn.usd_path == NLEGS_CFG.spawn.usd_path
+    assert robot_cfg.actuators.keys() == NLEGS_CFG.actuators.keys()
+    assert robot_cfg.init_state == NLEGS_CFG.init_state
+    assert not hasattr(cfg.events, "crouch_joint_limits")
+    assert cfg.actions.JointPositionAction.clip is None
+    cfg.scene.num_envs = 2
+    cfg.sim.device = args.device
+    cfg.scene.sky_light.spawn.texture_file = None
+    cfg.scene.terrain.visual_material = None
+    cfg.scene.terrain.terrain_generator.num_rows = 2
+    cfg.scene.terrain.terrain_generator.num_cols = 10
+    cfg.scene.terrain.max_init_terrain_level = 1
+    cfg.commands.base_velocity.debug_vis = False
+    env = gym.make(args.task, cfg=cfg).unwrapped
+    try:
+        obs, _ = env.reset()
+        robot = env.scene["robot"]
+        action = env.action_manager.get_term("JointPositionAction")
+        assert torch.equal(action.raw_actions, torch.zeros_like(action.raw_actions))
+        action.process_actions(torch.ones((2, 12), device=env.device))
+        assert torch.equal(action.raw_actions, torch.ones_like(action.raw_actions))
+        action.process_actions(torch.zeros((2, 12), device=env.device))
+        assert torch.count_nonzero(action.raw_actions) == 0
+        action.apply_actions()
+        torch.testing.assert_close(robot.data.joint_pos_target, action.processed_actions - env._joint_zero_bias)
+        for name, (kp, kd) in {
+            "legs": ((0.8, 1.2), (0.8, 1.2)),
+            "ankle_pitch": ((0.7, 1.1), (0.8, 1.3)),
+            "ankle_roll": ((0.8, 1.2), (0.7, 1.3)),
+        }.items():
+            actuator = robot.actuators[name]
+            ids = actuator.joint_indices
+            for actual, nominal, bounds in (
+                (actuator.stiffness, robot.data.default_joint_stiffness[:, ids], kp),
+                (actuator.damping, robot.data.default_joint_damping[:, ids], kd),
+            ):
+                ratio = actual / nominal
+                assert ratio.ge(bounds[0] - 1e-5).all() and ratio.le(bounds[1] + 1e-5).all()
+                assert not torch.allclose(ratio, torch.ones_like(ratio))
+        stage = Usd.Stage.Open(robot_cfg.spawn.usd_path)
+        original = {
+            p.GetName(): np.radians([UsdPhysics.RevoluteJoint(p).GetLowerLimitAttr().Get(),
+                                     UsdPhysics.RevoluteJoint(p).GetUpperLimitAttr().Get()])
+            for p in stage.Traverse() if p.IsA(UsdPhysics.RevoluteJoint)
+        }
+        for j, name in enumerate(robot.joint_names):
+            np.testing.assert_allclose(robot.data.joint_pos_limits[:, j].cpu(),
+                                       np.tile(original[name], (2, 1)), atol=2e-6, rtol=0)
+        for _ in range(5):
+            obs, rewards, _, _, _ = env.step(torch.zeros((2, 12), device=env.device))
+            assert torch.isfinite(rewards).all()
+            assert all(torch.isfinite(v).all() for v in obs.values())
+        print("PASS nlegs_rough: NLEGS_CFG body, USD joint limits, no rough clip, finite 2-env rollout", flush=True)
+    finally:
+        env.close()
+
+
 def main():
     cfg = load_cfg_from_registry(args.task, "env_cfg_entry_point")
+    if args.task == "nlegs_rough":
+        check_rough(cfg)
+        return
     play = load_cfg_from_registry(args.task, "play_env_cfg_entry_point")
     agent = load_cfg_from_registry(args.task, "rsl_rl_cfg_entry_point")
     old = load_cfg_from_registry("nlegs_flat", "env_cfg_entry_point")
     is_static = args.task == "nlegs_rough_static"
-    task_limits = STATIC_LIMITS if is_static else CROUCH_LIMITS
-    assert set(CROUCH_LIMITS) == {f"joint_{side}{j}" for side in "LR" for j in (1, 2, 3, 5)}
-    pitch_delays = {"ankle_pitch": (1, 8)} if is_static else {
+    task_limits = STATIC_LIMITS
+    pitch_delays = {"ankle_pitch": (1, 7)} if is_static else {
         "ankle_pitch_left": (3, 3), "ankle_pitch_right": (2, 2),
     }
-    delay_bounds = {"legs": (4, 6), "knees": (1, 6), "ankle_roll": (2, 6), **pitch_delays}
+    delay_bounds = {"legs": (3, 7), "knees": (1, 6), "ankle_roll": (2, 7), **pitch_delays}
     gain_bounds = {"ankle_roll": ((34, 44), (0.25, 0.5))}
     gain_bounds.update({name: ((28, 44), (1.4, 2.4)) if is_static else ((40, 40), (2, 2))
                        for name in pitch_delays})
@@ -71,10 +145,6 @@ def main():
     assert not hasattr(old.events, "crouch_joint_limits")
     assert not hasattr(old.events, "base_com")
     assert not hasattr(load_cfg_from_registry("nlegs_rough_static", "env_cfg_entry_point").events, "base_com")
-    assert old.scene.robot.actuators["legs"].min_delay == 4
-    assert old.scene.robot.actuators["legs"].stiffness[".*4"] == 250
-    assert old.scene.robot.actuators["ankle_pitch"].min_delay == 4
-    assert old.scene.robot.actuators["ankle_roll"].min_delay == 4
     assert old.events.randomize_ankle_gains.params["damping_distribution_params"] == (0.9, 1.5)
     assert old.rewards.base_height.func is mdp.base_height_l2
     expected_asset = "nlegs_limit" if is_static else "nlegs"

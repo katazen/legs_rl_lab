@@ -1,4 +1,4 @@
-"""Convert the measured v3 reference into named full-body mimic data, without Isaac Sim."""
+"""Convert a kinematic reference into named full-body Mimic data, without Isaac Sim."""
 
 import argparse
 import hashlib
@@ -13,12 +13,12 @@ ROOT = Path(__file__).resolve().parents[1]
 DEFAULT_OUTPUT = ROOT / "source/legs_rl_lab/legs_rl_lab/tasks/mimic_task/task/nlegs_crouch/motions/stand_to_crouch_v3.npz"
 
 
-def convert(source, output):
+def convert(source, output, model_file=XML):
     if output.exists():
         raise FileExistsError(f"Refusing to overwrite {output}")
     with np.load(source, allow_pickle=False) as loaded:
         motion = dict(loaded)
-    model = mujoco.MjModel.from_xml_path(str(XML))
+    model = mujoco.MjModel.from_xml_path(str(model_file))
     data = mujoco.MjData(model)
     names = motion["joint_names"].tolist()
     joints = [model.joint(name).id for name in names]
@@ -51,7 +51,7 @@ def convert(source, output):
                   joint_vel=motion["joint_vel"].astype(np.float32),
                   velocity_frame=np.array("world_link_origin"),
                   validation_level=np.array("kinematic"), source_sha256=np.array(hashlib.sha256(source.read_bytes()).hexdigest()),
-                  model_sha256=np.array(hashlib.sha256(XML.read_bytes()).hexdigest()))
+                  model_sha256=np.array(hashlib.sha256(model_file.read_bytes()).hexdigest()))
     assert np.allclose(result["body_pos_w"][:, 0], motion["root_pos"], atol=1e-7)
     assert all(np.isfinite(v).all() for v in result.values() if v.dtype.kind == "f")
     output.parent.mkdir(parents=True, exist_ok=True)

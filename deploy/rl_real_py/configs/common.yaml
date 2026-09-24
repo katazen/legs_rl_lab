@@ -1,10 +1,10 @@
-# 统一三任务配置：只在这里选择模型、配置硬件和动作过渡。
+# 实机任务配置：只在这里选择模型、配置硬件和动作过渡。
 # 模型的观测、动作、PD、参考轨迹仍读取各 run 的 params/deploy.yaml。
 # 路径相对仓库根目录；不自动选择最新模型。
 tasks:
-  walk: logs/rsl_rl/nlegs_rough/2026-09-20_19-15-58
-  crouch: logs/rsl_rl/nlegs_mimic_crouch/2026-09-17_16-42-11
-  rise: logs/rsl_rl/nlegs_mimic_stand/2026-09-17_15-40-44
+  walk: logs/rsl_rl/nlegs_rough/2026-08-26_20-37-55
+  crouch: null
+  rise: null
 
 publish_rate: 200
 target_ema_alpha: 1.0       # 统一部署与 sim2sim 一致，不叠加目标 EMA
@@ -15,8 +15,8 @@ joint_index_in_real: ["L1","L2","L3","L4","L5","L6","R1","R2","R3","R4","R5","R6
 # 目标角度裁剪边界；运行中不再因实测角越界自动中断。
 joint_lower_limits: [-1.05, -0.26, -1.0, -0.5, -0.45, -0.5,
                      -1.05, -1.05, -1.0, -0.5, -0.45, -0.5]
-joint_upper_limits: [ 1.05,  1.05,  1.0, 1.92, 1.0,  0.5,
-                      1.05,  0.26,  1.0, 1.92, 1.0,  0.5]
+joint_upper_limits: [ 1.0,   1.05,  1.0, 1.92, 1.0,  0.5,
+                      1.0,   0.26,  1.0, 1.92, 1.0,  0.5]
 
 use_derived_vel: false     # 默认直接使用电机上报速度
 vel_ema_alpha: 0.5         # 仅差分速度模式使用

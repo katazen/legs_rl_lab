@@ -35,7 +35,7 @@ flat = _load_flat_sim2sim()
 
 # ===================== 需要自己填/改的部分（全部集中在这里） =====================
 # 要回放的训练 run（logs/rsl_rl/nlegs_rough/ 下的目录名，需先用 play 导出 exported/policy.pt）
-RUN = "2026-09-20_19-15-58"
+RUN = "2026-09-23_23-45-47"
 # run 所在的 logs 根目录（想用平地策略先试地形，可临时指到 .../nlegs_flat）
 LOGS_ROOT = os.path.join(flat._REPO_ROOT, "logs", "rsl_rl", "nlegs_rough")
 

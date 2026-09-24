@@ -77,9 +77,7 @@ class NlegsRoughPPORunnerCfg(NlegsFlatPPORunnerCfg):
     experiment_name = "nlegs_rough"
 
     def __post_init__(self):
-        # 保留小批次；实测左右单侧限位不同，不再强制镜像增强或镜像损失。
         self.algorithm.num_mini_batches = 16
-        self.algorithm.symmetry_cfg = None
 
 
 @configclass
