@@ -136,7 +136,7 @@ ROS 工作区的 `setup.py`、`package.xml` 和驱动配置也保留；`build/`�
 
 ## 模型同步与目标边界
 
-Git 同步部署源码和本页的最小离线检查；`logs/` 下的参数、导出模型和检查点需另行复制，其余本地测试与 `tools/` 实验脚本不会随 Git 同步。
+Git 同步部署源码及各策略的 `exported/`、`params/`；训练检查点、实机日志和其他 `logs/` 数据仍不随 Git 同步。
 
 同步到机器人主机后重新编译 `rl_real_py`，然后运行 `./start_real.sh --check-only`。
 模型需包含启用 run 的 `params/`、`exported/`，以及训练使用的参考 NPZ 和 XML；禁用下蹲时不依赖旧下蹲文件。
