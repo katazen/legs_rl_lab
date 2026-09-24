@@ -89,6 +89,16 @@ class Policy:
         self.cmd_max = np.array([command_ranges[name][1] for name in command_names], np.float32)
         if np.any(self.cmd_min > 0) or np.any(self.cmd_max < 0):
             raise ValueError("训练速度范围必须包含零速度")
+        if self.motion is None and "velocity_command_limits" in cfg:
+            limits = cfg["velocity_command_limits"]
+            if not isinstance(limits, dict) or set(limits) != set(command_names):
+                raise ValueError("velocity_command_limits 必须包含 lin_vel_x / lin_vel_y / ang_vel_z")
+            configured = np.asarray([limits[name] for name in command_names], np.float32)
+            if (configured.shape != (3, 2) or not np.isfinite(configured).all()
+                    or np.any(configured[:, 0] > 0) or np.any(configured[:, 1] < 0)
+                    or np.any(configured[:, 0] < self.cmd_min) or np.any(configured[:, 1] > self.cmd_max)):
+                raise ValueError("速度指令截断范围须为有限的 [最小, 最大]，包含零且不能超出训练范围")
+            self.cmd_min, self.cmd_max = configured[:, 0], configured[:, 1]
 
         # 观测项: 顺序 / scale / history 全来自 deploy.yaml
         obs = dep["observations"]

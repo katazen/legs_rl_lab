@@ -9,6 +9,11 @@ tasks:
 publish_rate: 200
 target_ema_alpha: 1.0       # 统一部署与 sim2sim 一致，不叠加目标 EMA
 cmd_bias: [0.0, 0.0, 0.0]   # 统一部署不叠加速度零偏
+# 走路速度指令截断范围 [最小, 最大]：前后/左右 m/s，转向 rad/s；不得超出训练范围。
+velocity_command_limits:
+  lin_vel_x: [-0.3, 0.3]
+  lin_vel_y: [-0.0, 0.0]
+  ang_vel_z: [-0.5, 0.5]
 
 # 话题中的实机顺序；策略顺序从各模型按关节名读取。
 joint_index_in_real: ["L1","L2","L3","L4","L5","L6","R1","R2","R3","R4","R5","R6"]

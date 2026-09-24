@@ -67,6 +67,7 @@ ros2 run joy game_controller_node --ros-args -p autorepeat_rate:=20.0 -r joy:=/g
 
 左摇杆前后/左右控制前后/横移，右摇杆左右控制转向，扳机不控制速度。
 速度指令不做缓升/缓降，摇杆回中后下一控制周期归零；保留死区、失联归零和任务接管过渡。
+键盘与手柄合成后的 `vx/vy/wz` 按 `rl_real_py/configs/common.yaml` 的 `velocity_command_limits` 截断；范围必须包含零，且不得超出走路策略训练时的命令范围。
 标准轴为 LEFTX/LEFTY/RIGHTX/RIGHTY/LT/RT=0/1/2/3/4/5；按钮 A/B/X/Y=0/1/2/3、LB=9、Back=4、Start=6。
 `gamepad_buttons` 已按此标准配置；不能把普通 `joy_node` 重映射到 `/gamepad`，原始轴序与标准轴序不同。
 首次连接或切换有线/无线后，先不运行机器人控制，用 `ros2 topic echo /gamepad` 核对回中、方向及按钮。

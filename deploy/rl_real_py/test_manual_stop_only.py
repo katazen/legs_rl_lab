@@ -1,11 +1,28 @@
 """离线验证：运行中异常只告警，手柄 B 才进入中断锁存。"""
 
 from types import SimpleNamespace
+from pathlib import Path
 
 import numpy as np
+import pytest
 
 from rl_real_py.multi_task import MultiTaskController
-from rl_real_py.rl_real_common import RL_real
+from rl_real_py.rl_real_common import Policy, RL_real
+from rl_real_py.deployment_config import load_settings
+
+
+def test_common_velocity_limits_override_training_limits_without_widening(monkeypatch):
+    cfg, run_dir, repo = load_settings(Path(__file__).parent / "configs/common.yaml")
+    cfg["velocity_command_limits"] = {
+        "lin_vel_x": [-0.1, 0.2], "lin_vel_y": [-0.1, 0.1], "ang_vel_z": [-0.2, 0.2]
+    }
+    monkeypatch.setattr(Policy, "_load_policy", lambda *_: None)
+    policy = Policy(cfg, run_dir, repo)
+    np.testing.assert_allclose(policy.cmd_min, [-0.1, -0.1, -0.2])
+    np.testing.assert_allclose(policy.cmd_max, [0.2, 0.1, 0.2])
+    cfg["velocity_command_limits"]["lin_vel_x"] = [-0.4, 0.2]
+    with pytest.raises(ValueError, match="不能超出训练范围"):
+        Policy(cfg, run_dir, repo)
 
 
 def test_initial_status_before_any_blend(capsys):
@@ -53,8 +70,11 @@ def test_runtime_faults_do_not_latch_but_gamepad_b_does():
     m.policy_target = lambda policy: (_ for _ in ()).throw(ValueError("推理失败"))
 
     n.obs_raw[7] = 100.
+    n.cmd_max[:] = [0.2, 0.1, 0.3]
+    n._kb_cmd[:] = 1.
     RL_real._on_motor_warn(n, SimpleNamespace(data='{"errors":[{"err":"失能"}]}'))
     m.tick()
+    np.testing.assert_allclose(n.cmd, n.cmd_max)
     assert m.state == "walking" and m.active == "walk"
     assert any("推理失败" in message for message in warnings)
     m.keys("p")
