@@ -1,0 +1,71 @@
+source/legs_rl_lab/legs_rl_lab/tasks/nlegs_task/task/rough/sim2sim.py
+  s_41deeaca4ca644::t_d65c7a166dba4a 5,182,196-197
+  h_d698c05df35737 38
+deploy/rl_real_py/rl_real_py/rl_real_common.py
+  s_41deeaca4ca644::t_71c2d4d1967eed 82
+source/legs_rl_lab/legs_rl_lab/tasks/nlegs_task/task/rough/nogait_env_cfg.py
+  s_41deeaca4ca644::t_71c2d4d1967eed 1-22,24-31,33,37-44,49-77
+  s_41deeaca4ca644::t_8da1cd621197f5 23,32,34-36,45-48
+.gitignore
+  s_b5832af2ee20db::t_001b1a7791d238 42-43
+  s_41deeaca4ca644::t_71c2d4d1967eed 44
+  s_41deeaca4ca644::t_0caca409df126f 45
+source/legs_rl_lab/legs_rl_lab/tasks/nlegs_task/mdp/rewards.py
+  s_41deeaca4ca644::t_8da1cd621197f5 219-220
+  s_41deeaca4ca644::t_71c2d4d1967eed 200-218,221-225
+source/legs_rl_lab/legs_rl_lab/tasks/nlegs_task/task/rough/__init__.py
+  s_41deeaca4ca644::t_71c2d4d1967eed 24-34
+tests/check_rough_nogait_sim2sim.py
+  s_41deeaca4ca644::t_0caca409df126f 1-32,34-41
+  s_41deeaca4ca644::t_30830d406080ea 33
+README.md
+  s_41deeaca4ca644::t_71c2d4d1967eed 13
+source/legs_rl_lab/legs_rl_lab/tasks/nlegs_task/task/flat/sim2sim.py
+  s_41deeaca4ca644::t_71c2d4d1967eed 155-156
+  s_41deeaca4ca644::t_d65c7a166dba4a 658,666-667
+source/legs_rl_lab/legs_rl_lab/tasks/nlegs_task/task/rough/sim2sim_nogait.py
+  s_41deeaca4ca644::t_ef5df076944a43 1-70
+source/legs_rl_lab/legs_rl_lab/tasks/nlegs_task/task/rough/README_nogait.md
+  s_41deeaca4ca644::t_ef5df076944a43 22-24,27-31
+  s_41deeaca4ca644::t_8da1cd621197f5 10
+  s_41deeaca4ca644::t_6c0a7f2d048d66 13-17
+  s_41deeaca4ca644::t_0caca409df126f 38-39
+  s_41deeaca4ca644::t_71c2d4d1967eed 1-9,11-12,18-21,25-26,32-37,40-42
+tests/check_rough_nogait.py
+  s_41deeaca4ca644::t_8d9332bf3f6ea5 4,15,123-125
+  s_41deeaca4ca644::t_e93d5503102824 1-3,5-6,8-14,16-90,96-113,115-120,126
+  s_41deeaca4ca644::t_02968ef31759ee 7,121-122
+  s_41deeaca4ca644::t_8da1cd621197f5 91-95
+  s_41deeaca4ca644::t_718b596b0d970f 114
+source/legs_rl_lab/legs_rl_lab/assets/nlegs/nlegs.py
+  h_d698c05df35737 94
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.7.5",
+  "base_commit_sha": "75607ba8f612f36867332bc48a2fd380f18e6587",
+  "prompts": {},
+  "humans": {
+    "h_d698c05df35737": {
+      "author": "woan <377801872@qq.com>"
+    }
+  },
+  "sessions": {
+    "s_41deeaca4ca644": {
+      "agent_id": {
+        "tool": "codex",
+        "id": "01a1107c-fe23-7401-bd0a-b1971e228c18",
+        "model": "gpt-6.1-sol"
+      },
+      "human_author": "woan <377801872@qq.com>"
+    },
+    "s_b5832af2ee20db": {
+      "agent_id": {
+        "tool": "codex",
+        "id": "01a0ec81-cb11-7e71-9a90-880a74dcbef9",
+        "model": "gpt-6-astra"
+      },
+      "human_author": "woan <377801872@qq.com>"
+    }
+  }
+}
