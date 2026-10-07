@@ -79,7 +79,7 @@ class Policy:
         term_clip = dep["actions"]["JointPositionAction"].get("clip")
         self.action_term_clip = None if term_clip is None else np.asarray(term_clip, np.float32)
         self.action_clip = dep.get("policy_action_clip", agent.get("clip_actions"))
-        self.gait_period = 1.0 if self.motion is not None else float(dep["gait_period"])
+        self.gait_period = float(dep["gait_period"]) if "gait_phase" in dep["observations"] else 1.0
         step_dt = float(dep["step_dt"])
         self.step_dt = step_dt
         command_names = ("lin_vel_x", "lin_vel_y", "ang_vel_z")

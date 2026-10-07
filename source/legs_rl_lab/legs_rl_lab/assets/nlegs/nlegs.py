@@ -91,6 +91,7 @@ NLEGS_CFG = UnitreeArticulationCfg(
         ),
         "ankle_roll": DelayedPDActuatorCfg(
             joint_names_expr=[".*6"],
+            effort_limit=5.8,#
             stiffness=40.0,
             damping=0.5,
             armature=0.00219,

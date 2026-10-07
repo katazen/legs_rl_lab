@@ -21,3 +21,14 @@ gym.register(
         "rsl_rl_cfg_entry_point": "legs_rl_lab.tasks.nlegs_task.agents.rsl_rl_ppo_cfg:NlegsRoughPPORunnerCfg",
     },
 )
+
+gym.register(
+    id="rough_nogait",
+    entry_point="isaaclab.envs:ManagerBasedRLEnv",
+    disable_env_checker=True,
+    kwargs={
+        "env_cfg_entry_point": f"{__name__}.nogait_env_cfg:RoughNoGaitEnvCfg",
+        "play_env_cfg_entry_point": f"{__name__}.nogait_env_cfg:RoughNoGaitPlayEnvCfg",
+        "rsl_rl_cfg_entry_point": f"{__name__}.nogait_env_cfg:RoughNoGaitPPORunnerCfg",
+    },
+)

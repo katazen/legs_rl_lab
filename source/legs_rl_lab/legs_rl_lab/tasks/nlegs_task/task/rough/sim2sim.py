@@ -2,7 +2,7 @@
 
 用法(按文件路径直接运行, 不要 python -m 走包导入):
     python source/legs_rl_lab/legs_rl_lab/tasks/nlegs_task/task/rough/sim2sim.py \
-        [--run RUN] [--headless] [--duration S] [--save-data] [--check-terrain]
+        [--run RUN] [--scene-xml XML] [--headless] [--duration S] [--save-data] [--check-terrain]
 
 地形(参数见下方可改块):
   沿 +X 行进，距原点 2m 开始，整条路线宽 2m：
@@ -35,7 +35,7 @@ flat = _load_flat_sim2sim()
 
 # ===================== 需要自己填/改的部分（全部集中在这里） =====================
 # 要回放的训练 run（logs/rsl_rl/nlegs_rough/ 下的目录名，需先用 play 导出 exported/policy.pt）
-RUN = "2026-09-23_23-45-47"
+RUN = "2026-09-29_15-57-49"
 # run 所在的 logs 根目录（想用平地策略先试地形，可临时指到 .../nlegs_flat）
 LOGS_ROOT = os.path.join(flat._REPO_ROOT, "logs", "rsl_rl", "nlegs_rough")
 
@@ -179,6 +179,7 @@ class RoughRunner(flat.MujocoRunner):
 def main():
     parser = argparse.ArgumentParser()
     parser.add_argument("--run", default=RUN)
+    parser.add_argument("--scene-xml", help="覆盖机器人场景 XML，用于回放对应训练资产的历史策略")
     parser.add_argument("--headless", action="store_true")
     parser.add_argument("--duration", type=float, default=None)
     parser.add_argument("--save-data", action="store_true")
@@ -192,6 +193,8 @@ def main():
     flat._self_check()
     duration = args.duration if args.duration is not None else (10.0 if args.headless else flat.SIM_DURATION)
     config = flat.load_config(args.run)
+    if args.scene_xml:
+        config.scene_xml = os.path.abspath(args.scene_xml)
     config.base_pos[2] = DROP_HEIGHT  # 覆盖 deploy.yaml 的出生高度, 从空中自由下落
     print(f"[sim2sim] run={args.run}, action_clip=±{config.policy_action_clip}, "
           f"出生高度 {config.base_pos[2]:.3f}m")

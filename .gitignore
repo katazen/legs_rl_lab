@@ -39,7 +39,10 @@ docker/.container.cfg
 qoder_conversations.md
 
 # 本地测试、诊断与实验工具（不影响正式训练 / sim2sim / 实机部署入口）
-tests/
+tests/*
+!tests/check_rough_domain_randomization.py
+!tests/check_rough_nogait.py
+!tests/check_rough_nogait_sim2sim.py
 test/
 debug/
 diagnostics/

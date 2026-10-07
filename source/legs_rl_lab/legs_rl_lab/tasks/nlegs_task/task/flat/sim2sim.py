@@ -152,8 +152,8 @@ def load_config(run):
         raise KeyError(f"{deploy_path} 缺字段 {missing}；请用新版导出器重新生成")
     if deploy["format_version"] != 2:
         raise ValueError(f"不支持 deploy.yaml format_version={deploy['format_version']}")
-    if "gait_period" not in deploy and "motion" not in deploy["commands"]:
-        raise KeyError("缺少 gait_period；仅无步态相位的动作跟踪任务可省略")
+    if "gait_phase" in deploy["observations"] and "gait_period" not in deploy:
+        raise KeyError("相位观测需要 gait_period；请重新导出 deploy.yaml")
 
     joint_names = list(deploy["joint_names"])
     short_names = [name.removeprefix("joint_") for name in joint_names]
@@ -655,6 +655,7 @@ def _self_check():
 def main():
     parser = argparse.ArgumentParser()
     parser.add_argument("--run", default=RUN)
+    parser.add_argument("--scene-xml", help="覆盖机器人场景 XML，用于回放对应训练资产的历史策略")
     parser.add_argument("--headless", action="store_true")
     parser.add_argument("--duration", type=float, default=None)
     parser.add_argument("--save-data", action="store_true")
@@ -662,6 +663,8 @@ def main():
     _self_check()
     duration = args.duration if args.duration is not None else (10.0 if args.headless else SIM_DURATION)
     config = load_config(args.run)
+    if args.scene_xml:
+        config.scene_xml = os.path.abspath(args.scene_xml)
     print(f"[sim2sim] run={args.run}, action_clip=±{config.policy_action_clip}")
     runner = MujocoRunner(config, show_viewer=not args.headless, save_data=args.save_data)
     runner.run(duration=duration, realtime=not args.headless)

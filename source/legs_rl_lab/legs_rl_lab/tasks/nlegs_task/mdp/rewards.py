@@ -197,6 +197,32 @@ def feet_clearance(env: ManagerBasedRLEnv, asset_cfg: SceneEntityCfg, target_hei
     return reward
 
 
+def feet_clearance_nogait(
+    env: ManagerBasedRLEnv,
+    asset_cfg: SceneEntityCfg,
+    sensor_cfg: SceneEntityCfg,
+    contact_sensor_cfg: SceneEntityCfg,
+    target_height: float = 0.12,
+    std: float = 0.05,
+    command_threshold: float = 0.1,
+) -> torch.Tensor:
+    """单脚支撑时奖励摆动脚接近目标离地高度；无相位，零速与双脚腾空均不奖励。"""
+    asset = env.scene[asset_cfg.name]
+    feet_pos = asset.data.body_pos_w[:, asset_cfg.body_ids, :]
+    ray_hits = env.scene.sensors[sensor_cfg.name].data.ray_hits_w
+    valid = torch.isfinite(ray_hits).all(dim=-1)
+    distances = torch.cdist(feet_pos[:, :, :2], torch.nan_to_num(ray_hits[:, :, :2]))
+    distances = distances.masked_fill(~valid.unsqueeze(1), float("inf"))
+    ground_z = torch.gather(ray_hits[:, :, 2], 1, distances.argmin(dim=-1))
+    # 与 rough 相同：脚部 body 原点距脚底 0.0135 m。
+    clearance = feet_pos[:, :, 2] - 0.0135 - torch.nan_to_num(ground_z)
+    contact_sensor = env.scene.sensors[contact_sensor_cfg.name]
+    contact = contact_sensor.data.current_contact_time[:, contact_sensor_cfg.body_ids] > 0
+    single_stance = contact.sum(dim=1) == 1
+    reward = (torch.exp(-torch.square((clearance - target_height) / std)) * ~contact).sum(dim=1)
+    return reward * single_stance * valid.any(dim=1) * command_is_moving(env, command_threshold)
+
+
 def feet_drag(env: ManagerBasedRLEnv, asset_cfg: SceneEntityCfg, height_threshold: float = 0.06, sensor_cfg: SceneEntityCfg | None = None) -> torch.Tensor:
     """摆动相低空拖脚惩罚: 脚底离地 < height_threshold 时惩罚脚的水平速度(rough 用)。
     逼策略"先抬后挥、抬着落"——上台阶失败多是摆动前期脚尖踢到立面, 而非最高点不够高。"""
