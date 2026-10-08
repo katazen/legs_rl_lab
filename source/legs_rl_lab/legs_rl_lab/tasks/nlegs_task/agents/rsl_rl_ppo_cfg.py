@@ -72,6 +72,12 @@ class NlegsFlatPPORunnerCfg(RslRlOnPolicyRunnerCfg):
 
 
 @configclass
+class NlegsRough826PPORunnerCfg(NlegsFlatPPORunnerCfg):
+    """8.26 rough 基准：4 个 PPO mini-batch，其余沿用相同的网络和算法。"""
+    experiment_name = "nlegs_rough"
+
+
+@configclass
 class NlegsRoughPPORunnerCfg(NlegsFlatPPORunnerCfg):
     """rough 地形变体：拆小 PPO 更新批次，降低 2490 维 critic 的显存峰值。"""
     experiment_name = "nlegs_rough"

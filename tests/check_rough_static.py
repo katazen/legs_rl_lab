@@ -33,21 +33,22 @@ def check_rough(cfg):
     play = load_cfg_from_registry("nlegs_rough", "play_env_cfg_entry_point")
     for config in (cfg, play):
         assert not hasattr(config, "action_mix_range") and not hasattr(config, "action_noise_std")
-    for name, kp, kd in (
-        ("randomize_leg_gains", (0.8, 1.2), (0.8, 1.2)),
-        ("randomize_ankle_pitch_gains", (0.7, 1.1), (0.8, 1.3)),
-        ("randomize_ankle_roll_gains", (0.8, 1.2), (0.7, 1.3)),
-    ):
-        term = getattr(cfg.events, name)
+    for config in (cfg, play):
+        term = config.events.randomize_ankle_gains
         assert term.func is mdp.randomize_actuator_gains and term.mode == "reset"
-        assert term.params["stiffness_distribution_params"] == kp
-        assert term.params["damping_distribution_params"] == kd
-        assert getattr(play.events, name) is None
+        assert term.params["stiffness_distribution_params"] == (0.7, 1.1)
+        assert term.params["damping_distribution_params"] == (0.9, 1.5)
+        assert config.events.base_com.mode == "startup"
+        assert config.events.base_com.func is mdp.randomize_rigid_body_com
+        assert config.events.base_com.params["asset_cfg"].body_names == "base"
+        assert config.events.base_com.params["com_range"] == {
+            "x": (-0.01, 0.01), "y": (-0.01, 0.01), "z": (0.02, 0.06)}
     assert robot_cfg.spawn.usd_path == NLEGS_CFG.spawn.usd_path
     assert robot_cfg.actuators.keys() == NLEGS_CFG.actuators.keys()
     assert robot_cfg.init_state == NLEGS_CFG.init_state
     assert not hasattr(cfg.events, "crouch_joint_limits")
     assert cfg.actions.JointPositionAction.clip is None
+    assert cfg.actions.JointPositionAction.class_type is mdp.ZeroBiasJointPositionAction
     cfg.scene.num_envs = 2
     cfg.sim.device = args.device
     cfg.scene.sky_light.spawn.texture_file = None
@@ -67,11 +68,20 @@ def check_rough(cfg):
         action.process_actions(torch.zeros((2, 12), device=env.device))
         assert torch.count_nonzero(action.raw_actions) == 0
         action.apply_actions()
-        torch.testing.assert_close(robot.data.joint_pos_target, action.processed_actions - env._joint_zero_bias)
+        for bias_value in (-0.05, 0.0, 0.05):
+            env._joint_zero_bias.fill_(bias_value)
+            encoder = mdp.joint_pos_rel_biased(env)
+            physical = robot.data.joint_pos - robot.data.default_joint_pos
+            torch.testing.assert_close(encoder, physical + env._joint_zero_bias)
+            target = action.processed_actions.clone()
+            for _ in range(3):
+                action.apply_actions()
+                torch.testing.assert_close(robot.data.joint_pos_target, target - env._joint_zero_bias)
+                torch.testing.assert_close(action.processed_actions, target)
         for name, (kp, kd) in {
-            "legs": ((0.8, 1.2), (0.8, 1.2)),
-            "ankle_pitch": ((0.7, 1.1), (0.8, 1.3)),
-            "ankle_roll": ((0.8, 1.2), (0.7, 1.3)),
+            "legs": ((1.0, 1.0), (1.0, 1.0)),
+            "ankle_pitch": ((0.7, 1.1), (0.9, 1.5)),
+            "ankle_roll": ((1.0, 1.0), (1.0, 1.0)),
         }.items():
             actuator = robot.actuators[name]
             ids = actuator.joint_indices
@@ -81,13 +91,27 @@ def check_rough(cfg):
             ):
                 ratio = actual / nominal
                 assert ratio.ge(bounds[0] - 1e-5).all() and ratio.le(bounds[1] + 1e-5).all()
-                assert not torch.allclose(ratio, torch.ones_like(ratio))
+                if name == "ankle_pitch":
+                    assert not torch.allclose(ratio, torch.ones_like(ratio))
         stage = Usd.Stage.Open(robot_cfg.spawn.usd_path)
         original = {
             p.GetName(): np.radians([UsdPhysics.RevoluteJoint(p).GetLowerLimitAttr().Get(),
                                      UsdPhysics.RevoluteJoint(p).GetUpperLimitAttr().Get()])
             for p in stage.Traverse() if p.IsA(UsdPhysics.RevoluteJoint)
         }
+        base = robot.body_names.index("base")
+        nominal_prim = next(p for p in stage.Traverse()
+                            if p.GetName() == "base" and p.HasAPI(UsdPhysics.MassAPI))
+        nominal_com = torch.tensor(tuple(UsdPhysics.MassAPI(nominal_prim).GetCenterOfMassAttr().Get()))
+        com_before = robot.root_physx_view.get_coms().clone()
+        offset = com_before[:, base, :3] - nominal_com
+        bounds = torch.tensor([cfg.events.base_com.params["com_range"][axis] for axis in "xyz"])
+        assert (offset >= bounds[:, 0] - 1e-6).all() and (offset <= bounds[:, 1] + 1e-6).all()
+        assert env.event_manager.get_term_cfg("base_com").params["asset_cfg"].body_ids == [base]
+        for _ in range(3):
+            env.reset()
+            torch.testing.assert_close(robot.root_physx_view.get_coms()[..., :3], com_before[..., :3],
+                                       rtol=0, atol=0)
         for j, name in enumerate(robot.joint_names):
             np.testing.assert_allclose(robot.data.joint_pos_limits[:, j].cpu(),
                                        np.tile(original[name], (2, 1)), atol=2e-6, rtol=0)
@@ -95,7 +119,7 @@ def check_rough(cfg):
             obs, rewards, _, _, _ = env.step(torch.zeros((2, 12), device=env.device))
             assert torch.isfinite(rewards).all()
             assert all(torch.isfinite(v).all() for v in obs.values())
-        print("PASS nlegs_rough: NLEGS_CFG body, USD joint limits, no rough clip, finite 2-env rollout", flush=True)
+        print("PASS nlegs_rough: paired encoder/action bias, startup base COM offsets, no reset accumulation, finite 2-env rollout", flush=True)
     finally:
         env.close()
 

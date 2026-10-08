@@ -1,7 +1,8 @@
-"""nlegs_rough：8.26 基准配置，使用修改 base 的 limit USD、成对零偏和质心随机化。"""
+"""nlegs_rough：使用 NLEGS_CFG 机器人资产的零速原地踏步任务。"""
 
 import isaaclab.sim as sim_utils
 import isaaclab.terrains as terrain_gen
+from isaaclab.actuators import DelayedPDActuatorCfg
 from isaaclab.assets import ArticulationCfg, AssetBaseCfg
 from isaaclab.envs import ManagerBasedRLEnvCfg
 from isaaclab.managers import CurriculumTermCfg as CurrTerm
@@ -18,11 +19,151 @@ from isaaclab.utils import configclass
 from isaaclab.utils.assets import ISAAC_NUCLEUS_DIR, ISAACLAB_NUCLEUS_DIR
 from isaaclab.utils.noise import AdditiveUniformNoiseCfg as Unoise
 
-from legs_rl_lab.assets.nlegs.nlegs import NLEGS_CFG
+from legs_rl_lab.actuators import DelayedDCMotorCfg
+from legs_rl_lab.assets.nlegs.nlegs import (
+    NLEGS_CFG as BASE_NLEGS_CFG,
+    UnitreeArticulationCfg,
+    UnitreeUsdFileCfg,
+)
 from legs_rl_lab.tasks.nlegs_task import mdp
 
 
-# 旧 nlegs 站姿高度约 0.58m；沿用 8.26 的地形分布。
+ROBOT_USD_PATH = BASE_NLEGS_CFG.spawn.usd_path
+ROBOT_INIT_HEIGHT = BASE_NLEGS_CFG.init_state.pos[2]
+
+
+NLEGS_CFG = UnitreeArticulationCfg(
+    spawn=UnitreeUsdFileCfg(
+        usd_path=ROBOT_USD_PATH,
+    ),
+    articulation_root_prim_path="/base/base",
+    init_state=ArticulationCfg.InitialStateCfg(
+        pos=(0.0, 0.0, ROBOT_INIT_HEIGHT),  # 默认站姿贴近平地
+        joint_pos={
+            ".*1": -0.1,
+            ".*4": 0.2,
+            ".*5": -0.1,
+        },
+        joint_vel={".*": 0.0},
+    ),
+    actuators={
+        # 左右分组使 DelayedPDActuator.reset() 分别采样延迟；同一组内会共用延迟。
+        "left_legs": DelayedDCMotorCfg(
+            joint_names_expr=["joint_L[1-4]"],
+            effort_limit=26.0,
+            saturation_effort=26.0,
+            velocity_limit=7.0,
+            stiffness={
+                ".*1": 200.0,
+                ".*2": 200.0,
+                ".*3": 200.0,
+                ".*4": 250.0,
+            },
+            damping={
+                ".*1": 5.0,
+                ".*2": 5.0,
+                ".*3": 5.0,
+                ".*4": 5.0,
+            },
+            armature=0.0509,
+            friction=0.5,
+            dynamic_friction=0.5,
+            min_delay=3,
+            max_delay=7,
+        ),
+        "right_legs": DelayedDCMotorCfg(
+            joint_names_expr=["joint_R[1-4]"],
+            effort_limit=26.0,
+            saturation_effort=26.0,
+            velocity_limit=7.0,
+            stiffness={
+                ".*1": 200.0,
+                ".*2": 200.0,
+                ".*3": 200.0,
+                ".*4": 250.0,
+            },
+            damping={
+                ".*1": 5.0,
+                ".*2": 5.0,
+                ".*3": 5.0,
+                ".*4": 5.0,
+            },
+            armature=0.0509,
+            friction=0.5,
+            dynamic_friction=0.5,
+            min_delay=3,
+            max_delay=7,
+        ),
+        "left_ankle_pitch": DelayedDCMotorCfg(
+            joint_names_expr=["joint_L5"],
+            effort_limit=26.0,
+            saturation_effort=26.0,
+            velocity_limit=7.0,
+            stiffness=40.0,
+            damping=2.0,
+            armature=0.0509,
+            friction=0.5,
+            dynamic_friction=0.5,
+            min_delay=3,
+            max_delay=7,
+        ),
+        "right_ankle_pitch": DelayedDCMotorCfg(
+            joint_names_expr=["joint_R5"],
+            effort_limit=26.0,
+            saturation_effort=26.0,
+            velocity_limit=7.0,
+            stiffness=40.0,
+            damping=2.0,
+            armature=0.0509,
+            friction=0.5,
+            dynamic_friction=0.5,
+            min_delay=3,
+            max_delay=7,
+        ),
+        "left_ankle_roll": DelayedPDActuatorCfg(
+            joint_names_expr=["joint_L6"],
+            # 显式 PD 内部限矩与 PhysX 限矩分别设置，避免从 USD 继承零限矩。
+            effort_limit=5.8,
+            velocity_limit=14.0,
+            stiffness=40.0,
+            damping=0.5,
+            armature=0.00219,
+            effort_limit_sim=5.8,
+            velocity_limit_sim=14.0,
+            min_delay=3,
+            max_delay=7,
+        ),
+        "right_ankle_roll": DelayedPDActuatorCfg(
+            joint_names_expr=["joint_R6"],
+            effort_limit=5.8,
+            velocity_limit=14.0,
+            stiffness=40.0,
+            damping=0.5,
+            armature=0.00219,
+            effort_limit_sim=5.8,
+            velocity_limit_sim=14.0,
+            min_delay=3,
+            max_delay=7,
+        ),
+    },
+    joint_sdk_names=[
+        "joint_R1",
+        "joint_R2",
+        "joint_R3",
+        "joint_R4",
+        "joint_R5",
+        "joint_R6",
+        "joint_L1",
+        "joint_L2",
+        "joint_L3",
+        "joint_L4",
+        "joint_L5",
+        "joint_L6",
+    ],
+)
+
+
+# 新资产默认站姿高度约 0.46m。num_rows = 难度等级(课程沿行递增)，num_cols = 每级的变体数。
 NLEGS_ROUGH_TERRAINS_CFG = TerrainGeneratorCfg(
     size=(8.0, 8.0),
     border_width=20.0,
@@ -38,32 +179,32 @@ NLEGS_ROUGH_TERRAINS_CFG = TerrainGeneratorCfg(
         "flat": terrain_gen.MeshPlaneTerrainCfg(proportion=0.2),
         # 随机起伏(碎石感)：温和 2~6cm
         "random_rough": terrain_gen.HfRandomUniformTerrainCfg(
-            proportion=0.2, noise_range=(0.02, 0.06), noise_step=0.02, border_width=0.25
+            proportion=0.1, noise_range=(0.02, 0.06), noise_step=0.02, border_width=0.25
         ),
         # 金字塔坡 / 反金字塔坡：坡度 ≤0.3(≈17°)
         "hf_pyramid_slope": terrain_gen.HfPyramidSlopedTerrainCfg(
-            proportion=0.15, slope_range=(0.0, 0.3), platform_width=2.0, border_width=0.25
+            proportion=0.15, slope_range=(0.1, 0.3), platform_width=2.0, border_width=0.25
         ),
         "hf_pyramid_slope_inv": terrain_gen.HfInvertedPyramidSlopedTerrainCfg(
-            proportion=0.15, slope_range=(0.0, 0.3), platform_width=2.0, border_width=0.25
+            proportion=0.15, slope_range=(0.1, 0.3), platform_width=2.0, border_width=0.25
         ),
-        # 随机方块：矮块 2~8cm
+        # 随机方块：矮块 2~5cm
         "boxes": terrain_gen.MeshRandomGridTerrainCfg(
-            proportion=0.15, grid_width=0.45, grid_height_range=(0.02, 0.08), platform_width=2.0
+            proportion=0.1, grid_width=0.45, grid_height_range=(0.02, 0.05), platform_width=2.0
         ),
-        # 台阶 / 反台阶：单级高 3~12cm
+        # 台阶 / 反台阶：单级高 4~10cm
         "pyramid_stairs": terrain_gen.MeshPyramidStairsTerrainCfg(
-            proportion=0.075,
-            step_height_range=(0.03, 0.12),
-            step_width=0.3,
+            proportion=0.15,
+            step_height_range=(0.04, 0.1),
+            step_width=0.2,
             platform_width=3.0,
             border_width=1.0,
             holes=False,
         ),
         "pyramid_stairs_inv": terrain_gen.MeshInvertedPyramidStairsTerrainCfg(
-            proportion=0.075,
-            step_height_range=(0.03, 0.12),
-            step_width=0.3,
+            proportion=0.15,
+            step_height_range=(0.04, 0.1),
+            step_width=0.2,
             platform_width=3.0,
             border_width=1.0,
             holes=False,
@@ -95,8 +236,8 @@ class RoughSceneCfg(InteractiveSceneCfg):
         physics_material=sim_utils.RigidBodyMaterialCfg(
             friction_combine_mode="multiply",
             restitution_combine_mode="multiply",
-            static_friction=1.0,
-            dynamic_friction=1.0,
+            static_friction=0.6,
+            dynamic_friction=0.6,
         ),
         visual_material=sim_utils.MdlFileCfg(
             mdl_path=f"{ISAACLAB_NUCLEUS_DIR}/Materials/TilesMarbleSpiderWhiteBrickBondHoned/TilesMarbleSpiderWhiteBrickBondHoned.mdl",
@@ -137,19 +278,23 @@ class EventCfg:
         mode="startup",
         params={
             "asset_cfg": SceneEntityCfg("robot", body_names=".*"),
-            "static_friction_range": (0.1, 1.3),
-            "dynamic_friction_range": (0.1, 1.3),
+            "static_friction_range": (0.1, 2.0),
+            "dynamic_friction_range": (0.1, 2.0),
             "restitution_range": (0.0, 0.0),
             "num_buckets": 64,
         },
     )
 
+    # 机身局部坐标系的质心偏移（m）；该函数在资产名义 COM 上叠加增量。
+    # nlegs_body 名义 base COM z=0.136465m；z 下界 -0.16m 使随机后可到
+    # -0.023535m，覆盖 nlegs_limit 的 -0.0190667m，上界保留 0.04m 裕量。
+    # 每环境初始化时独立均匀采样一次，不在 reset 时累加。
     base_com = EventTerm(
         func=mdp.randomize_rigid_body_com,
         mode="startup",
         params={
             "asset_cfg": SceneEntityCfg("robot", body_names="base"),
-            "com_range": {"x": (-0.01, 0.01), "y": (-0.01, 0.01), "z": (0.02, 0.06)},
+            "com_range": {"x": (-0.03, 0.03), "y": (-0.02, 0.02), "z": (-0.16, 0.04)},
         },
     )
 
@@ -159,7 +304,7 @@ class EventCfg:
         mode="reset",
         params={
             "asset_cfg": SceneEntityCfg("robot", body_names="base"),
-            "mass_distribution_params": (-5.0, 1.0),
+            "mass_distribution_params": (-1.0, 2.0),
             "operation": "add",
         },
     )
@@ -190,20 +335,53 @@ class EventCfg:
         },
     )
 
-    # 同一零偏 b：策略读 q_phys + b，编码器目标以 q_cmd - b 送入执行器。
+    # 标0偏置随机化: 每环境每关节一个恒定偏置(reset 采样, 整幕不变), 模拟实机编码器零位
+    # q_encoder = q_physical + b：策略观测加 b，电机物理目标减同一个 b；critic 保持真值。
+    # ±0.05rad(≈±2.9°)沿用工程覆盖范围，并非实测置信区间；不保证消除实机零速漂移。
     joint_zero_bias = EventTerm(
         func=mdp.randomize_joint_zero_bias,
         mode="reset",
         params={"bias_range": (-0.05, 0.05)},
     )
 
-    randomize_ankle_gains = EventTerm(
+    # 每关节、每环境、每回合独立采样；scale 始终基于 NLEGS_CFG 名义值，不逐回合累乘。
+    randomize_leg_gains = EventTerm(
+        func=mdp.randomize_actuator_gains, mode="reset",
+        params={
+            "asset_cfg": SceneEntityCfg("robot", joint_names=[".*[1-4]"]),
+            "stiffness_distribution_params": (0.8, 1.2),
+            "damping_distribution_params": (0.8, 1.2),
+            "operation": "scale", "distribution": "uniform",
+        },
+    )
+    randomize_ankle_pitch_gains = EventTerm(
         func=mdp.randomize_actuator_gains, mode="reset",
         params={
             "asset_cfg": SceneEntityCfg("robot", joint_names=[".*5"]),
             "stiffness_distribution_params": (0.7, 1.1),
-            "damping_distribution_params": (0.9, 1.5),
+            "damping_distribution_params": (0.8, 1.3),
             "operation": "scale", "distribution": "uniform",
+        },
+    )
+    randomize_ankle_roll_gains = EventTerm(
+        func=mdp.randomize_actuator_gains, mode="reset",
+        params={
+            "asset_cfg": SceneEntityCfg("robot", joint_names=[".*6"]),
+            "stiffness_distribution_params": (0.8, 1.2),
+            "damping_distribution_params": (0.7, 1.3),
+            "operation": "scale", "distribution": "uniform",
+        },
+    )
+
+    # 每环境、每关节独立采样摩擦，显式覆盖左右电机/减速器摩擦不一致。
+    randomize_joint_friction = EventTerm(
+        func=mdp.randomize_joint_parameters,
+        mode="reset",
+        params={
+            "asset_cfg": SceneEntityCfg("robot", joint_names=[".*"]),
+            "friction_distribution_params": (0.7, 1.3),
+            "operation": "scale",
+            "distribution": "uniform",
         },
     )
 
@@ -228,10 +406,10 @@ class CommandsCfg:
         heading_command=False,
         debug_vis=True,
         ranges=mdp.UniformLevelVelocityCommandCfg.Ranges(
-            lin_vel_x=(-0.3, 0.5), lin_vel_y=(-0.3, 0.3), ang_vel_z=(-0.5, 0.5)
+            lin_vel_x=(-0.3, 0.6), lin_vel_y=(-0.3, 0.3), ang_vel_z=(-0.5, 0.5)
         ),
         limit_ranges=mdp.UniformLevelVelocityCommandCfg.Ranges(
-            lin_vel_x=(-0.3, 0.5), lin_vel_y=(-0.3, 0.3), ang_vel_z=(-0.5, 0.5)
+            lin_vel_x=(-0.3, 0.6), lin_vel_y=(-0.3, 0.3), ang_vel_z=(-0.5, 0.5)
         ),
     )
 
@@ -287,7 +465,7 @@ class ObservationsCfg:
         # 187 点高度图只进入 critic，actor 保持盲走。
         height_scan = ObsTerm(
             func=mdp.height_scan,
-            params={"sensor_cfg": SceneEntityCfg("height_scanner"), "offset": 0.58},
+            params={"sensor_cfg": SceneEntityCfg("height_scanner"), "offset": 0.46},
             clip=(-1.0, 1.0),
         )
 
@@ -338,7 +516,7 @@ class RewardsCfg:
     # -- robot
     base_height = RewTerm(
         func=mdp.base_height_l2, weight=-2.0,
-        params={"target_height": 0.58, "sensor_cfg": SceneEntityCfg("height_scanner")},
+        params={"target_height": 0.46, "sensor_cfg": SceneEntityCfg("height_scanner")},
     )
 
     # -- feet
@@ -351,7 +529,7 @@ class RewardsCfg:
     feet_y_distance = RewTerm(
         func=mdp.feet_y_distance,
         weight=-2.0,
-        params={"threshold": 0.222, "asset_cfg": SceneEntityCfg("robot", body_names=".*6")},
+        params={"threshold": 0.266, "asset_cfg": SceneEntityCfg("robot", body_names=".*6")},
     )
 
     feet_x_distance = RewTerm(
@@ -362,7 +540,7 @@ class RewardsCfg:
 
     feet_slide = RewTerm(
         func=mdp.feet_slide,
-        weight=-0.2,
+        weight=-0.5,
         params={
             "asset_cfg": SceneEntityCfg("robot", body_names=".*6"),
             "sensor_cfg": SceneEntityCfg("contact_forces", body_names=".*6"),
@@ -413,9 +591,10 @@ class TerminationsCfg:
 
     time_out = DoneTerm(func=mdp.time_out, time_out=True)
     bad_orientation = DoneTerm(func=mdp.bad_orientation, params={"limit_angle": 1.0})
+    # 新资产默认 base 到脚部 body 约 0.445m，按旧资产 0.2/0.568 的塌陷比例取 0.16m。
     base_height = DoneTerm(
         func=mdp.base_height_below_feet,
-        params={"minimum_height": 0.2, "asset_cfg": SceneEntityCfg("robot", body_names=".*6")},
+        params={"minimum_height": 0.16, "asset_cfg": SceneEntityCfg("robot", body_names=".*6")},
     )
 
 
@@ -432,7 +611,7 @@ class RoughEnvCfg(ManagerBasedRLEnvCfg):
     """独立 rough 配置；0 速仍原地踏步。"""
 
     # Scene settings
-    scene: RoughSceneCfg = RoughSceneCfg(num_envs=2048, env_spacing=2.5)
+    scene: RoughSceneCfg = RoughSceneCfg(num_envs=4096, env_spacing=2.5)
     # Basic settings
     observations: ObservationsCfg = ObservationsCfg()
     actions: ActionsCfg = ActionsCfg()
@@ -466,6 +645,11 @@ class RoughEnvCfg(ManagerBasedRLEnvCfg):
 class RoughPlayEnvCfg(RoughEnvCfg):
     def __post_init__(self):
         super().__post_init__()
+        # Play 使用名义 PD，避免回放对照每次重置得到不同的执行器。
+        self.events.randomize_leg_gains = None
+        self.events.randomize_ankle_pitch_gains = None
+        self.events.randomize_ankle_roll_gains = None
+        self.events.randomize_joint_friction = None
         self.scene.num_envs = 32
         self.scene.terrain.terrain_generator.num_rows = 5
         self.scene.terrain.terrain_generator.num_cols = 5

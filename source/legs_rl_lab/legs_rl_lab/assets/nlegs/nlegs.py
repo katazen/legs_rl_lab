@@ -1,4 +1,4 @@
-"""nlegs_body 资产及腿、踝执行器的名义配置；域随机化由任务 EventCfg 定义。"""
+"""旧 nlegs 腿部 + body 版 base 惯性；执行器沿用 2026-08-26 rough 配置。"""
 
 import os
 
@@ -40,11 +40,11 @@ class UnitreeUsdFileCfg(sim_utils.UsdFileCfg):
 
 NLEGS_CFG = UnitreeArticulationCfg(
     spawn=UnitreeUsdFileCfg(
-        usd_path="/home/woan/workspace/legs_rl_lab/source/legs_rl_lab/legs_rl_lab/assets/nlegs_body/mjcf/nlegs_body/nlegs_body.usd",
+        usd_path=os.path.join(_ASSET_DIR, "mjcf", "nlegs_limit", "nlegs_limit.usd"),
     ),
     articulation_root_prim_path='/base/base',
     init_state=ArticulationCfg.InitialStateCfg(
-        pos=(0.0, 0.0, 0.50),  # 新资产默认站姿脚底距平地约 4 cm
+        pos=(0.0, 0.0, 0.62),
         joint_pos={
             ".*1": -0.1,
             ".*4": 0.2,
@@ -60,8 +60,8 @@ NLEGS_CFG = UnitreeArticulationCfg(
             velocity_limit=7.0,
             stiffness={
                 ".*1": 200.0,
-                ".*2": 200.0,
-                ".*3": 200.0,
+                ".*2": 100.0,
+                ".*3": 100.0,
                 ".*4": 250.0,
             },
             damping={
@@ -73,8 +73,8 @@ NLEGS_CFG = UnitreeArticulationCfg(
             armature=0.0509,
             friction=0.5,
             dynamic_friction=0.5,
-            min_delay=3,
-            max_delay=7,
+            min_delay=4,
+            max_delay=6,
         ),
         "ankle_pitch": DelayedDCMotorCfg(
             joint_names_expr=[".*5"],
@@ -84,21 +84,21 @@ NLEGS_CFG = UnitreeArticulationCfg(
             stiffness=40.0,
             damping=2.0,
             armature=0.0509,
-            friction=0.5,
-            dynamic_friction=0.5,
-            min_delay=3,
-            max_delay=7,
+            friction=0.55,
+            dynamic_friction=0.55,
+            min_delay=4,
+            max_delay=8,
         ),
         "ankle_roll": DelayedPDActuatorCfg(
             joint_names_expr=[".*6"],
-            effort_limit=5.8,#
             stiffness=40.0,
             damping=0.5,
             armature=0.00219,
             effort_limit_sim=5.8,
             velocity_limit_sim=14.0,
-            min_delay=3,
-            max_delay=7,
+            viscous_friction=0.54,
+            min_delay=4,
+            max_delay=6,
         ),
     },
     joint_sdk_names=['joint_R1',

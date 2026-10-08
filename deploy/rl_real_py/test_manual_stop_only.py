@@ -8,7 +8,53 @@ import pytest
 
 from rl_real_py.multi_task import MultiTaskController
 from rl_real_py.rl_real_common import Policy, RL_real
-from rl_real_py.deployment_config import load_settings
+from rl_real_py.deployment_config import load_settings, read_joint_limits
+
+
+def test_xml_limits_reach_policy_controller_and_publisher(monkeypatch, tmp_path):
+    cfg, run_dir, repo = load_settings(Path(__file__).parent / "configs/common.yaml")
+    names = cfg["joint_index_in_real"]
+    xml = Path(cfg["joint_limits_xml"])
+    lo, hi = read_joint_limits(xml, names)
+    reversed_lo, reversed_hi = read_joint_limits(xml, names[::-1])
+    np.testing.assert_allclose(reversed_lo, lo[::-1])
+    np.testing.assert_allclose(reversed_hi, hi[::-1])
+    with pytest.raises(ValueError, match="12 个唯一关节"):
+        read_joint_limits(xml, [names[0]] * 12)
+    # Old config arrays and measured stop_sides cannot become a second limit authority.
+    import yaml
+    legacy = dict(cfg, joint_lower_limits=[-12.] * 12, joint_upper_limits=[12.] * 12)
+    config_file = tmp_path / "legacy.yaml"
+    config_file.write_text(yaml.safe_dump(legacy))
+    parsed, _, _ = load_settings(config_file)
+    np.testing.assert_allclose(parsed["joint_lower_limits"], lo)
+    np.testing.assert_allclose(parsed["joint_upper_limits"], hi)
+    monkeypatch.setattr(Policy, "_load_policy", lambda *_: None)
+    monkeypatch.setattr(Policy, "_check_policy", lambda *_: None)
+    policy = Policy(parsed, run_dir, repo)
+    policy.preflight_only = True
+    controller = MultiTaskController(policy, parsed, repo)
+    np.testing.assert_allclose(controller.lo, lo)
+    np.testing.assert_allclose(controller.hi, hi)
+    np.testing.assert_allclose(controller._policy_limits(policy), [lo, hi])
+    assert "crouch" not in controller.pose_q
+    controller._calibrate_crouch(parsed["crouch_calibration"])
+    np.testing.assert_allclose(controller.lo, lo)
+    np.testing.assert_allclose(controller.hi, hi)
+    action = np.zeros(12, np.float32)
+    for name, value in (("L5", -2.), ("R5", -2.), ("L6", 4.), ("R6", -4.), ("L4", 10.)):
+        action[policy.sim2real[names.index(name)]] = value
+    target = policy._target_from_action(action)
+    np.testing.assert_allclose(target[[4, 10, 5, 11, 3]], [-.44, -.44, .26, -.26, 1.45], atol=1e-6)
+    # Exported training clipping is separate and still takes effect before XML clipping.
+    policy.action_term_clip = np.tile([-10., 10.], (12, 1))
+    policy.action_term_clip[policy.sim2real[4]] = [-.2, .3]
+    assert np.isclose(policy._target_from_action(action)[4], -.2)
+    published = []
+    policy.target_pub = np.full(12, 10., np.float32)
+    policy.pub = SimpleNamespace(publish=lambda message: published.append(message.data))
+    RL_real._publish_target(policy)
+    np.testing.assert_allclose(published[-1], hi)
 
 
 def test_common_velocity_limits_override_training_limits_without_widening(monkeypatch):

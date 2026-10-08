@@ -80,13 +80,33 @@ _build
 
 # RL-Games
 **/runs/*
-# 仅同步策略的 exported / params；训练检查点、日志、实机数据仍忽略。
+# 仅同步已在机器人上的策略 params/exported；新增本地策略、检查点和实机数据仍忽略。
 /logs/*
 !/logs/rsl_rl/
 /logs/rsl_rl/*
 !/logs/rsl_rl/*/
 /logs/rsl_rl/*/*
-!/logs/rsl_rl/*/*/
+!/logs/rsl_rl/nlegs_flat/2026-08-26_13-57-34/
+!/logs/rsl_rl/nlegs_flat/2026-08-27_10-14-28/
+!/logs/rsl_rl/nlegs_flat_crouch/2026-09-09_18-13-14/
+!/logs/rsl_rl/nlegs_flat_crouch/2026-09-09_20-27-00/
+!/logs/rsl_rl/nlegs_flat_static/2026-09-16_11-41-05/
+!/logs/rsl_rl/nlegs_mimic_crouch/2026-09-14_20-26-06/
+!/logs/rsl_rl/nlegs_mimic_crouch/2026-09-15_15-36-16/
+!/logs/rsl_rl/nlegs_mimic_crouch/2026-09-17_16-42-11/
+!/logs/rsl_rl/nlegs_mimic_stand/2026-09-15_18-50-29/
+!/logs/rsl_rl/nlegs_mimic_stand/2026-09-17_12-30-38/
+!/logs/rsl_rl/nlegs_mimic_stand/2026-09-17_15-40-44/
+!/logs/rsl_rl/nlegs_rough/2026-08-26_20-37-55/
+!/logs/rsl_rl/nlegs_rough/2026-09-18_10-10-59/
+!/logs/rsl_rl/nlegs_rough/2026-09-19_16-53-50/
+!/logs/rsl_rl/nlegs_rough/2026-09-20_19-15-58/
+!/logs/rsl_rl/nlegs_rough/2026-09-21_14-27-47/
+!/logs/rsl_rl/nlegs_rough/2026-09-23_23-45-47/
+!/logs/rsl_rl/nlegs_rough/2026-09-29_22-10-03/
+!/logs/rsl_rl/nlegs_rough/2026-09-30_14-05-25/
+!/logs/rsl_rl/nlegs_rough/2026-09-30_17-45-24/
+!/logs/rsl_rl/nlegs_rough/2026-10-07_18-37-35/
 /logs/rsl_rl/*/*/*
 !/logs/rsl_rl/*/*/exported/
 !/logs/rsl_rl/*/*/params/

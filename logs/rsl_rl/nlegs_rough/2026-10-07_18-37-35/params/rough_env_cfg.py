@@ -159,7 +159,7 @@ class EventCfg:
         mode="reset",
         params={
             "asset_cfg": SceneEntityCfg("robot", body_names="base"),
-            "mass_distribution_params": (-5.0, 1.0),
+            "mass_distribution_params": (-2.0, 2.0),
             "operation": "add",
         },
     )

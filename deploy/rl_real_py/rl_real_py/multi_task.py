@@ -55,27 +55,14 @@ class MultiTaskController:
         if up is not None:
             if not np.allclose(up.motion.positions[-1, up.sim2real], walk.default_real, atol=1e-5):
                 raise ValueError("起身末帧必须与走路默认站姿一致")
-            # 下蹲/起身保留原任务边界；walk 的膝上限随后按自身训练 clip 与 common 解析。
-            self.lo = np.maximum(node.lo, up.motion.limits[up.sim2real, 0])
-            self.hi = np.minimum(node.hi, up.motion.limits[up.sim2real, 1])
             self.pose_q = {"stand": up.motion.positions[-1, up.sim2real],
                            "crouch": up.motion.positions[0, up.sim2real]}
         else:
-            self.lo, self.hi = node.lo.copy(), node.hi.copy()
             self.pose_q = {"stand": walk.default_real.copy()}
-        if cfg.get("crouch_calibration") is not None:
+        self.lo, self.hi = node.lo.copy(), node.hi.copy()
+        if up is not None and cfg.get("crouch_calibration") is not None:
             self._calibrate_crouch(cfg["crouch_calibration"])
-            if up is None:
-                self.pose_q.pop("crouch")
-        self.mimic_limits = (self.lo, self.hi)
-        self.walk_limits = (self.lo.copy(), self.hi.copy())
-        # 膝止挡已拆除：仅取消 walk 额外套用的下蹲膝上限，其他机械端点保持。
-        for joint in ("L4", "R4"):
-            i = node.real_joint_names.index(joint)
-            trained_hi = (walk.action_term_clip[walk.sim2real[i], 1]
-                          if walk.action_term_clip is not None else np.inf)
-            self.walk_limits[1][i] = min(node.hi[i], trained_hi)
-        lo, hi = self.walk_limits
+        lo, hi = self.lo, self.hi
         if (np.any(lo >= hi) or np.any(walk.default_real < lo) or np.any(walk.default_real > hi)):
             raise ValueError("walk 任务边界无效或排除了默认站姿")
         for name, p in self.policies.items():
@@ -101,7 +88,7 @@ class MultiTaskController:
             self.show_status()
 
     def _calibrate_crouch(self, calibration):
-        """实测蹲姿用于任务边界和初始姿态分类；不改网络观测或参考动作。"""
+        """实测蹲姿仅用于分类；历史 stop_sides 不覆盖 XML 目标边界。"""
         names = self.n.real_joint_names
         if (not isinstance(calibration, dict)
                 or set(calibration) != {"joint_pos", "body_quat_wxyz", "stop_sides"}
@@ -112,21 +99,11 @@ class MultiTaskController:
                 or any(side not in ("lower", "upper") for side in calibration["stop_sides"].values())):
             raise ValueError("crouch_calibration 需要完整 12 关节姿态、机身四元数和除 ankle roll 外的 10 个限位方向")
         q = np.asarray([calibration["joint_pos"][name] for name in names], dtype=np.float32)
-        if (q.shape != (12,) or not np.isfinite(q).all()
-                or np.any(q < self.n.lo) or np.any(q > self.n.hi)):
-            raise ValueError("实测蹲姿必须为有限角度且位于 common 硬件限位内")
+        if q.shape != (12,) or not np.isfinite(q).all():
+            raise ValueError("实测蹲姿必须为 12 个有限角度")
         rotation_matrix(calibration["body_quat_wxyz"])
-        lo, hi = self.lo.copy(), self.hi.copy()
-        for name, side in calibration["stop_sides"].items():
-            i = names.index(name)
-            (lo if side == "lower" else hi)[i] = q[i]
-        if (np.any(lo >= hi) or np.any(q < lo) or np.any(q > hi)
-                or np.any(self.pose_q["stand"] < lo) or np.any(self.pose_q["stand"] > hi)):
-            raise ValueError("实测任务边界无效，或不能同时包含蹲姿与站姿")
-        self.lo, self.hi = lo, hi
         self.pose_q["crouch"] = q
-        print("[multi] 保留实测的 10 个单侧任务目标边界；ankle roll 不设实测限位；"
-              "common、训练 clip、参考动作与真实观测不变。")
+        print("[multi] 实测蹲姿仅用于入口分类；所有任务关节边界读取 nlegs_limit.xml。")
 
     def show_status(self):
         crouch_key = "；2/LB+X 下蹲" if "crouch" in self.policies else ""
@@ -164,7 +141,7 @@ class MultiTaskController:
         self.change("stopped", reason)
 
     def _policy_limits(self, policy):
-        return self.walk_limits if policy is self.policies["walk"] else self.mimic_limits
+        return self.lo, self.hi
 
     def closest_pose(self):
         q = self.n.obs_raw[7:19]
@@ -243,7 +220,7 @@ class MultiTaskController:
             return self.reject(f"策略接管预检失败: {exc}")
         n._close_log()
         n._clear_cmd_sources()
-        # 成功接管才换边界；中断保持、停步及慢回站姿继续沿用它，避免膝目标跳回旧上限。
+        # 所有任务、保持与慢回站姿共用 XML 边界。
         self.lo, self.hi = lo, hi
         self.active, self.pending_target = task, target
         # 初始保持可能来自边界外少量测量偏差；策略接管起点也必须严格落在指令边界内。

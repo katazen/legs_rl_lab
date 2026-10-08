@@ -2,7 +2,7 @@
 
 用法(按文件路径直接运行, 不要 python -m 走包导入):
     python source/legs_rl_lab/legs_rl_lab/tasks/nlegs_task/task/rough/sim2sim.py \
-        [--run RUN] [--scene-xml XML] [--headless] [--duration S] [--save-data] [--check-terrain]
+        [--run RUN] [--xml XML] [--headless] [--duration S] [--save-data] [--check-terrain]
 
 地形(参数见下方可改块):
   沿 +X 行进，距原点 2m 开始，整条路线宽 2m：
@@ -35,9 +35,14 @@ flat = _load_flat_sim2sim()
 
 # ===================== 需要自己填/改的部分（全部集中在这里） =====================
 # 要回放的训练 run（logs/rsl_rl/nlegs_rough/ 下的目录名，需先用 play 导出 exported/policy.pt）
-RUN = "2026-09-29_15-57-49"
+RUN = "2026-10-07_18-37-35"
 # run 所在的 logs 根目录（想用平地策略先试地形，可临时指到 .../nlegs_flat）
 LOGS_ROOT = os.path.join(flat._REPO_ROOT, "logs", "rsl_rl", "nlegs_rough")
+# 机器人场景 XML（包含地面）；可直接改这里，或用 --xml / --scene-xml 覆盖。
+SCENE_XML = os.path.join(
+    flat._REPO_ROOT, "source", "legs_rl_lab", "legs_rl_lab", "assets", "nlegs_body", "mjcf",
+    "nlegs_body_scene.xml",
+)
 
 # --- 平台与下楼梯（接在上坡末端，沿 +X 行进）---
 STAIR_STEP_H = 0.05      # 每级高(m)
@@ -179,7 +184,8 @@ class RoughRunner(flat.MujocoRunner):
 def main():
     parser = argparse.ArgumentParser()
     parser.add_argument("--run", default=RUN)
-    parser.add_argument("--scene-xml", help="覆盖机器人场景 XML，用于回放对应训练资产的历史策略")
+    parser.add_argument("--xml", "--scene-xml", dest="scene_xml", default=SCENE_XML,
+                        help="机器人场景 XML（含地面），命令行路径优先于顶部 SCENE_XML")
     parser.add_argument("--headless", action="store_true")
     parser.add_argument("--duration", type=float, default=None)
     parser.add_argument("--save-data", action="store_true")
@@ -193,11 +199,11 @@ def main():
     flat._self_check()
     duration = args.duration if args.duration is not None else (10.0 if args.headless else flat.SIM_DURATION)
     config = flat.load_config(args.run)
-    if args.scene_xml:
-        config.scene_xml = os.path.abspath(args.scene_xml)
+    config.scene_xml = os.path.abspath(os.path.expanduser(args.scene_xml))
     config.base_pos[2] = DROP_HEIGHT  # 覆盖 deploy.yaml 的出生高度, 从空中自由下落
     print(f"[sim2sim] run={args.run}, action_clip=±{config.policy_action_clip}, "
           f"出生高度 {config.base_pos[2]:.3f}m")
+    print(f"[sim2sim] XML={config.scene_xml}")
     runner = RoughRunner(config, show_viewer=not args.headless, save_data=args.save_data)
     runner.run(duration=duration, realtime=not args.headless)
     print(f"[sim2sim] 完成 {runner.data.time:.2f}s，base_z={runner.data.xpos[runner.base_body_id, 2]:.3f}m")

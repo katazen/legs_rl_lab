@@ -129,12 +129,12 @@ class Policy:
         self.real2sim = [real.index(n) for n in sim]                        # x_sim = x_real[real2sim]
         self.sim2real = [sim.index(n) for n in real]                        # x_real = x_sim[sim2real]
         self.default_real = self.default_sim[self.sim2real].astype(np.float32)
-        # common 始终是硬件边界；策略另外保留训练动作裁剪。
+        # load_settings 从 nlegs_limit.xml 解析硬件边界；保留训练动作裁剪。
         self.lo = np.array(cfg["joint_lower_limits"], np.float32)
         self.hi = np.array(cfg["joint_upper_limits"], np.float32)
         if (self.lo.shape != (12,) or self.hi.shape != (12,)
                 or not np.isfinite([self.lo, self.hi]).all() or np.any(self.lo >= self.hi)):
-            raise ValueError("common.yaml 关节限位无效")
+            raise ValueError("XML 关节限位无效")
         self.deploy, self.run_dir = dep, Path(run_dir)
         self.obs_raw = np.zeros(31, np.float32)
         self.cmd = np.zeros(3, np.float32)
@@ -287,6 +287,8 @@ class RL_real(Node, Policy):
         from .multi_task import MultiTaskController
         self.multi = MultiTaskController(self, cfg, repo)
         print(f"[config] {config_file}\n[run] {run_dir}")
+        print(f"[joint-limits] {cfg['joint_limits_xml']}（rad）\n"
+              + "; ".join(f"{name}=[{lo:g}, {hi:g}]" for name, lo, hi in zip(self.real_joint_names, self.lo, self.hi)))
         if self.preflight_only:
             print("[preflight] PASS：配置/模型/观测/参考/限位检查完成；未创建控制话题、未使能电机。")
             return
@@ -320,7 +322,7 @@ class RL_real(Node, Policy):
             q = self.obs_raw[7:19]
             outside = (q < self.lo) | (q > self.hi)
             if np.any(outside):
-                reason = ("反馈超出 common 硬件限位（rad）: "
+                reason = ("反馈超出 XML 硬件限位（rad）: "
                           + self._joint_range_details(q, self.lo, self.hi, outside))
         if reason is not None:
             self.get_logger().warn(f"当前姿态不可接管: {reason}", throttle_duration_sec=1.0)

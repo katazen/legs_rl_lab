@@ -32,7 +32,7 @@ RL_ARGS=(--ros-args -p "config_file:=$CONFIG_FILE")
 # 必须先确认安装版支持无输出预检，避免旧 main 忽略参数后直接启动控制。
 echo "[preflight] 检查安装版、所选模型与配置 ..."
 if ! (source "$ROS"; source "$H1/rl_real_py/install/setup.bash";
-      python3 -c 'from rl_real_py.rl_real_common import RL_real, main; assert hasattr(RL_real, "multi") and not hasattr(RL_real, "_tick_prepare"), "请先重新编译 rl_real_py（统一三任务版）"; main()' \
+      python3 -c 'from rl_real_py.deployment_config import read_joint_limits; from rl_real_py.rl_real_common import RL_real, main; assert hasattr(RL_real, "multi") and not hasattr(RL_real, "_tick_prepare"), "请先重新编译 rl_real_py（XML 限位版）"; main()' \
       "${RL_ARGS[@]}" -p preflight_only:=true); then
   echo "错误: 预检失败，未启动电机驱动；请检查模型/配置，并重新编译 rl_real_py。" >&2
   exit 1
