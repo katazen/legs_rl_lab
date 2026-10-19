@@ -1,0 +1,24 @@
+.gitignore
+  s_41deeaca4ca644::t_82481a43a4ca2e 110-111
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.7.5",
+  "base_commit_sha": "10ea2dfe23eba11fbe318d9c4cd69a0a821b38ea",
+  "prompts": {},
+  "humans": {
+    "h_d698c05df35737": {
+      "author": "woan <377801872@qq.com>"
+    }
+  },
+  "sessions": {
+    "s_41deeaca4ca644": {
+      "agent_id": {
+        "tool": "codex",
+        "id": "01a1107c-fe23-7401-bd0a-b1971e228c18",
+        "model": "gpt-6.1-sol"
+      },
+      "human_author": "woan <377801872@qq.com>"
+    }
+  }
+}
