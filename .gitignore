@@ -111,6 +111,7 @@ _build
 !/logs/rsl_rl/nlegs_body_rough/2026-10-19_11-44-04/
 !/logs/rsl_rl/nlegs_body_rough/2026-10-20_14-14-13/
 !/logs/rsl_rl/nlegs_body_rough/2026-10-21_18-08-22/
+!/logs/rsl_rl/nlegs_body_rough/2026-10-22_12-24-19/
 /logs/rsl_rl/*/*/*
 !/logs/rsl_rl/*/*/exported/
 !/logs/rsl_rl/*/*/params/
