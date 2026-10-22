@@ -1,0 +1,156 @@
+{
+  "schema_version": 1,
+  "run": "2026-10-21_18-08-22",
+  "checkpoint_filename": "model_22300.pt",
+  "checkpoint_iteration": 22300,
+  "checkpoint_sha256": "87ef8cf52554c87dbbbc8cc4c54c3d27ce4d6033af01ebd2c7f102c11cc7edd2",
+  "checkpoint_size_bytes": 31274047,
+  "checkpoint_included": false,
+  "frozen_at_utc": "2026-10-22T03:08:33.806191+00:00",
+  "export_method": "RSL-RL MLPModel.as_jit/as_onnx CPU",
+  "exported_files": {
+    "exported/policy.pt": {
+      "sha256": "9053c46cdf5353681805383e1a8c7d30ff62cdf27ada1834c3435c40daf7e12e",
+      "size_bytes": 2122134
+    },
+    "exported/policy.onnx": {
+      "sha256": "2dd175ca3ad48faaa2cd50b76428787242fe271809107bf76e229a4ff78275ec",
+      "size_bytes": 2110124
+    }
+  },
+  "source_params_sha256": {
+    "params/agent.yaml": "ed0313e26689e0727b59999897ec0588689df499586810d6cb36bbf2067b5d7a",
+    "params/body_env_cfg.py": "4f882ae5e3e8a34a0731a3ecc1c0947e13a36e94e6b12c8ba4b45e0f225fe515",
+    "params/deploy.yaml": "c5aa77d4ccdddc5956d2eb77f31b6c8fd445452d9e1fae3f0e0148b38122847b",
+    "params/env.yaml": "52304b7e900e47031f64e23adeb868e15cd34755d95e9596a996a3dc6d5431b3"
+  },
+  "policy": {
+    "input_dim": 705,
+    "output_dim": 12,
+    "history_length_by_term": {
+      "base_ang_vel": 15,
+      "projected_gravity": 15,
+      "velocity_commands": 15,
+      "joint_pos_rel": 15,
+      "joint_vel_rel": 15,
+      "last_action": 15,
+      "gait_phase": 15
+    },
+    "observation_term_order": [
+      "base_ang_vel",
+      "projected_gravity",
+      "velocity_commands",
+      "joint_pos_rel",
+      "joint_vel_rel",
+      "last_action",
+      "gait_phase"
+    ],
+    "history_layout": "term-grouped, oldest-to-newest within each term",
+    "step_dt": 0.02,
+    "physics_dt": 0.005,
+    "joint_ids_map": [
+      0,
+      6,
+      1,
+      7,
+      2,
+      8,
+      3,
+      9,
+      4,
+      10,
+      5,
+      11
+    ],
+    "gait_period": 0.6,
+    "default_joint_pos": [
+      -0.1,
+      -0.1,
+      0.0,
+      0.0,
+      0.0,
+      0.0,
+      0.4,
+      0.4,
+      -0.3,
+      -0.3,
+      0.0,
+      0.0
+    ],
+    "actions": {
+      "JointPositionAction": {
+        "clip": null,
+        "joint_names": [
+          ".*"
+        ],
+        "scale": [
+          0.25,
+          0.25,
+          0.25,
+          0.25,
+          0.25,
+          0.25,
+          0.25,
+          0.25,
+          0.25,
+          0.25,
+          0.25,
+          0.25
+        ],
+        "offset": [
+          -0.1,
+          -0.1,
+          0.0,
+          0.0,
+          0.0,
+          0.0,
+          0.4,
+          0.4,
+          -0.3,
+          -0.3,
+          0.0,
+          0.0
+        ],
+        "joint_ids": null
+      }
+    },
+    "policy_action_clip": 5.0,
+    "obs_normalization": false
+  },
+  "validation": {
+    "checkpoint_actor_load_strict": true,
+    "checkpoint_jit_onnx_mlp_parameters_bitwise_equal": true,
+    "deterministic_export_excludes": [
+      "distribution.std_param"
+    ],
+    "onnx_checker_passed": true,
+    "backend": "onnx.reference.ReferenceEvaluator",
+    "output_parity": {
+      "random": {
+        "count": 64,
+        "checkpoint_vs_jit_max_abs": 0.0,
+        "checkpoint_vs_onnx_max_abs": 2.86102294921875e-06,
+        "rtol": 1e-05,
+        "atol": 1e-05,
+        "passed": true
+      },
+      "recorded_physical_states_reencoded": {
+        "count": 50,
+        "checkpoint_vs_jit_max_abs": 0.0,
+        "checkpoint_vs_onnx_max_abs": 2.384185791015625e-07,
+        "rtol": 1e-05,
+        "atol": 1e-05,
+        "passed": true
+      }
+    },
+    "trajectory_note": "Saved MuJoCo states from the earlier body-policy replay, reencoded with each run interface; this is output parity evidence, not a new on-policy rollout.",
+    "trajectory_source": "/home/woan/.codex/visualizations/2026/10/08/01a11a47-ad86-7c91-b466-9f6c8976b7ee/body_width_20261022/mujo/vx0.2_z0.49.npz",
+    "trajectory_sha256": "d6a8028b783a27e594a9ae21a6831b3c1f785f0ce2759506c181dcec45181687"
+  },
+  "versions": {
+    "python": "3.11.15",
+    "torch": "2.7.0+cu128",
+    "onnx": "1.21.0",
+    "rsl_rl": "5.0.1"
+  }
+}

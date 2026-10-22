@@ -21,4 +21,8 @@ logs/rsl_rl/nlegs_rough/2026-09-20_19-15-58/exported/*.pt -filter -diff -merge -
 logs/rsl_rl/nlegs_mimic_crouch/2026-09-17_16-42-11/exported/*.pt -filter -diff -merge -text
 logs/rsl_rl/nlegs_mimic_stand/2026-09-17_15-40-44/exported/*.pt -filter -diff -merge -text
 
+# body rough 部署导出直接入 Git，机器人拉取无需 Git LFS。
+logs/rsl_rl/nlegs_body_rough/2026-10-20_14-14-13/exported/*.pt -filter -diff -merge -text
+logs/rsl_rl/nlegs_body_rough/2026-10-21_18-08-22/exported/*.pt -filter -diff -merge -text
+
 *.bat text eol=crlf

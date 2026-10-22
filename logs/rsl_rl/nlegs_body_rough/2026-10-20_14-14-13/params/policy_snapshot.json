@@ -1,0 +1,156 @@
+{
+  "schema_version": 1,
+  "run": "2026-10-20_14-14-13",
+  "checkpoint_filename": "model_20500.pt",
+  "checkpoint_iteration": 20500,
+  "checkpoint_sha256": "7926b9c2e5ed21ab062084626856425e19ca797e847754ef1e99fe86fc0cba44",
+  "checkpoint_size_bytes": 22180927,
+  "checkpoint_included": false,
+  "frozen_at_utc": "2026-10-22T03:08:34.748813+00:00",
+  "export_method": "copy existing exports; exact checkpoint-weight validation",
+  "exported_files": {
+    "exported/policy.pt": {
+      "sha256": "89d5ff0e2f8257e62272821c5dc8d0fad8978836ceec7c8841595b62ae893908",
+      "size_bytes": 1640790
+    },
+    "exported/policy.onnx": {
+      "sha256": "efbc889bcf7ed2ebd3543b5fb9aeb96569ae394057c8f6f9bfd1968b0998b1e9",
+      "size_bytes": 1628843
+    }
+  },
+  "source_params_sha256": {
+    "params/agent.yaml": "7b7e1ffc4e8c1e0da44a3d176aa6313b592e7ce2ff7c9cb85a7420fe847acc4d",
+    "params/body_env_cfg.py": "44259c2b49871f100a382f795a10db31dde5f066179b3b1fe5cc64c24e5e1aca",
+    "params/deploy.yaml": "5650206a2a9a7dac42f2324c980b0bf7326989e0de421512705aa3701a30dab5",
+    "params/env.yaml": "ee472deaf8eddb563f8bbb8df960fbbbf7b406f82fdd09c67bdcf88cbfd4da16"
+  },
+  "policy": {
+    "input_dim": 470,
+    "output_dim": 12,
+    "history_length_by_term": {
+      "base_ang_vel": 10,
+      "projected_gravity": 10,
+      "velocity_commands": 10,
+      "joint_pos_rel": 10,
+      "joint_vel_rel": 10,
+      "last_action": 10,
+      "gait_phase": 10
+    },
+    "observation_term_order": [
+      "base_ang_vel",
+      "projected_gravity",
+      "velocity_commands",
+      "joint_pos_rel",
+      "joint_vel_rel",
+      "last_action",
+      "gait_phase"
+    ],
+    "history_layout": "term-grouped, oldest-to-newest within each term",
+    "step_dt": 0.02,
+    "physics_dt": 0.005,
+    "joint_ids_map": [
+      0,
+      6,
+      1,
+      7,
+      2,
+      8,
+      3,
+      9,
+      4,
+      10,
+      5,
+      11
+    ],
+    "gait_period": 0.9,
+    "default_joint_pos": [
+      -0.1,
+      -0.1,
+      0.0,
+      0.0,
+      0.0,
+      0.0,
+      0.2,
+      0.2,
+      -0.1,
+      -0.1,
+      0.0,
+      0.0
+    ],
+    "actions": {
+      "JointPositionAction": {
+        "clip": null,
+        "joint_names": [
+          ".*"
+        ],
+        "scale": [
+          0.25,
+          0.25,
+          0.25,
+          0.25,
+          0.25,
+          0.25,
+          0.25,
+          0.25,
+          0.25,
+          0.25,
+          0.25,
+          0.25
+        ],
+        "offset": [
+          -0.1,
+          -0.1,
+          0.0,
+          0.0,
+          0.0,
+          0.0,
+          0.2,
+          0.2,
+          -0.1,
+          -0.1,
+          0.0,
+          0.0
+        ],
+        "joint_ids": null
+      }
+    },
+    "policy_action_clip": 5.0,
+    "obs_normalization": false
+  },
+  "validation": {
+    "checkpoint_actor_load_strict": true,
+    "checkpoint_jit_onnx_mlp_parameters_bitwise_equal": true,
+    "deterministic_export_excludes": [
+      "distribution.std_param"
+    ],
+    "onnx_checker_passed": true,
+    "backend": "onnx.reference.ReferenceEvaluator",
+    "output_parity": {
+      "random": {
+        "count": 64,
+        "checkpoint_vs_jit_max_abs": 0.0,
+        "checkpoint_vs_onnx_max_abs": 3.814697265625e-06,
+        "rtol": 1e-05,
+        "atol": 1e-05,
+        "passed": true
+      },
+      "recorded_physical_states_reencoded": {
+        "count": 50,
+        "checkpoint_vs_jit_max_abs": 0.0,
+        "checkpoint_vs_onnx_max_abs": 2.384185791015625e-07,
+        "rtol": 1e-05,
+        "atol": 1e-05,
+        "passed": true
+      }
+    },
+    "trajectory_note": "Saved MuJoCo states from the earlier body-policy replay, reencoded with each run interface; this is output parity evidence, not a new on-policy rollout.",
+    "trajectory_source": "/home/woan/.codex/visualizations/2026/10/08/01a11a47-ad86-7c91-b466-9f6c8976b7ee/body_width_20261022/mujo/vx0.2_z0.49.npz",
+    "trajectory_sha256": "d6a8028b783a27e594a9ae21a6831b3c1f785f0ce2759506c181dcec45181687"
+  },
+  "versions": {
+    "python": "3.11.15",
+    "torch": "2.7.0+cu128",
+    "onnx": "1.21.0",
+    "rsl_rl": "5.0.1"
+  }
+}
