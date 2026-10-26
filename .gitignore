@@ -113,6 +113,7 @@ _build
 !/logs/rsl_rl/nlegs_body_rough/2026-10-21_18-08-22/
 !/logs/rsl_rl/nlegs_body_rough/2026-10-22_12-24-19/
 !/logs/rsl_rl/nlegs_body_rough/2026-10-22_17-38-36/
+!/logs/rsl_rl/nlegs_body_rough/2026-10-26_10-56-59/
 /logs/rsl_rl/*/*/*
 !/logs/rsl_rl/*/*/exported/
 !/logs/rsl_rl/*/*/params/

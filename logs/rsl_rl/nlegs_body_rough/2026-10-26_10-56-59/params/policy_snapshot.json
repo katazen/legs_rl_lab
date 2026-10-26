@@ -1,0 +1,38 @@
+{
+  "schema_version": 1,
+  "run": "2026-10-26_10-56-59",
+  "checkpoint_filename": "model_5100.pt",
+  "checkpoint_iteration": 5100,
+  "checkpoint_sha256": "0506fc7bfe13c2b49593ba0d9f9171b880c14eda6583b4a321967e454f5304f9",
+  "checkpoint_included": false,
+  "frozen_at_utc": "2026-10-26T07:18:00.128632+00:00",
+  "export_method": "RSL-RL MLPModel.as_jit/as_onnx CPU",
+  "exported_files": {
+    "exported/policy.onnx": {
+      "sha256": "e0dc0a164351a876367efb6c2bfbf38363c7cd248ad23b13f0f10d2ef63dfcef",
+      "size_bytes": 2110124
+    },
+    "exported/policy.pt": {
+      "sha256": "cfb55831e2605658ef9632f72e2252a99d1c741e4bcb1769d0fa664db810d427",
+      "size_bytes": 2122070
+    }
+  },
+  "source_params_sha256": {
+    "params/agent.yaml": "ed0313e26689e0727b59999897ec0588689df499586810d6cb36bbf2067b5d7a",
+    "params/body_env_cfg.py": "2fec6d02ec7e7664d0a1e61e3502e2f101794a7d1f2a8d47fb8e2d3d092e9b95",
+    "params/deploy.yaml": "959403fe60646c56831091fde11df126a1e3ec511984508c7441eea4c081a3dd",
+    "params/env.yaml": "660cde59426f456172d7ede704be07ca1a61494b92e2f8294adf2061ec980247"
+  },
+  "policy": {
+    "input_dim": 705,
+    "output_dim": 12
+  },
+  "validation": {
+    "checkpoint_actor_load_strict": true,
+    "onnx_checker_passed": true,
+    "backend": "onnx.reference.ReferenceEvaluator",
+    "test_inputs": 18,
+    "checkpoint_vs_jit_max_abs": 0.0,
+    "checkpoint_vs_onnx_max_abs": 3.814697265625e-06
+  }
+}

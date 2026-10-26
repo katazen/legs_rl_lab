@@ -28,3 +28,4 @@ logs/rsl_rl/nlegs_body_rough/2026-10-22_12-24-19/exported/*.pt -filter -diff -me
 logs/rsl_rl/nlegs_body_rough/2026-10-22_17-38-36/exported/*.pt -filter -diff -merge -text
 
 *.bat text eol=crlf
+logs/rsl_rl/nlegs_body_rough/2026-10-26_10-56-59/exported/*.pt -filter -diff -merge -text
