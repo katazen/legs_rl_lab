@@ -1,0 +1,31 @@
+.gitattributes
+  s_0d00c894404011::t_ccdf274992283f 32
+.gitignore
+  s_0d00c894404011::t_ccdf274992283f 117
+logs/rsl_rl/nlegs_body_rough/2026-10-27_11-01-10/params/agent.yaml
+  s_0d00c894404011::t_129c1e0def8354 1-65
+logs/rsl_rl/nlegs_body_rough/2026-10-27_11-01-10/params/body_env_cfg.py
+  s_0d00c894404011::t_1e09bc8572ac68 1-516
+logs/rsl_rl/nlegs_body_rough/2026-10-27_11-01-10/params/deploy.yaml
+  s_0d00c894404011::t_0596b63f0dd316 1-100
+logs/rsl_rl/nlegs_body_rough/2026-10-27_11-01-10/params/env.yaml
+  s_0d00c894404011::t_ae14b7442a557f 1-1537
+logs/rsl_rl/nlegs_body_rough/2026-10-27_11-01-10/params/policy_snapshot.json
+  s_0d00c894404011::t_5c8dafd2b19e85 1-235
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.7.5",
+  "base_commit_sha": "c21dc709de4aca8403db20793ba6c6b12f78171f",
+  "prompts": {},
+  "sessions": {
+    "s_0d00c894404011": {
+      "agent_id": {
+        "tool": "codex",
+        "id": "01a16247-d6d1-72e3-a49e-17c9987de647",
+        "model": "gpt-6-astra"
+      },
+      "human_author": "woan <377801872@qq.com>"
+    }
+  }
+}
