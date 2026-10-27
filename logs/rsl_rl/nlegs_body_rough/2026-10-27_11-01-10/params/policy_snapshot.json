@@ -1,0 +1,235 @@
+{
+  "schema_version": 1,
+  "run": "2026-10-27_11-01-10",
+  "source_run": "/mnt/workspace/legs_rl_lab_20261022/logs/rsl_rl/nlegs_body_rough/2026-10-27_11-01-10",
+  "checkpoint_filename": "model_7200.pt",
+  "checkpoint_iteration": 7200,
+  "checkpoint_sha256": "d12be55bd4a34a3c4d8bb49f4e2b7d9d4aac6223bee2ee6bf941d263168d8176",
+  "checkpoint_size_bytes": 31273973,
+  "checkpoint_included": false,
+  "frozen_at_utc": "2026-10-27T08:16:52.535632+00:00",
+  "export_method": "RSL-RL MLPModel.as_jit/as_onnx CPU",
+  "exported_files": {
+    "exported/policy.pt": {
+      "sha256": "368b9f75591be809dcdadcb2fe21b938213d07c21c5ef2aae8be873fc5dd94a1",
+      "size_bytes": 2122070
+    },
+    "exported/policy.onnx": {
+      "sha256": "0d760d4783e1d75a28ed14547930f859e2b43dd01b6d4ee548310870554df73e",
+      "size_bytes": 2110124
+    }
+  },
+  "source_params_sha256": {
+    "params/agent.yaml": "73d8cef9ffad2d7cd7674ef7a834a4e2a14a23061337eda39c5a3d0bd6879c39",
+    "params/body_env_cfg.py": "5ca5191d40d5b281e63fc60cecab2e3206353f2586ec8666db13e7498332bcba",
+    "params/deploy.yaml": "10280785080121b82bbfaab003d73828b57c0434f778acc9f01f2109e5418038",
+    "params/env.yaml": "2f873f65b11fcc9d41c46716942f2c7005ad17841a08672c5f2d057b8a06e5ff"
+  },
+  "policy": {
+    "input_dim": 705,
+    "output_dim": 12,
+    "step_dt": 0.02,
+    "physics_dt": 0.005,
+    "observation_term_order": [
+      "base_ang_vel",
+      "projected_gravity",
+      "velocity_commands",
+      "joint_pos_rel",
+      "joint_vel_rel",
+      "last_action",
+      "gait_phase"
+    ],
+    "history_length_by_term": {
+      "base_ang_vel": 15,
+      "projected_gravity": 15,
+      "velocity_commands": 15,
+      "joint_pos_rel": 15,
+      "joint_vel_rel": 15,
+      "last_action": 15,
+      "gait_phase": 15
+    },
+    "history_layout": "term-grouped, oldest-to-newest within each term",
+    "joint_ids_map": [
+      0,
+      6,
+      1,
+      7,
+      2,
+      8,
+      3,
+      9,
+      4,
+      10,
+      5,
+      11
+    ],
+    "default_joint_pos": [
+      -0.1,
+      -0.1,
+      0.0,
+      0.0,
+      0.0,
+      0.0,
+      0.2,
+      0.2,
+      -0.1,
+      -0.1,
+      0.0,
+      0.0
+    ],
+    "gait_period": 0.6,
+    "actions": {
+      "JointPositionAction": {
+        "clip": null,
+        "joint_names": [
+          ".*"
+        ],
+        "scale": [
+          0.25,
+          0.25,
+          0.25,
+          0.25,
+          0.25,
+          0.25,
+          0.25,
+          0.25,
+          0.25,
+          0.25,
+          0.25,
+          0.25
+        ],
+        "offset": [
+          -0.1,
+          -0.1,
+          0.0,
+          0.0,
+          0.0,
+          0.0,
+          0.2,
+          0.2,
+          -0.1,
+          -0.1,
+          0.0,
+          0.0
+        ],
+        "joint_ids": null
+      }
+    },
+    "policy_action_clip": 5.0,
+    "obs_normalization": false
+  },
+  "validation": {
+    "checkpoint_actor_load_strict": true,
+    "checkpoint_jit_onnx_mlp_parameters_bitwise_equal": true,
+    "checkpoint_stable": true,
+    "source_files_preserved": true,
+    "onnx_checker_full_check_passed": true,
+    "output_parity": {
+      "backend": "onnx.reference.ReferenceEvaluator",
+      "count": 18,
+      "rtol": 1e-05,
+      "atol": 1e-05,
+      "checkpoint_vs_jit_max_abs": 0.0,
+      "checkpoint_vs_onnx_max_abs": 1.9073486328125e-06,
+      "passed": true,
+      "cases": [
+        {
+          "index": 0,
+          "jit_max_abs_error": 0.0,
+          "onnx_max_abs_error": 4.470348358154297e-08
+        },
+        {
+          "index": 1,
+          "jit_max_abs_error": 0.0,
+          "onnx_max_abs_error": 1.1920928955078125e-06
+        },
+        {
+          "index": 2,
+          "jit_max_abs_error": 0.0,
+          "onnx_max_abs_error": 9.5367431640625e-07
+        },
+        {
+          "index": 3,
+          "jit_max_abs_error": 0.0,
+          "onnx_max_abs_error": 1.4901161193847656e-07
+        },
+        {
+          "index": 4,
+          "jit_max_abs_error": 0.0,
+          "onnx_max_abs_error": 8.940696716308594e-08
+        },
+        {
+          "index": 5,
+          "jit_max_abs_error": 0.0,
+          "onnx_max_abs_error": 5.960464477539063e-08
+        },
+        {
+          "index": 6,
+          "jit_max_abs_error": 0.0,
+          "onnx_max_abs_error": 1.1920928955078125e-07
+        },
+        {
+          "index": 7,
+          "jit_max_abs_error": 0.0,
+          "onnx_max_abs_error": 1.4901161193847656e-07
+        },
+        {
+          "index": 8,
+          "jit_max_abs_error": 0.0,
+          "onnx_max_abs_error": 4.76837158203125e-07
+        },
+        {
+          "index": 9,
+          "jit_max_abs_error": 0.0,
+          "onnx_max_abs_error": 4.76837158203125e-07
+        },
+        {
+          "index": 10,
+          "jit_max_abs_error": 0.0,
+          "onnx_max_abs_error": 2.384185791015625e-07
+        },
+        {
+          "index": 11,
+          "jit_max_abs_error": 0.0,
+          "onnx_max_abs_error": 4.76837158203125e-07
+        },
+        {
+          "index": 12,
+          "jit_max_abs_error": 0.0,
+          "onnx_max_abs_error": 4.76837158203125e-07
+        },
+        {
+          "index": 13,
+          "jit_max_abs_error": 0.0,
+          "onnx_max_abs_error": 1.9073486328125e-06
+        },
+        {
+          "index": 14,
+          "jit_max_abs_error": 0.0,
+          "onnx_max_abs_error": 9.5367431640625e-07
+        },
+        {
+          "index": 15,
+          "jit_max_abs_error": 0.0,
+          "onnx_max_abs_error": 9.834766387939453e-07
+        },
+        {
+          "index": 16,
+          "jit_max_abs_error": 0.0,
+          "onnx_max_abs_error": 5.960464477539062e-07
+        },
+        {
+          "index": 17,
+          "jit_max_abs_error": 0.0,
+          "onnx_max_abs_error": 1.430511474609375e-06
+        }
+      ]
+    },
+    "note": "CPU export parity only; physical robot behavior and walking stability have not been evaluated."
+  },
+  "versions": {
+    "torch": "2.7.0+cu128",
+    "onnx": "1.21.0",
+    "rsl_rl": "5.0.1"
+  }
+}
