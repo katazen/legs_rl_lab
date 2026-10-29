@@ -1,0 +1,77 @@
+README.md
+  s_823f79bf5ba124::t_c76f6f582084b4 1-82
+deploy/control_ws/src/armcontrol/src/arm_control_node.cpp
+  s_823f79bf5ba124::t_a396265af81446 1-460
+deploy/build.sh
+  s_823f79bf5ba124::t_12a6818e05a5d0 1-8
+deploy/control_ws/src/armcontrol/CMakeLists.txt
+  s_823f79bf5ba124::t_7af07ff6178b9b 1-47
+deploy/control_ws/src/armcontrol/config/arm_control_node.yaml
+  s_823f79bf5ba124::t_e209474a989a05 1-7
+deploy/control_ws/src/armcontrol/config/motors.yaml
+  s_823f79bf5ba124::t_275c09597c9b21 1-21
+deploy/control_ws/src/armcontrol/include/armcontrol/motor_protocol.h
+  s_823f79bf5ba124::t_048b743494d08c 1-196
+deploy/control_ws/src/armcontrol/include/armcontrol/serial_port.h
+  s_823f79bf5ba124::t_f3e3ae1c29490b 1-145
+deploy/control_ws/src/armcontrol/package.xml
+  s_823f79bf5ba124::t_124c55c00f0e73 1-15
+deploy/imu_ws/src/wit_ros2_imu/launch/rviz_and_imu.launch.py
+  s_823f79bf5ba124::t_bc8b21142d8cea 1-9
+deploy/imu_ws/src/wit_ros2_imu/package.xml
+  s_823f79bf5ba124::t_8532f14f2ddb76 1-24
+deploy/imu_ws/src/wit_ros2_imu/setup.cfg
+  s_823f79bf5ba124::t_3e25f365da368a 1-4
+deploy/imu_ws/src/wit_ros2_imu/setup.py
+  s_823f79bf5ba124::t_524486d012f6e8 1-27
+deploy/imu_ws/src/wit_ros2_imu/wit_ros2_imu/wit_ros2_imu.py
+  s_823f79bf5ba124::t_15c23db9dbc236 1-193
+deploy/motor_config.py
+  s_823f79bf5ba124::t_40eeed718c7976 1-52
+deploy/rl_real_py/configs/common.yaml
+  s_823f79bf5ba124::t_830e53c610b9df 1-47
+deploy/rl_real_py/package.xml
+  s_823f79bf5ba124::t_497d149f0babcc 1-26
+deploy/rl_real_py/rl_real_py/motion_reference.py
+  s_823f79bf5ba124::t_a8a8f00f84c574 1-103
+deploy/rl_real_py/rl_real_py/multi_task.py
+  s_823f79bf5ba124::t_8382faf7ed9f5f 1-314
+deploy/rl_real_py/rl_real_py/rl_real_common.py
+  s_823f79bf5ba124::t_3d9c4e77ff676f 1-464
+deploy/rl_real_py/setup.cfg
+  s_823f79bf5ba124::t_6dc324cf8437b1 1-4
+deploy/rl_real_py/setup.py
+  s_823f79bf5ba124::t_496f0410fa96e6 1-31
+deploy/start_real.sh
+  s_823f79bf5ba124::t_0c3a0d8fbf09d3 1-80
+deploy/stop_real.sh
+  s_823f79bf5ba124::t_d264e110c1a022 1-36
+deploy/sync_pd.py
+  s_823f79bf5ba124::t_a5392869d9c672 1-90
+logs/rsl_rl/nlegs_rough/2026-08-26_20-37-55/params/agent.yaml
+  s_823f79bf5ba124::t_d3c645ba14e371 1-61
+logs/rsl_rl/nlegs_rough/2026-08-26_20-37-55/params/deploy.yaml
+  s_823f79bf5ba124::t_8516ae60d7d3a0 1-103
+.gitignore
+  s_823f79bf5ba124::t_cdeef05c9c7438 1-12
+deploy/rl_real_py/rl_real_py/deployment_config.py
+  s_823f79bf5ba124::t_9ad5674171857c 1-40
+requirements.txt
+  s_823f79bf5ba124::t_d957a7602e014c 1-4
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.7.5",
+  "base_commit_sha": "36187507cad151fe42685fcffe6807f607413d55",
+  "prompts": {},
+  "sessions": {
+    "s_823f79bf5ba124": {
+      "agent_id": {
+        "tool": "codex",
+        "id": "01a185be-a9a5-7582-833b-c6fac060ab99",
+        "model": "gpt-6-astra"
+      },
+      "human_author": "woan <377801872@qq.com>"
+    }
+  }
+}
