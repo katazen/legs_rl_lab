@@ -1,0 +1,34 @@
+.gitignore
+  s_22f8ffc6662cf2::t_b758856b904b03 124,133-138
+source/legs_rl_lab/legs_rl_lab/assets/nlegs_body/mjcf/nlegs_body_scene.xml
+  s_557a345e11e578::t_d35e4a3c52cb79 1-15
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.7.4",
+  "base_commit_sha": "7eba7ee6fce078dc5ac240cd5f7e8c14669846a0",
+  "prompts": {},
+  "humans": {
+    "h_d698c05df35737": {
+      "author": "woan <377801872@qq.com>"
+    }
+  },
+  "sessions": {
+    "s_22f8ffc6662cf2": {
+      "agent_id": {
+        "tool": "codex",
+        "id": "01a06a55-9d3a-7f52-b1dc-6c6e4d885f57",
+        "model": "gpt-6-sol"
+      },
+      "human_author": "woan <377801872@qq.com>"
+    },
+    "s_557a345e11e578": {
+      "agent_id": {
+        "tool": "codex",
+        "id": "01a019a0-3a40-7c51-aee1-85f2447a9b3b",
+        "model": "unknown"
+      },
+      "human_author": "woan <377801872@qq.com>"
+    }
+  }
+}

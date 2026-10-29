@@ -1,0 +1,42 @@
+source/legs_rl_lab/legs_rl_lab/tasks/nlegs_task/task/rough/rough_env_cfg.py
+  s_22f8ffc6662cf2::t_a46008c4fdfa72 28,39-53,105,109-110,112-113,115-135
+  s_22f8ffc6662cf2::t_c3797a54bc928e 104,106-108,111,114
+source/legs_rl_lab/legs_rl_lab/tasks/nlegs_task/task/rough/README_static.md
+  s_22f8ffc6662cf2::t_c3797a54bc928e 39
+  s_22f8ffc6662cf2::t_8517795ea91b17 42,93,97
+source/legs_rl_lab/legs_rl_lab/tasks/nlegs_task/task/rough/static_env_cfg.py
+  s_22f8ffc6662cf2::t_c3797a54bc928e 14
+source/legs_rl_lab/legs_rl_lab/tasks/nlegs_task/task/rough/README.md
+  s_22f8ffc6662cf2::t_8517795ea91b17 1-11,13-19,22-44
+  s_22f8ffc6662cf2::t_c3797a54bc928e 12,20-21
+  s_22f8ffc6662cf2::t_cdc5af1ecc5eac 45-46
+tests/check_rough_static.py
+  s_22f8ffc6662cf2::t_8517795ea91b17 1,13,26,31-35,38-41,43-50,78,110-113,138,140-148,153,155-160,170-173,175-176
+  s_22f8ffc6662cf2::t_c2badb752aa6e9 2-5,7-12,14-25,27-30,51-53,58-77,79-82,100-101,103-109,114-122,125-127,134-137,139,149-152,154,161-169,174,178-188
+  s_22f8ffc6662cf2::t_6cd6ef56f2fcc5 6,54-57,83-99,177
+  s_22f8ffc6662cf2::t_c3797a54bc928e 36-37,42,102,123,128-133
+  s_22f8ffc6662cf2::t_da6e4a03e0d955 124
+source/legs_rl_lab/legs_rl_lab/tasks/nlegs_task/agents/rsl_rl_ppo_cfg.py
+  s_22f8ffc6662cf2::t_a46008c4fdfa72 80,82
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.7.4",
+  "base_commit_sha": "ef482d003426a8a3c33e2d313a637c9e7bf991fd",
+  "prompts": {},
+  "humans": {
+    "h_d698c05df35737": {
+      "author": "woan <377801872@qq.com>"
+    }
+  },
+  "sessions": {
+    "s_22f8ffc6662cf2": {
+      "agent_id": {
+        "tool": "codex",
+        "id": "01a06a55-9d3a-7f52-b1dc-6c6e4d885f57",
+        "model": "gpt-6-astra"
+      },
+      "human_author": "woan <377801872@qq.com>"
+    }
+  }
+}

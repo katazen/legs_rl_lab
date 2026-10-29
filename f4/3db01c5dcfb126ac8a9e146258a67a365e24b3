@@ -1,0 +1,65 @@
+source/legs_rl_lab/legs_rl_lab/tasks/nlegs_task/task/rough/rough_env_cfg.py
+  s_f9d788709686b7::t_d094ae631d8427 330-331,386
+  h_d698c05df35737 298
+  s_f9d788709686b7::t_f4417d82b2a69e 1-6,9-11,13-15,18,20,23-25,27-28,30,34,97-280,292-297,299-329,332-342,347-348,352-363,365-377,381-385,387-391,396-397,399-444,448-449,451-613,616
+  s_f9d788709686b7::t_8f4ee79998667f 281-291
+deploy/rl_real_py/configs/common.yaml
+  h_d698c05df35737 5
+source/legs_rl_lab/legs_rl_lab/assets/nlegs/nlegs.py
+  h_d698c05df35737 54
+source/legs_rl_lab/legs_rl_lab/tasks/nlegs_task/task/rough/README.md
+  s_f9d788709686b7::t_d5f2fac786343e 54-55
+  s_f9d788709686b7::t_ddc63301a20a94 53
+  s_f9d788709686b7::t_5417956c970d22 8,12,25-32,34-36
+  s_f9d788709686b7::t_252c4b83e7136e 21
+  s_f9d788709686b7::t_d094ae631d8427 19,37-38
+  s_f9d788709686b7::t_8f4ee79998667f 40
+  s_f9d788709686b7::t_d74b31b790b263 39
+source/legs_rl_lab/legs_rl_lab/tasks/nlegs_task/mdp/actions.py
+  s_f9d788709686b7::t_d094ae631d8427 1-15
+tests/check_rough_static.py
+  s_f9d788709686b7::t_813d93f955ffe9 115
+  s_f9d788709686b7::t_8f4ee79998667f 55,72-73,105-114,144,148
+  s_f9d788709686b7::t_6c301e1f5b3efb 27,37-45,53-54,57-58,61,80-81,116-130,138,142,271-275
+  s_f9d788709686b7::t_3c12d7aca70607 145
+  s_f9d788709686b7::t_7086be8cf1a4cc 146-147
+  s_f9d788709686b7::t_5417956c970d22 56
+  s_f9d788709686b7::t_d481db7284fed6 66-70,172-214,256,258,260-262,268-269
+source/legs_rl_lab/legs_rl_lab/tasks/nlegs_task/task/rough/sim2sim.py
+  h_d698c05df35737 38
+deploy/rl_real_py/rl_real_py/multi_task.py
+  s_f9d788709686b7::t_4914a2361fecbb 64,72-82,177-180,197,199,202,207-208,313-314,317-319,321,324,346-347,371-372
+source/legs_rl_lab/legs_rl_lab/tasks/nlegs_task/mdp/__init__.py
+  s_f9d788709686b7::t_d094ae631d8427 2
+source/legs_rl_lab/legs_rl_lab/tasks/nlegs_task/task/rough/static_env_cfg.py
+  s_f9d788709686b7::t_f4417d82b2a69e 3-7,10-11,14-94,101
+deploy/README.md
+  s_f9d788709686b7::t_252c4b83e7136e 82,86-87
+source/legs_rl_lab/legs_rl_lab/tasks/nlegs_task/mdp/observations.py
+  s_f9d788709686b7::t_d094ae631d8427 20-21
+source/legs_rl_lab/legs_rl_lab/tasks/nlegs_task/mdp/events.py
+  s_f9d788709686b7::t_d094ae631d8427 43-45
+source/legs_rl_lab/legs_rl_lab/tasks/nlegs_task/task/rough/README_static.md
+  s_f9d788709686b7::t_5417956c970d22 4,39
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.7.4",
+  "base_commit_sha": "f43db01c5dcfb126ac8a9e146258a67a365e24b3",
+  "prompts": {},
+  "humans": {
+    "h_d698c05df35737": {
+      "author": "woan <377801872@qq.com>"
+    }
+  },
+  "sessions": {
+    "s_f9d788709686b7": {
+      "agent_id": {
+        "tool": "codex",
+        "id": "01a0a95f-b45a-7101-8d19-84757cb4fb14",
+        "model": "gpt-6-astra"
+      },
+      "human_author": "woan <377801872@qq.com>"
+    }
+  }
+}

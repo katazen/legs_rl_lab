@@ -1,0 +1,24 @@
+.gitignore
+  s_aede2d0005e56c::t_90c4483b057cbc 18-20
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.6.16",
+  "base_commit_sha": "5b740d3155e202e77ce0ed1370b6ef37c8abebcd",
+  "prompts": {},
+  "humans": {
+    "h_d698c05df35737": {
+      "author": "woan <377801872@qq.com>"
+    }
+  },
+  "sessions": {
+    "s_aede2d0005e56c": {
+      "agent_id": {
+        "tool": "claude",
+        "id": "cdfd5184-d1e6-44c4-8105-792b029609d7",
+        "model": "claude-opus-4-8"
+      },
+      "human_author": "woan <377801872@qq.com>"
+    }
+  }
+}

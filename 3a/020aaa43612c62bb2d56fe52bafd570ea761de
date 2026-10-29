@@ -1,0 +1,104 @@
+source/legs_rl_lab/legs_rl_lab/tasks/legs_task/mdp/rewards.py
+  s_aede2d0005e56c::t_85239e2bda471e 85-95
+source/legs_rl_lab/legs_rl_lab/actuators/delayed_dc_motor.py
+  s_1c282a56a9c63a::t_16bbea9ba73042 1-75
+source/legs_rl_lab/legs_rl_lab/tasks/legs_task/agents/rsl_rl_ppo_cfg.py
+  h_d698c05df35737 61
+source/legs_rl_lab/legs_rl_lab/utils/export_deploy_cfg.py
+  s_aede2d0005e56c::t_a797adbcb05fd3 39-40,42,44-45
+source/legs_rl_lab/legs_rl_lab/tasks/legs_task/task/legs/legs_env_cfg.py
+  s_aede2d0005e56c::t_ff1abc915a48c7 264,266-275
+  h_d698c05df35737 33,111-112,247,263
+  s_aede2d0005e56c::t_144a437408b016 265
+source/legs_rl_lab/legs_rl_lab/assets/legs_URDF/legs.py
+  s_1c282a56a9c63a::t_23f14e2ce9a693 56-64,69-72,75-77
+  s_1c282a56a9c63a::t_516ca1d43e7175 66-67,79-80
+  s_1c282a56a9c63a::t_c02bbcaa72d61a 73-74,78
+  s_1c282a56a9c63a::t_75c96fb4ad58d9 8-9
+source/legs_rl_lab/legs_rl_lab/tasks/legs_task/task/nlegs/sim2sim.py
+  h_d698c05df35737 36,432,444
+  s_1c282a56a9c63a::t_d17b515905fbe6 367-368
+  s_1c282a56a9c63a::t_58d0ac6da34f72 242-243
+  s_1c282a56a9c63a::t_95490c55be22a4 434-443,445-446
+  s_1c282a56a9c63a::t_1aa2faf30e8b9f 414-415,417-418
+  s_1c282a56a9c63a::t_a964e8dabaaf8f 356-357
+  s_1c282a56a9c63a::t_71640880f42d12 405-409,411
+  s_1c282a56a9c63a::t_544ff18ece4109 400-401
+  s_1c282a56a9c63a::t_432be907163f61 244-246
+  s_1c282a56a9c63a::t_f47eb62a0209b1 10-14,144,151-153,158-159,161-164,189,195-196,213-217,237,247-253,269,286,289-292,297-302,339-340,348,363,382-383,466-470
+source/legs_rl_lab/legs_rl_lab/assets/legs_URDF/mjcf/A1_legs_V2_narrow_mjcf.xml
+  s_aede2d0005e56c::t_a2f6db0d9aeb88 98
+  s_aede2d0005e56c::t_0afe08ba06b773 49
+  s_aede2d0005e56c::t_055ab43fa47683 57
+  s_aede2d0005e56c::t_1bb5e2015c4292 62,103
+  s_aede2d0005e56c::t_d5855121b2737e 67,108
+  s_aede2d0005e56c::t_60e2808499e363 72,113
+  s_7c010affc2480c::t_657bb0e88551fa 46,148-154
+source/legs_rl_lab/legs_rl_lab/tasks/legs_task/task/legs/sim2sim.py
+  s_1c282a56a9c63a::t_8712c9e7a32c7b 419-420,422-423
+  s_1c282a56a9c63a::t_2b2e4393d66243 361-362
+  s_1c282a56a9c63a::t_a6a7cc59db23c4 372-373
+  s_1c282a56a9c63a::t_3549edf53d2677 303-312
+  s_1c282a56a9c63a::t_5fe35a13579589 72-80,84,93-94,98,100-106
+  s_1c282a56a9c63a::t_cc2779a73c447c 215-227
+  s_1c282a56a9c63a::t_a8a967c501d196 437
+  s_1c282a56a9c63a::t_99f5a0c52e7161 410-414,416
+  s_1c282a56a9c63a::t_d5c63db4403d17 405-406
+  h_d698c05df35737 32
+  s_1c282a56a9c63a::t_3ed4a545d54ddc 439-451
+  s_1c282a56a9c63a::t_c6448fec843fdd 238-239
+  s_1c282a56a9c63a::t_891e6431b43712 240-242
+  s_1c282a56a9c63a::t_03feb820a0c72a 127,134-136,141-142,144-147,172,178-179,196-200,233,243-249,265,282,285-288,293-298,344-345,353,368,387-388,471-475
+source/legs_rl_lab/legs_rl_lab/assets/legs_URDF/mjcf/A1_legs_V2_mjcf.xml
+  s_aede2d0005e56c::t_7944025c50fedc 99
+  s_aede2d0005e56c::t_8aabaf0d637e74 73,114
+  s_aede2d0005e56c::t_2fddd25b4abc26 68,109
+  s_aede2d0005e56c::t_76de1473527889 50
+  s_aede2d0005e56c::t_2432f43adcf977 58
+  s_aede2d0005e56c::t_2e5e85cc6cc054 63,104
+  s_7c010affc2480c::t_5d6104a91cacdf 47,149-155
+source/legs_rl_lab/legs_rl_lab/assets/legs_URDF/mjcf/A1_legs_V2_narrow_mjcf_scene.xml
+  h_d698c05df35737 4-5,7-12,14-15
+  s_7c010affc2480c::t_ed68645029a09e 1-3,6,13
+source/legs_rl_lab/legs_rl_lab/actuators/__init__.py
+  s_1c282a56a9c63a::t_5fd7756d02c78a 1-5
+source/legs_rl_lab/legs_rl_lab/assets/legs_URDF/mjcf/A1_legs_V2_mjcf_scene.xml
+  s_7c010affc2480c::t_45d561c61936e7 1-3,6,13
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.6.13",
+  "base_commit_sha": "3a020aaa43612c62bb2d56fe52bafd570ea761de",
+  "prompts": {},
+  "humans": {
+    "h_d698c05df35737": {
+      "author": "woan <377801872@qq.com>"
+    }
+  },
+  "sessions": {
+    "s_1c282a56a9c63a": {
+      "agent_id": {
+        "tool": "claude",
+        "id": "e038b5d5-a23a-437e-8075-8a78e1995bbe",
+        "model": "claude-opus-4-8"
+      },
+      "human_author": "woan <377801872@qq.com>"
+    },
+    "s_7c010affc2480c": {
+      "agent_id": {
+        "tool": "codex",
+        "id": "019f21a8-7a15-7cc0-88ed-bf59294affe4",
+        "model": "unknown"
+      },
+      "human_author": "woan <377801872@qq.com>"
+    },
+    "s_aede2d0005e56c": {
+      "agent_id": {
+        "tool": "claude",
+        "id": "cdfd5184-d1e6-44c4-8105-792b029609d7",
+        "model": "claude-opus-4-8"
+      },
+      "human_author": "woan <377801872@qq.com>"
+    }
+  }
+}

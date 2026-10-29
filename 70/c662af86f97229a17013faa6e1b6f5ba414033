@@ -1,0 +1,32 @@
+deploy/README.md
+  s_22f8ffc6662cf2::t_bd609d86481080 70
+deploy/rl_real_py/test_manual_stop_only.py
+  s_22f8ffc6662cf2::t_1b997e09b71bcb 4,7,10-25
+  s_22f8ffc6662cf2::t_30df48c01974f5 73-74,77
+deploy/rl_real_py/rl_real_py/rl_real_common.py
+  s_22f8ffc6662cf2::t_1b997e09b71bcb 92-101
+deploy/rl_real_py/configs/common.yaml
+  h_d698c05df35737 14-15
+  s_22f8ffc6662cf2::t_1b997e09b71bcb 12-13,16
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.7.4",
+  "base_commit_sha": "70c662af86f97229a17013faa6e1b6f5ba414033",
+  "prompts": {},
+  "humans": {
+    "h_d698c05df35737": {
+      "author": "woan <377801872@qq.com>"
+    }
+  },
+  "sessions": {
+    "s_22f8ffc6662cf2": {
+      "agent_id": {
+        "tool": "codex",
+        "id": "01a06a55-9d3a-7f52-b1dc-6c6e4d885f57",
+        "model": "gpt-6-sol"
+      },
+      "human_author": "woan <377801872@qq.com>"
+    }
+  }
+}

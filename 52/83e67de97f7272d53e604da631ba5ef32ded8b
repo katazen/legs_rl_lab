@@ -1,0 +1,14 @@
+README.md
+  h_d698c05df35737 3,13,15-18,22,73-74
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.6.24",
+  "base_commit_sha": "5283e67de97f7272d53e604da631ba5ef32ded8b",
+  "prompts": {},
+  "humans": {
+    "h_d698c05df35737": {
+      "author": "woan <377801872@qq.com>"
+    }
+  }
+}

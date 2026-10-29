@@ -1,0 +1,24 @@
+README.md
+  s_691089d81bb0a2::t_60ca71a76b0fc8 3,5,7-14,16,18,20,22,24,26,28-32,40,42,45,48-49,52,54,56,59,62,64-65,68-70,72,74,78-80,83,86-87,90,92-99,102,105,107,109-118,121,123
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.7.4",
+  "base_commit_sha": "a1eec67146ee895b0258f7d24b36466845333f12",
+  "prompts": {},
+  "humans": {
+    "h_d698c05df35737": {
+      "author": "woan <377801872@qq.com>"
+    }
+  },
+  "sessions": {
+    "s_691089d81bb0a2": {
+      "agent_id": {
+        "tool": "codex",
+        "id": "01a0af4e-2f0a-72e2-9e87-220a91b434ac",
+        "model": "gpt-6-astra"
+      },
+      "human_author": "woan <377801872@qq.com>"
+    }
+  }
+}

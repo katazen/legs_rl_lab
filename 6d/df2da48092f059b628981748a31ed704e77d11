@@ -1,0 +1,117 @@
+source/legs_rl_lab/legs_rl_lab/tasks/legs_task/task/nlegs/nlegs_env_cfg.py
+  h_d698c05df35737 8,18-19,21-23
+source/legs_rl_lab/legs_rl_lab/tasks/legs_task/task/legs/legs_static_env_cfg.py
+  s_aede2d0005e56c::t_19b455a2dcba0a 1-36,48-60
+  s_aede2d0005e56c::t_7b1a7bf7cedb0b 37-45,47
+  h_d698c05df35737 46
+source/legs_rl_lab/legs_rl_lab/tasks/legs_task/task/legs/__init__.py
+  s_aede2d0005e56c::t_649fed0fa40808 24-34
+source/legs_rl_lab/legs_rl_lab/tasks/legs_task/task/legs/legs_env_cfg.py
+  s_aede2d0005e56c::t_2cc4788bac0bf6 146,149-150
+source/legs_rl_lab/legs_rl_lab/tasks/legs_task/task/legs/sim2sim.py
+  h_d698c05df35737 32
+deploy/sysid/src/isaac/chirp_replay.py
+  s_1c282a56a9c63a::t_974856486d6746 21
+  s_1c282a56a9c63a::t_92c23cf66d3106 45-47
+  s_1c282a56a9c63a::t_7159cae40189c5 54-59
+  s_1c282a56a9c63a::t_a67542ea37a003 67-72,76-81
+  s_1c282a56a9c63a::t_f4f174017ca801 23
+  s_1c282a56a9c63a::t_6f8c6a3321fa65 22
+  s_1c282a56a9c63a::t_a4fc4a60947cd4 48-53
+  s_1c282a56a9c63a::t_adba06001ff091 20
+  s_1c282a56a9c63a::t_b17ed88d54c9d6 1-19,24-44,60-66,73-75,82-96
+source/legs_rl_lab/legs_rl_lab/assets/legs_URDF/legs.py
+  s_1c282a56a9c63a::t_88cdeb61d70bef 62
+  s_1c282a56a9c63a::t_3314adf82aa859 59,69
+  s_1c282a56a9c63a::t_12117c15fa64fd 60-61,63-64,70
+source/legs_rl_lab/legs_rl_lab/assets/legs_narrow/nlegs.py
+  h_d698c05df35737 1-102
+deploy/rl_real_py/configs/common.yaml
+  h_d698c05df35737 9
+  s_41841b18fc4c68::t_57cedb278c26bd 59
+source/legs_rl_lab/legs_rl_lab/tasks/legs_task/task/legs/sim2sim_static.py
+  s_aede2d0005e56c::t_388ef3df7c7d62 1-27,30-33,35-298,303-518
+  s_aede2d0005e56c::t_af831d2b89dca9 299-302
+  h_d698c05df35737 34
+  s_aede2d0005e56c::t_93a6d03d601dc0 28-29
+deploy/sysid/src/analyze_stepsine.py
+  s_1c282a56a9c63a::t_986d6b75b9b227 91-120
+  s_1c282a56a9c63a::t_d6ab2d35fbe28e 167,169-180
+  s_1c282a56a9c63a::t_6bbd32598259ab 127,134-135,166,168
+  s_1c282a56a9c63a::t_52d126c9430051 1-90,121-126,130-133,140-165,181-191
+  s_1c282a56a9c63a::t_5e769f474feab2 128-129,136-139
+source/legs_rl_lab/legs_rl_lab/assets/legs_narrow/urdf/legs_narrow.urdf
+  h_d698c05df35737 151
+  s_aede2d0005e56c::t_7c779a40522e30 1-150,152-853
+deploy/sysid/src/excite_record.py
+  s_1c282a56a9c63a::t_36b1c33c9f1bdd 32-36
+  s_1c282a56a9c63a::t_7dff5f1e66081d 54-60,64-67,73
+  s_1c282a56a9c63a::t_ab46a73b3affed 304-308
+deploy/imu_ws/src/wit_ros2_imu/tty_imu.rules
+  s_1c282a56a9c63a::t_ae75bd5de4ca7c 2
+deploy/rl_real_py/rl_real_py/rl_real_common.py
+  s_aede2d0005e56c::t_a2aad8832d2058 108-110
+  s_aede2d0005e56c::t_aebaa5b20f1811 232-235,243-244
+deploy/sysid/src/bode.py
+  s_1c282a56a9c63a::t_ad9b41709b4030 1-63
+deploy/sysid/src/fit_actuator.py
+  s_1c282a56a9c63a::t_00c1365f048a91 27
+  s_1c282a56a9c63a::t_ba9b244c1f8c13 1-26,28-66
+deploy/sysid/src/plot_sine_tracking.py
+  s_1c282a56a9c63a::t_4f0820ca2ebba3 1-88
+source/legs_rl_lab/legs_rl_lab/tasks/legs_task/mdp/rewards.py
+  s_aede2d0005e56c::t_82f30243492ffd 177,183-186
+  s_aede2d0005e56c::t_44c684a2ca4c90 119-127
+  s_aede2d0005e56c::t_c31d6970018e51 258,269-272
+source/legs_rl_lab/legs_rl_lab/assets/legs_narrow/mjcf/legs_narrow.xml
+  h_d698c05df35737 48,56,68,72,93,109,113
+  s_aede2d0005e56c::t_0f9a0de57260f1 89
+  s_aede2d0005e56c::t_01b92fe526d366 1-44,47,51,53-55,57-67,69-71,73-88,90-92,94-108,110-112,114-149
+  s_aede2d0005e56c::t_4bedb5017903ee 45-46,49-50
+  s_aede2d0005e56c::t_271c1eff2c9d0f 52
+source/legs_rl_lab/legs_rl_lab/tasks/legs_task/mdp/observations.py
+  s_aede2d0005e56c::t_59461a8b3f5274 30,35-38
+deploy/control_ws/src/armcontrol/config/arm_control_node.yaml
+  s_1c282a56a9c63a::t_cdcff63c6d3acb 3
+source/legs_rl_lab/legs_rl_lab/assets/legs_narrow/urdf/legs_narrow.csv
+  s_aede2d0005e56c::t_d2511f43b628e9 1-16
+source/legs_rl_lab/legs_rl_lab/assets/legs_narrow/urdf/legs_narrow_ori.urdf
+  s_aede2d0005e56c::t_62ee9b746ae021 1-849
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.6.16",
+  "base_commit_sha": "6ddf2da48092f059b628981748a31ed704e77d11",
+  "prompts": {},
+  "humans": {
+    "h_d698c05df35737": {
+      "author": "woan <377801872@qq.com>"
+    }
+  },
+  "sessions": {
+    "s_1c282a56a9c63a": {
+      "agent_id": {
+        "tool": "claude",
+        "id": "e038b5d5-a23a-437e-8075-8a78e1995bbe",
+        "model": "claude-opus-4-8"
+      },
+      "human_author": "woan <377801872@qq.com>"
+    },
+    "s_41841b18fc4c68": {
+      "agent_id": {
+        "tool": "claude",
+        "id": "903080ef-c236-41d0-8a5f-b3b6baa1793e",
+        "model": "claude-opus-4-8"
+      },
+      "human_author": "woan <377801872@qq.com>"
+    },
+    "s_aede2d0005e56c": {
+      "agent_id": {
+        "tool": "claude",
+        "id": "cdfd5184-d1e6-44c4-8105-792b029609d7",
+        "model": "claude-opus-4-8"
+      },
+      "human_author": "woan <377801872@qq.com>"
+    }
+  }
+}

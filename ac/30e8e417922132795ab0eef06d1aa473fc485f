@@ -1,0 +1,28 @@
+.gitattributes
+  s_691089d81bb0a2::t_785199c821f700 14-17
+README.md
+  s_691089d81bb0a2::t_785199c821f700 91-103
+.gitignore
+  s_691089d81bb0a2::t_785199c821f700 89,100-101,105-106
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.7.4",
+  "base_commit_sha": "ac30e8e417922132795ab0eef06d1aa473fc485f",
+  "prompts": {},
+  "humans": {
+    "h_d698c05df35737": {
+      "author": "woan <377801872@qq.com>"
+    }
+  },
+  "sessions": {
+    "s_691089d81bb0a2": {
+      "agent_id": {
+        "tool": "codex",
+        "id": "01a0af4e-2f0a-72e2-9e87-220a91b434ac",
+        "model": "gpt-6-astra"
+      },
+      "human_author": "woan <377801872@qq.com>"
+    }
+  }
+}

@@ -1,0 +1,39 @@
+deploy/rl_real_py/configs/common.yaml
+  h_d698c05df35737 9,11
+  h_d698c05df35737 43-65
+source/legs_rl_lab/legs_rl_lab/tasks/nlegs_task/task/flat/flat_env_cfg.py
+  h_d698c05df35737 38,356,358-359
+  h_d698c05df35737 357,360
+source/legs_rl_lab/legs_rl_lab/tasks/nlegs_task/task/rough/sim2sim.py
+  h_d698c05df35737 1-154
+source/legs_rl_lab/legs_rl_lab/tasks/nlegs_task/task/flat/sim2sim.py
+  h_d698c05df35737 332,405-407
+  h_d698c05df35737 408
+.gitignore
+  h_d698c05df35737 66-68
+deploy/control_ws/src/armcontrol/config/arm_control_node.yaml
+  h_d698c05df35737 3
+deploy/rl_real_py/rl_real_py/rl_real_common.py
+  h_d698c05df35737 28,131-136,142-160,195,197-198,222-225,312-331,336-338,368-392,407-408,422-429
+source/legs_rl_lab/legs_rl_lab/tasks/nlegs_task/mdp/__init__.py
+  h_d698c05df35737 8
+source/legs_rl_lab/legs_rl_lab/tasks/nlegs_task/mdp/rewards.py
+  h_d698c05df35737 174,176-183,198-215
+source/legs_rl_lab/legs_rl_lab/tasks/nlegs_task/mdp/symmetry.py
+  h_d698c05df35737 21-25,59-66,99-104,106-107,110
+source/legs_rl_lab/legs_rl_lab/tasks/nlegs_task/mdp/terminations.py
+  h_d698c05df35737 1-26
+source/legs_rl_lab/legs_rl_lab/tasks/nlegs_task/task/rough/rough_env_cfg.py
+  h_d698c05df35737 1,6-8,16-17,21-23,25,30-31,92,103-110,118-119,123-133
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.7.0",
+  "base_commit_sha": "1f7a5d75a1d31503be114edb0f1892abe85372f4",
+  "prompts": {},
+  "humans": {
+    "h_d698c05df35737": {
+      "author": "woan <377801872@qq.com>"
+    }
+  }
+}

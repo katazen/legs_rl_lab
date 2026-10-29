@@ -1,0 +1,48 @@
+logs/rsl_rl/nlegs_flat/2026-08-26_13-57-34/params/deploy.yaml
+  h_d698c05df35737 1-103
+.gitignore
+  s_22f8ffc6662cf2::t_ed41983e3ac4a7 67-84
+logs/rsl_rl/nlegs_flat/2026-08-26_13-57-34/params/agent.yaml
+  h_d698c05df35737 1-61
+logs/rsl_rl/nlegs_flat/2026-08-26_13-57-34/params/env.yaml
+  h_d698c05df35737 1-1382
+logs/rsl_rl/nlegs_flat/2026-08-26_13-57-34/params/flat_env_cfg.py
+  h_d698c05df35737 1-405
+logs/rsl_rl/nlegs_flat_crouch/2026-09-09_20-27-00/params/agent.yaml
+  h_d698c05df35737 1-61
+logs/rsl_rl/nlegs_flat_crouch/2026-09-09_20-27-00/params/crouch_env_cfg.py
+  h_d698c05df35737 1-45
+logs/rsl_rl/nlegs_flat_crouch/2026-09-09_20-27-00/params/deploy.yaml
+  h_d698c05df35737 1-109
+logs/rsl_rl/nlegs_flat_crouch/2026-09-09_20-27-00/params/env.yaml
+  h_d698c05df35737 1-1362
+logs/rsl_rl/nlegs_rough/2026-08-26_20-37-55/params/agent.yaml
+  h_d698c05df35737 1-61
+logs/rsl_rl/nlegs_rough/2026-08-26_20-37-55/params/deploy.yaml
+  h_d698c05df35737 1-103
+logs/rsl_rl/nlegs_rough/2026-08-26_20-37-55/params/env.yaml
+  h_d698c05df35737 1-1610
+logs/rsl_rl/nlegs_rough/2026-08-26_20-37-55/params/rough_env_cfg.py
+  h_d698c05df35737 1-145
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.7.4",
+  "base_commit_sha": "be8cad2638ccd95fe6e6991ed64a1dc4bcaa130d",
+  "prompts": {},
+  "humans": {
+    "h_d698c05df35737": {
+      "author": "woan <377801872@qq.com>"
+    }
+  },
+  "sessions": {
+    "s_22f8ffc6662cf2": {
+      "agent_id": {
+        "tool": "codex",
+        "id": "01a06a55-9d3a-7f52-b1dc-6c6e4d885f57",
+        "model": "gpt-6-astra"
+      },
+      "human_author": "woan <377801872@qq.com>"
+    }
+  }
+}

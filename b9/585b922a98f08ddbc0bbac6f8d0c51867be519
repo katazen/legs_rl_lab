@@ -1,0 +1,28 @@
+source/legs_rl_lab/legs_rl_lab/tasks/nlegs_task/task/rough/sim2sim_static.py
+  s_22f8ffc6662cf2::t_01a6ac151aafc1 1-109
+deploy/rl_real_py/configs/common.yaml
+  h_d698c05df35737 5
+source/legs_rl_lab/legs_rl_lab/tasks/nlegs_task/task/rough/README_static.md
+  s_22f8ffc6662cf2::t_530640c0f69c6d 17-31,46-47,125-135
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.7.4",
+  "base_commit_sha": "b9585b922a98f08ddbc0bbac6f8d0c51867be519",
+  "prompts": {},
+  "humans": {
+    "h_d698c05df35737": {
+      "author": "woan <377801872@qq.com>"
+    }
+  },
+  "sessions": {
+    "s_22f8ffc6662cf2": {
+      "agent_id": {
+        "tool": "codex",
+        "id": "01a06a55-9d3a-7f52-b1dc-6c6e4d885f57",
+        "model": "gpt-6-astra"
+      },
+      "human_author": "woan <377801872@qq.com>"
+    }
+  }
+}

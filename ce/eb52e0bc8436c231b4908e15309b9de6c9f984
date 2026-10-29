@@ -1,0 +1,105 @@
+tests/check_rough_static.py
+  s_22f8ffc6662cf2::t_ce72d940f917db 36-37,39-40,82-84,94-95
+  s_22f8ffc6662cf2::t_7e66bf33e2771c 41-45,51,71-80,102-114,122
+source/legs_rl_lab/legs_rl_lab/tasks/nlegs_task/task/rough/__init__.py
+  s_22f8ffc6662cf2::t_b6d216d364faaf 21
+source/legs_rl_lab/legs_rl_lab/tasks/nlegs_task/agents/rsl_rl_ppo_cfg.py
+  s_22f8ffc6662cf2::t_b6d216d364faaf 75-79
+  s_22f8ffc6662cf2::t_fcce36a71b1982 74
+source/legs_rl_lab/legs_rl_lab/tasks/nlegs_task/task/rough/rough_env_cfg.py
+  s_22f8ffc6662cf2::t_4aa4199890202a 98-99
+  h_d698c05df35737 162,231,234
+  s_22f8ffc6662cf2::t_b6d216d364faaf 25,41,45,48,50,52,54,56-58,64-66,140-141,200,205,290,341,354,418,435
+  s_22f8ffc6662cf2::t_7e66bf33e2771c 1,152,193
+tests/check_rough_826_base.py
+  s_22f8ffc6662cf2::t_418ecabfda3749 1-4,6-84,97-109,113-114
+  s_22f8ffc6662cf2::t_4aa4199890202a 85-96
+  s_22f8ffc6662cf2::t_7bb9899357c423 5,110-112
+source/legs_rl_lab/legs_rl_lab/tasks/nlegs_task/task/rough/sim2sim.py
+  s_22f8ffc6662cf2::t_a7a86a68a4a852 5,41-42,45,187-188,202,206
+  h_d698c05df35737 38,43-44
+deploy/README.md
+  s_41deeaca4ca644::t_5178e782fe950b 29,100-105,107-108,118,147,152,174
+deploy/start_real.sh
+  s_41deeaca4ca644::t_eb222b5d9aa47f 35
+source/legs_rl_lab/legs_rl_lab/assets/nlegs/nlegs.py
+  s_22f8ffc6662cf2::t_b6d216d364faaf 1,43,47,63-64,76-77,87-90,99-101
+deploy/rl_real_py/test_manual_stop_only.py
+  s_41deeaca4ca644::t_5178e782fe950b 11-40,44-57
+  s_41deeaca4ca644::t_3b8402b440568b 41-43
+deploy/rl_real_py/rl_real_py/deployment_config.py
+  s_41deeaca4ca644::t_4fb01188cc13fc 4,10-35,53-56
+deploy/rl_real_py/rl_real_py/multi_task.py
+  s_41deeaca4ca644::t_4fb01188cc13fc 62-63,65,91,102-103,106,144,223
+source/legs_rl_lab/legs_rl_lab/assets/nlegs/mjcf/nlegs_limit.xml
+  s_22f8ffc6662cf2::t_38c0dcaa2d4b27 51
+  s_22f8ffc6662cf2::t_b6d216d364faaf 49-50
+  h_d698c05df35737 58,62,66,70,74,78,95,99,103,107,111,115
+deploy/rl_real_py/configs/common.yaml
+  s_41deeaca4ca644::t_4fb01188cc13fc 20-21,33
+deploy/rl_real_py/rl_real_py/rl_real_common.py
+  s_41deeaca4ca644::t_4fb01188cc13fc 132,137,290-291,325
+.gitignore
+  s_41deeaca4ca644::t_5d12b77acc48e5 83,89-109
+logs/rsl_rl/nlegs_rough/2026-09-29_22-10-03/params/agent.yaml
+  s_41deeaca4ca644::t_8237e420a8a326 1-59
+logs/rsl_rl/nlegs_rough/2026-09-29_22-10-03/params/deploy.yaml
+  s_41deeaca4ca644::t_d5b78794b2c160 1-109
+logs/rsl_rl/nlegs_rough/2026-09-29_22-10-03/params/env.yaml
+  s_41deeaca4ca644::t_14211459efb585 1-1760
+logs/rsl_rl/nlegs_rough/2026-09-29_22-10-03/params/zero_start_env_cfg.py
+  s_41deeaca4ca644::t_598e77f0fa7487 1-772
+logs/rsl_rl/nlegs_rough/2026-09-30_14-05-25/params/agent.yaml
+  s_41deeaca4ca644::t_306831df73c8ab 1-61
+logs/rsl_rl/nlegs_rough/2026-09-30_14-05-25/params/deploy.yaml
+  s_41deeaca4ca644::t_7df2913e5504b0 1-134
+logs/rsl_rl/nlegs_rough/2026-09-30_14-05-25/params/env.yaml
+  s_41deeaca4ca644::t_52b23a43f725cf 1-1819
+logs/rsl_rl/nlegs_rough/2026-09-30_14-05-25/params/rough_env_cfg.py
+  s_41deeaca4ca644::t_581056581a1744 1-656
+logs/rsl_rl/nlegs_rough/2026-09-30_17-45-24/params/agent.yaml
+  s_41deeaca4ca644::t_53b1f8c0fcde59 1-61
+logs/rsl_rl/nlegs_rough/2026-09-30_17-45-24/params/deploy.yaml
+  s_41deeaca4ca644::t_7fd1cd4cddbddc 1-109
+logs/rsl_rl/nlegs_rough/2026-09-30_17-45-24/params/env.yaml
+  s_41deeaca4ca644::t_17bfc8317bff06 1-1728
+logs/rsl_rl/nlegs_rough/2026-09-30_17-45-24/params/rough_env_cfg.py
+  s_41deeaca4ca644::t_70afe5b9d98998 1-594
+logs/rsl_rl/nlegs_rough/2026-10-07_18-37-35/params/agent.yaml
+  h_d698c05df35737 1-61
+logs/rsl_rl/nlegs_rough/2026-10-07_18-37-35/params/deploy.yaml
+  h_d698c05df35737 1-109
+logs/rsl_rl/nlegs_rough/2026-10-07_18-37-35/params/env.yaml
+  h_d698c05df35737 1-1650
+logs/rsl_rl/nlegs_rough/2026-10-07_18-37-35/params/rough_env_cfg.py
+  h_d698c05df35737 1-472
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.7.5",
+  "base_commit_sha": "ceeb52e0bc8436c231b4908e15309b9de6c9f984",
+  "prompts": {},
+  "humans": {
+    "h_d698c05df35737": {
+      "author": "woan <377801872@qq.com>"
+    }
+  },
+  "sessions": {
+    "s_22f8ffc6662cf2": {
+      "agent_id": {
+        "tool": "codex",
+        "id": "01a06a55-9d3a-7f52-b1dc-6c6e4d885f57",
+        "model": "gpt-6.1-sol"
+      },
+      "human_author": "woan <377801872@qq.com>"
+    },
+    "s_41deeaca4ca644": {
+      "agent_id": {
+        "tool": "codex",
+        "id": "01a1107c-fe23-7401-bd0a-b1971e228c18",
+        "model": "gpt-6.1-sol"
+      },
+      "human_author": "woan <377801872@qq.com>"
+    }
+  }
+}

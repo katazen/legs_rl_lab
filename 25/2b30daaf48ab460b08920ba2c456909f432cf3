@@ -1,0 +1,51 @@
+scripts/prepare_crouch_mimic.py
+  s_22f8ffc6662cf2::t_68f7496615c8ac 1,13,64
+scripts/rsl_rl/play.py
+  s_22f8ffc6662cf2::t_68f7496615c8ac 50,53,106-116,118-119
+deploy/rl_real_py/test/test_mimic.py
+  s_22f8ffc6662cf2::t_eb880ce7e3d2aa 178-195
+deploy/rl_real_py/configs/common.yaml
+  h_d698c05df35737 7
+  s_22f8ffc6662cf2::t_68f7496615c8ac 6
+tests/check_crouch_mimic.py
+  s_22f8ffc6662cf2::t_eb880ce7e3d2aa 17,29,32,111-121,180-181,187-197
+source/legs_rl_lab/legs_rl_lab/tasks/mimic_task/task/nlegs_crouch/sim2sim.py
+  s_22f8ffc6662cf2::t_68f7496615c8ac 4-6,35,217
+deploy/README.md
+  s_22f8ffc6662cf2::t_9851f13924b087 11-13,17-31
+  s_22f8ffc6662cf2::t_4f319fbcd8a5af 32
+source/legs_rl_lab/legs_rl_lab/tasks/mimic_task/task/nlegs_stand/sim2sim.py
+  h_d698c05df35737 24
+tests/check_crouch_mimic_sim2sim.py
+  s_22f8ffc6662cf2::t_68f7496615c8ac 39-40
+tests/check_stand_mimic_cfg.py
+  s_22f8ffc6662cf2::t_eb880ce7e3d2aa 84-93
+  s_22f8ffc6662cf2::t_68f7496615c8ac 103,108-109,111
+source/legs_rl_lab/legs_rl_lab/tasks/mimic_task/task/nlegs_crouch/tracking_env_cfg.py
+  s_22f8ffc6662cf2::t_68f7496615c8ac 1,84
+tests/check_multi_sim2sim.py
+  s_22f8ffc6662cf2::t_eb880ce7e3d2aa 3,6,56-61,63,71-80,84,89,131
+scripts/sim2sim.py
+  s_22f8ffc6662cf2::t_68f7496615c8ac 9,17,27-29,36,55-58,60-61
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.7.4",
+  "base_commit_sha": "252b30daaf48ab460b08920ba2c456909f432cf3",
+  "prompts": {},
+  "humans": {
+    "h_d698c05df35737": {
+      "author": "woan <377801872@qq.com>"
+    }
+  },
+  "sessions": {
+    "s_22f8ffc6662cf2": {
+      "agent_id": {
+        "tool": "codex",
+        "id": "01a06a55-9d3a-7f52-b1dc-6c6e4d885f57",
+        "model": "gpt-6-astra"
+      },
+      "human_author": "woan <377801872@qq.com>"
+    }
+  }
+}

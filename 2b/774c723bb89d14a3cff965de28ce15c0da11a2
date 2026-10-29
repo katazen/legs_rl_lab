@@ -1,0 +1,56 @@
+scripts/sim2sim.py
+  s_22f8ffc6662cf2::t_8b857a2917b406 45
+source/legs_rl_lab/legs_rl_lab/tasks/mimic_task/task/nlegs_crouch/sim2sim.py
+  s_22f8ffc6662cf2::t_8b857a2917b406 66-69,158-164
+deploy/rl_real_py/test/test_mimic.py
+  s_22f8ffc6662cf2::t_86caffc23ac913 155
+  s_22f8ffc6662cf2::t_c23ab23bcbdc40 147-154,156-177
+source/legs_rl_lab/legs_rl_lab/tasks/mimic_task/mdp/rewards.py
+  s_22f8ffc6662cf2::t_8b857a2917b406 50,83-84,95-96
+source/legs_rl_lab/legs_rl_lab/tasks/mimic_task/mdp/observations.py
+  s_22f8ffc6662cf2::t_8b857a2917b406 81
+source/legs_rl_lab/legs_rl_lab/tasks/mimic_task/task/nlegs_stand/tracking_env_cfg.py
+  s_22f8ffc6662cf2::t_8b857a2917b406 16-17,19
+source/legs_rl_lab/legs_rl_lab/tasks/mimic_task/mdp/commands.py
+  s_22f8ffc6662cf2::t_8b857a2917b406 83-91,162-176,231-237,246,249,353-354,402,428-429
+tests/check_crouch_mimic_sim2sim.py
+  s_22f8ffc6662cf2::t_86caffc23ac913 14,20,86-88,104-128,221
+  s_22f8ffc6662cf2::t_ae4151964b41f2 9
+tests/check_stand_mimic_cfg.py
+  s_22f8ffc6662cf2::t_c1edb6b7ae7e1c 88
+  s_22f8ffc6662cf2::t_bfce3b2544d3f7 9,13-14,19,84-87,89-99
+  s_22f8ffc6662cf2::t_c23ab23bcbdc40 42,45-46,100,108-109,119-123,128-130,150-163,173-201,205
+deploy/README.md
+  s_22f8ffc6662cf2::t_ae4151964b41f2 73-76
+deploy/rl_real_py/rl_real_py/motion_reference.py
+  s_22f8ffc6662cf2::t_8b857a2917b406 83-85,153-159
+scripts/rsl_rl/play.py
+  s_22f8ffc6662cf2::t_bfce3b2544d3f7 52,100-107
+  s_22f8ffc6662cf2::t_c1edb6b7ae7e1c 99
+  s_22f8ffc6662cf2::t_98724047d993cf 108
+tests/check_crouch_mimic.py
+  s_22f8ffc6662cf2::t_e945f837b8b95a 1-185
+source/legs_rl_lab/legs_rl_lab/tasks/mimic_task/mdp/terminations.py
+  s_22f8ffc6662cf2::t_8b857a2917b406 25-26
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.7.4",
+  "base_commit_sha": "2b774c723bb89d14a3cff965de28ce15c0da11a2",
+  "prompts": {},
+  "humans": {
+    "h_d698c05df35737": {
+      "author": "woan <377801872@qq.com>"
+    }
+  },
+  "sessions": {
+    "s_22f8ffc6662cf2": {
+      "agent_id": {
+        "tool": "codex",
+        "id": "01a06a55-9d3a-7f52-b1dc-6c6e4d885f57",
+        "model": "gpt-6-astra"
+      },
+      "human_author": "woan <377801872@qq.com>"
+    }
+  }
+}

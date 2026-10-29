@@ -1,0 +1,32 @@
+README.md
+  s_aede2d0005e56c::t_4982655cd8575b 17
+  s_aede2d0005e56c::t_93b45a3b9f8d96 107
+source/legs_rl_lab/legs_rl_lab/assets/legs_URDF/nlegs.py
+  h_d698c05df35737 13
+source/legs_rl_lab/legs_rl_lab/tasks/nlegs_task/task/nlegs/nlegs_env_cfg.py
+  h_d698c05df35737 279
+  s_aede2d0005e56c::t_baa23c637e379f 252,258
+source/legs_rl_lab/legs_rl_lab/tasks/nlegs_task/mdp/gait.py
+  s_aede2d0005e56c::t_5dc6806cce85ac 13-14,17-18
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.6.5",
+  "base_commit_sha": "3660d93d08b2dabece0fcf402112d6d1739436bd",
+  "prompts": {},
+  "humans": {
+    "h_d698c05df35737": {
+      "author": "woan <377801872@qq.com>"
+    }
+  },
+  "sessions": {
+    "s_aede2d0005e56c": {
+      "agent_id": {
+        "tool": "claude",
+        "id": "cdfd5184-d1e6-44c4-8105-792b029609d7",
+        "model": "claude-opus-4-8"
+      },
+      "human_author": "woan <377801872@qq.com>"
+    }
+  }
+}

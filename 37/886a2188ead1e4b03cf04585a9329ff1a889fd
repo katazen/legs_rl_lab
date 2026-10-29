@@ -1,0 +1,34 @@
+source/legs_rl_lab/legs_rl_lab/tasks/amp_task/mdp/rewards.py
+  h_d698c05df35737 60-71
+source/legs_rl_lab/legs_rl_lab/assets/legs_narrow/nlegs.py
+  h_d698c05df35737 152-153
+source/legs_rl_lab/legs_rl_lab/tasks/amp_task/mdp/observations.py
+  h_d698c05df35737 7,55,69-70
+source/legs_rl_lab/legs_rl_lab/tasks/amp_task/task/nlegs/nlegs_env_cfg.py
+  h_d698c05df35737 173,268
+source/legs_rl_lab/legs_rl_lab/tasks/legs_task/task/nlegs/nlegs_env_cfg.py
+  h_d698c05df35737 20-21
+README.md
+  s_aede2d0005e56c::t_804420d41440c9 3,7-8,11,17-22,43,47,52,55-56,66,68-71,73-83,89-155,163-173,175-178,180-185,193-201,203,222-223,225
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.6.20",
+  "base_commit_sha": "37886a2188ead1e4b03cf04585a9329ff1a889fd",
+  "prompts": {},
+  "humans": {
+    "h_d698c05df35737": {
+      "author": "woan <377801872@qq.com>"
+    }
+  },
+  "sessions": {
+    "s_aede2d0005e56c": {
+      "agent_id": {
+        "tool": "claude",
+        "id": "cdfd5184-d1e6-44c4-8105-792b029609d7",
+        "model": "claude-opus-4-8"
+      },
+      "human_author": "woan <377801872@qq.com>"
+    }
+  }
+}

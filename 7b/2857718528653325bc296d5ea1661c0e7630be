@@ -1,0 +1,33 @@
+deploy/rl_real_py/package.xml
+  s_22f8ffc6662cf2::t_de936080509d64 13
+deploy/README.md
+  s_22f8ffc6662cf2::t_de936080509d64 62-74,77-86
+  s_22f8ffc6662cf2::t_d7da7243fff80e 87
+deploy/rl_real_py/configs/common.yaml
+  s_22f8ffc6662cf2::t_de936080509d64 29-30
+deploy/rl_real_py/rl_real_py/rl_real_common.py
+  s_22f8ffc6662cf2::t_de936080509d64 303-304,421-428
+deploy/99-beitong-joystick.rules
+  s_22f8ffc6662cf2::t_de936080509d64 1-5
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.7.4",
+  "base_commit_sha": "7b2857718528653325bc296d5ea1661c0e7630be",
+  "prompts": {},
+  "humans": {
+    "h_d698c05df35737": {
+      "author": "woan <377801872@qq.com>"
+    }
+  },
+  "sessions": {
+    "s_22f8ffc6662cf2": {
+      "agent_id": {
+        "tool": "codex",
+        "id": "01a06a55-9d3a-7f52-b1dc-6c6e4d885f57",
+        "model": "gpt-6-astra"
+      },
+      "human_author": "woan <377801872@qq.com>"
+    }
+  }
+}

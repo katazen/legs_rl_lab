@@ -1,0 +1,31 @@
+.gitattributes
+  s_0d00c894404011::t_733c4e8bf1bf64 31
+.gitignore
+  s_0d00c894404011::t_7af5b42e35c1e2 116
+logs/rsl_rl/nlegs_body_rough/2026-10-26_10-56-59/params/agent.yaml
+  s_0d00c894404011::t_d57ed539023f4f 1-65
+logs/rsl_rl/nlegs_body_rough/2026-10-26_10-56-59/params/body_env_cfg.py
+  s_0d00c894404011::t_630f27a8c58e6c 1-528
+logs/rsl_rl/nlegs_body_rough/2026-10-26_10-56-59/params/deploy.yaml
+  s_0d00c894404011::t_7d5e4e73bb457c 1-100
+logs/rsl_rl/nlegs_body_rough/2026-10-26_10-56-59/params/env.yaml
+  s_0d00c894404011::t_ceccc9e7244404 1-1520
+logs/rsl_rl/nlegs_body_rough/2026-10-26_10-56-59/params/policy_snapshot.json
+  s_0d00c894404011::t_3a78fe10d90f44 1-38
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.7.5",
+  "base_commit_sha": "3e23a327a2a5fca603c1ac13ef036c43cf50aeef",
+  "prompts": {},
+  "sessions": {
+    "s_0d00c894404011": {
+      "agent_id": {
+        "tool": "codex",
+        "id": "01a16247-d6d1-72e3-a49e-17c9987de647",
+        "model": "gpt-6-astra"
+      },
+      "human_author": "woan <377801872@qq.com>"
+    }
+  }
+}

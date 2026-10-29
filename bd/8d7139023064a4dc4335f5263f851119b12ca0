@@ -1,0 +1,42 @@
+.gitignore
+  s_22f8ffc6662cf2::t_2e566ca821df34 80-97
+.gitattributes
+  s_22f8ffc6662cf2::t_2e566ca821df34 18-22
+logs/rsl_rl/nlegs_mimic_crouch/2026-09-17_16-42-11/params/agent.yaml
+  s_ea613e213d629c::t_17163a985b4c48 1-57
+logs/rsl_rl/nlegs_mimic_crouch/2026-09-17_16-42-11/params/deploy.yaml
+  s_ea613e213d629c::t_f22b20435b2bf0 1-218
+logs/rsl_rl/nlegs_mimic_crouch/2026-09-17_16-42-11/params/env.yaml
+  s_ea613e213d629c::t_3a8690558de0aa 1-1142
+logs/rsl_rl/nlegs_mimic_crouch/2026-09-17_16-42-11/params/tracking_env_cfg.py
+  s_ea613e213d629c::t_47d7af1463640c 1-228
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.7.4",
+  "base_commit_sha": "bd8d7139023064a4dc4335f5263f851119b12ca0",
+  "prompts": {},
+  "humans": {
+    "h_d698c05df35737": {
+      "author": "woan <377801872@qq.com>"
+    }
+  },
+  "sessions": {
+    "s_22f8ffc6662cf2": {
+      "agent_id": {
+        "tool": "codex",
+        "id": "01a06a55-9d3a-7f52-b1dc-6c6e4d885f57",
+        "model": "gpt-6-astra"
+      },
+      "human_author": "woan <377801872@qq.com>"
+    },
+    "s_ea613e213d629c": {
+      "agent_id": {
+        "tool": "codex",
+        "id": "01a0a438-77a3-7413-99d9-7a6a98157499",
+        "model": "unknown"
+      },
+      "human_author": "woan <377801872@qq.com>"
+    }
+  }
+}

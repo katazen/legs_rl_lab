@@ -1,0 +1,14 @@
+source/legs_rl_lab/legs_rl_lab/tasks/legs_task/task/legs/sim2sim.py
+  h_d698c05df35737 32,34
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.6.13",
+  "base_commit_sha": "11511571d2076b06304ebb90b82f22290d72f759",
+  "prompts": {},
+  "humans": {
+    "h_d698c05df35737": {
+      "author": "woan <377801872@qq.com>"
+    }
+  }
+}

@@ -1,0 +1,37 @@
+source/legs_rl_lab/legs_rl_lab/tasks/legs_task/task/legs/sim2sim.py
+  s_aede2d0005e56c::t_bbfbbda550ab5a 39,41
+  s_aede2d0005e56c::t_6bcbf15d0f4b26 13-26
+source/legs_rl_lab/legs_rl_lab/assets/legs_URDF/mjcf/convert_urdf_to_mjcf.py
+  s_aede2d0005e56c::t_4a1089fac7ab7c 13-25
+source/legs_rl_lab/legs_rl_lab/tasks/g1_task/task/qie/sim2sim.py
+  s_aede2d0005e56c::t_fee7f8cd2b3588 47-49
+  s_aede2d0005e56c::t_58fa3dc4ea3f09 1,11-22
+  s_aede2d0005e56c::t_2346755d82eaeb 23-24
+source/legs_rl_lab/legs_rl_lab/tasks/legs_task/task/nlegs/sim2sim.py
+  s_aede2d0005e56c::t_e619e858f14364 13-26
+  s_aede2d0005e56c::t_036fbb0f845bae 39,41
+source/legs_rl_lab/legs_rl_lab/assets/robots/g123.py
+  s_aede2d0005e56c::t_5f817b4b340743 8-20
+  s_aede2d0005e56c::t_6c021f492ebada 67
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.6.5",
+  "base_commit_sha": "002889b78fac766f3a4fb2c21eabea4007042ee0",
+  "prompts": {},
+  "humans": {
+    "h_d698c05df35737": {
+      "author": "woan <377801872@qq.com>"
+    }
+  },
+  "sessions": {
+    "s_aede2d0005e56c": {
+      "agent_id": {
+        "tool": "claude",
+        "id": "cdfd5184-d1e6-44c4-8105-792b029609d7",
+        "model": "claude-opus-4-8"
+      },
+      "human_author": "woan <377801872@qq.com>"
+    }
+  }
+}

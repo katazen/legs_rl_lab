@@ -1,0 +1,28 @@
+source/legs_rl_lab/legs_rl_lab/assets/legs_URDF/legs.py
+  s_aede2d0005e56c::t_e8bd07559cf9d0 39
+  s_aede2d0005e56c::t_065c6aee0a28b3 1-2,8-9
+  s_aede2d0005e56c::t_2b943eb53695f8 10
+source/legs_rl_lab/legs_rl_lab/assets/legs_URDF/nlegs.py
+  s_aede2d0005e56c::t_c30d1403b8572b 1-2,10-11,15
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.6.5",
+  "base_commit_sha": "412f334cad5b50fb4443fc65917bbaa571b9e06c",
+  "prompts": {},
+  "humans": {
+    "h_d698c05df35737": {
+      "author": "woan <377801872@qq.com>"
+    }
+  },
+  "sessions": {
+    "s_aede2d0005e56c": {
+      "agent_id": {
+        "tool": "claude",
+        "id": "cdfd5184-d1e6-44c4-8105-792b029609d7",
+        "model": "claude-opus-4-8"
+      },
+      "human_author": "woan <377801872@qq.com>"
+    }
+  }
+}
