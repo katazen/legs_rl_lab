@@ -1,0 +1,12 @@
+**/build/
+**/install/
+**/log/
+**/__pycache__/
+*.py[cod]
+.pytest_cache/
+.venv/
+logs/**/sim2real/
+logs/**/sim2sim/
+*.csv
+*.pt
+events.out.tfevents.*

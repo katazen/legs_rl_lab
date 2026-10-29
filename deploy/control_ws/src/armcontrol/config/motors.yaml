@@ -1,0 +1,21 @@
+# 自研电机；large 用于关节 1..5，small 仅用于 ankle roll。
+# 以下是现有协议编码范围，不是机械行程、实测转速/输出力矩上限。
+models:
+  large: {position_range: 12.5, velocity_range: 45.0, effort_range: 30.0}
+  small: {position_range: 12.5, velocity_range: 45.0, effort_range: 30.0}
+# direction: q_joint=s*q_motor；位置命令、位置/速度/带符号 effort 反馈共用。
+# 数值继承 374cc3a 的方向表；历史注释称按实测修正，未找到逐关节物理标定原始记录。
+# effort 为驱动电流相关反馈；其标度不是经独立标定的关节输出 N·m。
+joints:
+  - {name: L1, model: large, slave_id: 1, master_id: 17, direction:  1}
+  - {name: L2, model: large, slave_id: 2, master_id: 18, direction:  1}
+  - {name: L3, model: large, slave_id: 3, master_id: 19, direction: -1}
+  - {name: L4, model: large, slave_id: 4, master_id: 20, direction:  1}
+  - {name: L5, model: large, slave_id: 6, master_id: 22, direction: -1}
+  - {name: L6, model: small, slave_id: 7, master_id: 23, direction:  1}
+  - {name: R1, model: large, slave_id: 1, master_id: 17, direction: -1}
+  - {name: R2, model: large, slave_id: 2, master_id: 18, direction:  1}
+  - {name: R3, model: large, slave_id: 3, master_id: 19, direction: -1}
+  - {name: R4, model: large, slave_id: 4, master_id: 20, direction: -1}
+  - {name: R5, model: large, slave_id: 6, master_id: 22, direction:  1}
+  - {name: R6, model: small, slave_id: 7, master_id: 23, direction:  1}
