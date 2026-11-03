@@ -1,0 +1,213 @@
+.gitignore
+  s_3c9bfdf6302f56::t_1061126309a322 46-57,167,177-186,188-189,194-197
+README.md
+  s_3c9bfdf6302f56::t_e7e88456193663 10,14-15,48
+deploy/.gitignore
+  s_3c9bfdf6302f56::t_6ede4789d00f7a 52-56
+deploy/README.md
+  s_3c9bfdf6302f56::t_a6acb59116d14e 1,3-4,6,8-12,14-18,21-24,26,28-41,43-47,49-51,53,55,59-62,65-67,69-71,73-83,85-90,94,97-137,140-146,149-150
+deploy/control_ws/src/armcontrol/CMakeLists.txt
+  s_3c9bfdf6302f56::t_95a865be97dabb 1,3-5,11-12,18,27-30,32,34,37-46
+deploy/control_ws/src/armcontrol/config/motors.yaml
+  s_3c9bfdf6302f56::t_32db1166f766bc 1-21
+deploy/control_ws/src/armcontrol/include/armcontrol/motor_protocol.h
+  s_3c9bfdf6302f56::t_6c413cb3dde0bb 3-4,6,8-18,20-23,25-42,44-86,88-96,98-108,110,112-179,181-185,187-191,193,195-196
+deploy/control_ws/src/armcontrol/include/armcontrol/serial_port.h
+  s_3c9bfdf6302f56::t_f16506acf3e01d 75,85,108,113,132-133
+deploy/control_ws/src/armcontrol/include/armcontrol/socketcan.h
+  s_3c9bfdf6302f56::t_583fb1a11abe84 3-4,6-8,11,13-17,19
+deploy/control_ws/src/armcontrol/package.xml
+  s_3c9bfdf6302f56::t_1177f5a9bdfc7e 4-5,7,9-14
+deploy/control_ws/src/armcontrol/src/arm_control_node.cpp
+  s_3c9bfdf6302f56::t_5c1c0b31809bbd 1,3-7,9-11,13-15,18-20,22,24-27,31,35-75,78-85,87,91-92,94-105,107-109,111-113,117-127,129-134,138,156,159,167-168,183-185,187-191,194-195,260,281-282,288-290,296,300-302,308,333,364,384,409,422-437,440,443-458
+deploy/control_ws/src/armcontrol/src/socketcan.cpp
+  s_3c9bfdf6302f56::t_0575a9ea989ee3 37-40,43-73,76-80,83-89
+deploy/control_ws/src/armcontrol/test/test_motor_protocol.cpp
+  s_3c9bfdf6302f56::t_86f0cac358cb6d 1-3,6-7,9-51
+deploy/control_ws/usbcan.rules
+  s_3c9bfdf6302f56::t_d8554ffe18495f 4,7,11-12
+deploy/imu_ws/src/wit_ros2_imu/launch/rviz_and_imu.launch.py
+  s_3c9bfdf6302f56::t_d23e3e6cb2d7cb 1-9
+deploy/imu_ws/src/wit_ros2_imu/package.xml
+  s_3c9bfdf6302f56::t_1defe9807e58a5 6,11-14
+deploy/imu_ws/src/wit_ros2_imu/setup.py
+  s_3c9bfdf6302f56::t_0ad5179803ac57 19
+deploy/imu_ws/src/wit_ros2_imu/wit_ros2_imu/wit_ros2_imu.py
+  s_3c9bfdf6302f56::t_06ada3cc0939c1 1-193
+deploy/joint_limits.py
+  s_3c9bfdf6302f56::t_ca44851a68fd7c 1-28
+deploy/motor_config.py
+  s_3c9bfdf6302f56::t_bdefaafd604490 1-52
+deploy/rl_real_py/configs/common.yaml
+  s_3c9bfdf6302f56::t_0c570f41cb8b75 10,14,20-21,24
+deploy/rl_real_py/configs/experiments_20261026/README.md
+  s_3c9bfdf6302f56::t_f2f0ce80de12ae 1-37
+deploy/rl_real_py/configs/experiments_20261026/body_122419_ckpt30800.yaml
+  s_3c9bfdf6302f56::t_10cac40a207a6b 1-58
+deploy/rl_real_py/configs/experiments_20261026/body_164640.yaml
+  s_3c9bfdf6302f56::t_9cdfad315d8763 1-58
+deploy/rl_real_py/configs/experiments_20261026/body_173810.yaml
+  s_3c9bfdf6302f56::t_c3ba6574570ca8 1-58
+deploy/rl_real_py/configs/experiments_20261026/body_173836_ckpt49999.yaml
+  s_3c9bfdf6302f56::t_aa32d7d24cfa9c 1-58
+deploy/rl_real_py/configs/experiments_20261026/body_2026-10-26_10-56-59.yaml
+  s_3c9bfdf6302f56::t_92a10524614c53 1-58
+deploy/rl_real_py/configs/experiments_20261027/body_2026-10-27_11-01-10_ckpt7200.yaml
+  s_3c9bfdf6302f56::t_e2ded7797204a5 1-58
+deploy/rl_real_py/configs/experiments_20261029/body_2026-10-28_16-43-52.yaml
+  s_3c9bfdf6302f56::t_b832dfdacfbac4 1-47
+deploy/rl_real_py/rl_real_py/motion_reference.py
+  s_3c9bfdf6302f56::t_da12076abc958c 38
+deploy/rl_real_py/rl_real_py/multi_task.py
+  s_3c9bfdf6302f56::t_3dd67e57b7a11e 14-26,33-35,72,82-84,88,93,102-103,132,152,195,213,279,310-323,327,342-347
+deploy/rl_real_py/rl_real_py/rl_real_common.py
+  s_3c9bfdf6302f56::t_7cfc1e066f08fa 68,76-78,111-113,136-138,181,183-197,201,221,241,268-270,283,305,351,354-357,359-360,367,370-371,374,407-409
+deploy/rl_real_py/test_gamepad_modes.py
+  s_3c9bfdf6302f56::t_123164822ad929 1-185
+deploy/rl_real_py/test_manual_stop_only.py
+  s_3c9bfdf6302f56::t_7ef5d9e5dd5263 11,14,16,19,21-24,26-31,33,36-47,183-228
+deploy/start_real.sh
+  s_3c9bfdf6302f56::t_2b55af5542de77 2,35,41-46,48-51,53-64,70-79,104
+deploy/stop_real.sh
+  s_3c9bfdf6302f56::t_e913271d23d728 2,9,18-22,31,37-38
+deploy/sync_pd.py
+  s_3c9bfdf6302f56::t_ddc0b9d6c47400 28,36,79-80,83
+deploy/tests/test_driver_loopback.py
+  s_3c9bfdf6302f56::t_5b56e71584360c 1-119
+deploy/tests/test_imu_decode.py
+  s_3c9bfdf6302f56::t_ae908627d307e7 1-39
+deploy/tests/test_motor_config.py
+  s_3c9bfdf6302f56::t_aa02b1c29829e0 1-48
+scripts/rsl_rl/play.py
+  s_3c9bfdf6302f56::t_00d7c695ce8ecd 101-108
+scripts/rsl_rl/train.py
+  s_3c9bfdf6302f56::t_3f2a0206c56860 189-194
+source/legs_rl_lab/legs_rl_lab/assets/nlegs/nlegs.py
+  s_3c9bfdf6302f56::t_bfd2bd936b4876 1,63-64,76-77,89-90,100-179
+source/legs_rl_lab/legs_rl_lab/assets/nlegs_body/__init__.py
+  s_3c9bfdf6302f56::t_a6c05860304ad0 1-3
+source/legs_rl_lab/legs_rl_lab/assets/nlegs_body/mjcf/nlegs_body.xml
+  s_57ba830a34d74d::t_b710f4094b4249 32,48,69,85
+source/legs_rl_lab/legs_rl_lab/assets/nlegs_body/mjcf/nlegs_body_base2kg.xml
+  s_3c9bfdf6302f56::t_bda558176d6fe7 1-125
+source/legs_rl_lab/legs_rl_lab/assets/nlegs_body/mjcf/nlegs_body_base2kg_scene.xml
+  s_3c9bfdf6302f56::t_f86f6896daaf9d 1-15
+source/legs_rl_lab/legs_rl_lab/assets/nlegs_body/nlegs_body.py
+  s_3c9bfdf6302f56::t_e5606ffd4cdba8 1-86
+source/legs_rl_lab/legs_rl_lab/assets/nlegs_v2/__init__.py
+  s_3c9bfdf6302f56::t_5b2094b5a16662 1
+source/legs_rl_lab/legs_rl_lab/assets/nlegs_v2/nlegs_v2.py
+  s_3c9bfdf6302f56::t_03645c07ce1343 1-87
+source/legs_rl_lab/legs_rl_lab/assets/nlegs_v2/w1196.urdf
+  s_3c9bfdf6302f56::t_8e420a3919a21a 1-287
+source/legs_rl_lab/legs_rl_lab/assets/nlegs_v2/w1196.xml
+  s_3c9bfdf6302f56::t_ae3334861c306a 1-112
+source/legs_rl_lab/legs_rl_lab/assets/nlegs_v2/w1196_scene.xml
+  s_3c9bfdf6302f56::t_9db31fc18b7a11 1-36
+source/legs_rl_lab/legs_rl_lab/tasks/nlegs_task/mdp/events.py
+  s_3c9bfdf6302f56::t_c6c18a35bf6a15 36,42,54-58,60-62
+source/legs_rl_lab/legs_rl_lab/tasks/nlegs_task/mdp/gait.py
+  s_3c9bfdf6302f56::t_207813443fbb17 4,16-48
+source/legs_rl_lab/legs_rl_lab/tasks/nlegs_task/mdp/observations.py
+  s_3c9bfdf6302f56::t_f28a199e281001 11,32-33,39-41
+source/legs_rl_lab/legs_rl_lab/tasks/nlegs_task/mdp/rewards.py
+  s_3c9bfdf6302f56::t_97f1d31ea4d536 13,47-55,65-74,165-173,182-183,192,205-206,209,226
+source/legs_rl_lab/legs_rl_lab/tasks/nlegs_task/mdp/symmetry.py
+  s_3c9bfdf6302f56::t_67f618ad2152a7 24,27,33,133-137
+source/legs_rl_lab/legs_rl_lab/tasks/nlegs_task/task/flat/sim2sim.py
+  s_3c9bfdf6302f56::t_8e53756ea72c21 339-342,401-402,468-481,563-564
+source/legs_rl_lab/legs_rl_lab/tasks/nlegs_task/task/flat_pi/README.md
+  s_3c9bfdf6302f56::t_73584e8054b021 1-121
+source/legs_rl_lab/legs_rl_lab/tasks/nlegs_task/task/flat_pi/__init__.py
+  s_3c9bfdf6302f56::t_969b65544b97c7 1-14
+source/legs_rl_lab/legs_rl_lab/tasks/nlegs_task/task/flat_pi/deploy.py
+  s_3c9bfdf6302f56::t_500471f361a81d 1-94
+source/legs_rl_lab/legs_rl_lab/tasks/nlegs_task/task/flat_pi/env.py
+  s_3c9bfdf6302f56::t_912b45da003861 1-285
+source/legs_rl_lab/legs_rl_lab/tasks/nlegs_task/task/flat_pi/env_cfg.py
+  s_3c9bfdf6302f56::t_017349c7d1d78c 1-73,76-128,130-207
+source/legs_rl_lab/legs_rl_lab/tasks/nlegs_task/task/flat_pi/rewards.py
+  s_3c9bfdf6302f56::t_fede7b5bcdeca3 1-206
+source/legs_rl_lab/legs_rl_lab/tasks/nlegs_task/task/flat_pi/sim2sim.py
+  s_3c9bfdf6302f56::t_d5ced906c8fb95 1-195
+source/legs_rl_lab/legs_rl_lab/tasks/nlegs_task/task/rough/README_body.md
+  s_3c9bfdf6302f56::t_cb24c81ff4846c 1-70
+source/legs_rl_lab/legs_rl_lab/tasks/nlegs_task/task/rough/README_body_static.md
+  s_3c9bfdf6302f56::t_f492b1d01cb290 1-84
+source/legs_rl_lab/legs_rl_lab/tasks/nlegs_task/task/rough/README_static.md
+  s_3c9bfdf6302f56::t_fdd77eac29dbed 28
+source/legs_rl_lab/legs_rl_lab/tasks/nlegs_task/task/rough/__init__.py
+  s_3c9bfdf6302f56::t_77debdf5855914 3-24
+source/legs_rl_lab/legs_rl_lab/tasks/nlegs_task/task/rough/body_env_cfg.py
+  s_3c9bfdf6302f56::t_33ec84328dc68e 1-544
+source/legs_rl_lab/legs_rl_lab/tasks/nlegs_task/task/rough/body_rewards.py
+  s_3c9bfdf6302f56::t_ef4477c51dec3b 1-128
+source/legs_rl_lab/legs_rl_lab/tasks/nlegs_task/task/rough/body_static_env_cfg.py
+  s_3c9bfdf6302f56::t_b4ca261ead1716 1-572
+source/legs_rl_lab/legs_rl_lab/tasks/nlegs_task/task/rough/body_static_rewards.py
+  s_3c9bfdf6302f56::t_ee2a775362dd5f 1-31
+source/legs_rl_lab/legs_rl_lab/tasks/nlegs_task/task/rough/rough_env_cfg.py
+  s_3c9bfdf6302f56::t_6f747b5843c369 1,21,108,132,147-150,153-154,158,162-164,194,205-206
+source/legs_rl_lab/legs_rl_lab/tasks/nlegs_task/task/rough/sim2sim.py
+  s_3c9bfdf6302f56::t_c305d1a192c2d0 1,9,36-37,39,42-43,46-48,52,54-55,59-60,67-76,78-86,91,99-100,106-110,112-114,117-118,120,122-148,152,157,160-161
+source/legs_rl_lab/legs_rl_lab/tasks/nlegs_task/task/rough/sim2sim_body_static.py
+  s_3c9bfdf6302f56::t_c8d87e043bef08 1-80
+source/legs_rl_lab/legs_rl_lab/tasks/nlegs_task/task/rough/sim2sim_nogait.py
+  s_3c9bfdf6302f56::t_9842569421d15e 1
+source/legs_rl_lab/legs_rl_lab/tasks/nlegs_task/task/rough/sim2sim_static.py
+  s_3c9bfdf6302f56::t_9e74dfcda3a435 6
+source/legs_rl_lab/legs_rl_lab/utils/export_deploy_cfg.py
+  s_3c9bfdf6302f56::t_d816888788eb09 41-44
+tests/check_pi.py
+  s_3c9bfdf6302f56::t_03dafca7887432 1-341
+tests/check_rough_826_base.py
+  s_3c9bfdf6302f56::t_673b02f8f922ca 1,5-6,18-20,23,46-65,75-84,104-170,174,176,179-180
+tests/check_rough_body.py
+  s_3c9bfdf6302f56::t_a1eb33bd0a8c50 1-524
+tests/check_rough_body_static.py
+  s_3c9bfdf6302f56::t_1c070a80375c6a 1-148
+tests/check_rough_static.py
+  s_3c9bfdf6302f56::t_5e7bed19c40bca 161
+tests/test_body_foot_twist_rewards.py
+  s_3c9bfdf6302f56::t_7d171e79830c5f 1-137
+tests/test_body_sway_rewards.py
+  s_3c9bfdf6302f56::t_597f11b73e89b0 1-91
+tests/test_body_yaw_reward.py
+  s_3c9bfdf6302f56::t_d4247737aedcbf 1-77
+tests/test_feet_clearance_offsets.py
+  s_3c9bfdf6302f56::t_7567d688081089 1-87
+tests/test_gait_stop_transition.py
+  s_3c9bfdf6302f56::t_e9640b62d6a9ea 1-60
+tests/test_observation_symmetry.py
+  s_3c9bfdf6302f56::t_bd4e3d4095c3c2 1-58
+tests/test_pi_deploy.py
+  s_3c9bfdf6302f56::t_32a30d2c40a580 1-153
+tests/test_pi_rewards.py
+  s_3c9bfdf6302f56::t_1b36bb3dd82797 1-359
+tests/test_standing_transition_runtime.py
+  s_3c9bfdf6302f56::t_b2a80bc16c85ed 1-205
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.7.5",
+  "base_commit_sha": "67d3140720d6625a22e7319f048d18820ad40fb5",
+  "prompts": {},
+  "sessions": {
+    "s_3c9bfdf6302f56": {
+      "agent_id": {
+        "tool": "codex",
+        "id": "01a11a47-ad86-7c91-b466-9f6c8976b7ee",
+        "model": "gpt-6-astra"
+      },
+      "human_author": "woan <377801872@qq.com>"
+    },
+    "s_57ba830a34d74d": {
+      "agent_id": {
+        "tool": "codex",
+        "id": "01a158b9-db4f-72a0-b34e-2d4772e56d27",
+        "model": "gpt-6-astra"
+      },
+      "human_author": "woan <377801872@qq.com>"
+    }
+  }
+}
