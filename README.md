@@ -7,9 +7,12 @@
 | 任务 | 用途 |
 |---|---|
 | `nlegs_flat` | 平地速度跟踪 |
+| [`nlegs_v2_pi`](source/legs_rl_lab/legs_rl_lab/tasks/nlegs_task/task/flat_pi/README.md) | Mini Pi 的步态、奖励和 PPO，适配 nlegs v2；705 维整帧历史，独立训练与 sim2sim |
 | `nlegs_flat_static` | 行走与零速站稳 |
 | `nlegs_flat_crouch` | 从站立或蹲姿起步的行走策略 |
 | `nlegs_rough` | 台阶、坡面等地形上的速度跟踪，带难度课程 |
+| [`nlegs_body_rough`](source/legs_rl_lab/legs_rl_lab/tasks/nlegs_task/task/rough/README_body.md) | W1196 本体、独立 MDP/PPO；保留平地/崎岖/上下坡地形，无地形课程 |
+| [`nlegs_body_rough_static`](source/legs_rl_lab/legs_rl_lab/tasks/nlegs_task/task/rough/README_body_static.md) | 当前 W1196 的独立零速站立版；运动后渐入默认站姿，保留策略平衡修正，需单独训练 |
 | [`rough_nogait`](source/legs_rl_lab/legs_rl_lab/tasks/nlegs_task/task/rough/README_nogait.md) | 无相位的复杂地形行走，以单脚支撑离地时间和抬脚高度鼓励迈步 |
 | [`nlegs_rough_static`](source/legs_rl_lab/legs_rl_lab/tasks/nlegs_task/task/rough/README_static.md) | rough 行走＋零速站稳；实测下蹲侧限位与辨识驱动的执行器随机化，不修改 XML/USD |
 | `nlegs_mimic_crouch` | 跟踪下蹲参考动作 v3 |
@@ -42,6 +45,7 @@ python -m pip install -e source/legs_rl_lab
 ## 训练与回放
 
 在仓库根目录运行，将 `--task` 替换为上表中的任务名。
+`nlegs_rough` 沿用 `2026-08-26_20-37-55` 的名义执行器、PPO 和原始 `assets/nlegs/mjcf/nlegs/nlegs.usd`；域随机化使用成对零偏（观测加、目标减）、base 质量 +5～+7 kg、腿部连杆质量 ×0.9～1.1，以及5号关节 Kp×0.7～1.3、Kd×0.7～1.5。检查：`python tests/check_rough_826_base.py --headless --device cpu`。
 
 ```bash
 # 训练

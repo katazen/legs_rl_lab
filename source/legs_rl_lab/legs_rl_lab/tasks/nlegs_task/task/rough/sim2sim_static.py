@@ -3,7 +3,7 @@
 python source/legs_rl_lab/legs_rl_lab/tasks/nlegs_task/task/rough/sim2sim_static.py
 --run RUN 可选择其他已导出的 run，也接受绝对路径。
 启动即运行策略；聚焦窗口，8/2 前后、4/6 左右、7/9 转向、0 清零速度。
-支持主键盘和小键盘。地形沿用 rough：上坡 → 30cm 平台 → 下楼梯。
+支持主键盘和小键盘。地形沿用 rough：上坡 → 60cm 平台 → 下坡。
 离线检查：--headless --duration 10；--save-data 保存关节跟踪数据。
 """
 

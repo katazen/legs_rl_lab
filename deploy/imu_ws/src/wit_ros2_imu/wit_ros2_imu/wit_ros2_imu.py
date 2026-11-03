@@ -9,11 +9,9 @@ from rclpy.node import Node
 from sensor_msgs.msg import Imu
 
 key = 0
-flag = 0
 buff = {}
 angularVelocity = [0, 0, 0]
 acceleration = [0, 0, 0]
-magnetometer = [0, 0, 0]
 angle_degree = [0, 0, 0]
 
 
@@ -27,7 +25,7 @@ def check_sum(list_data, check_data):
 
 
 def handle_serial_data(raw_data):
-    global buff, key, angle_degree, magnetometer, acceleration, angularVelocity, pub_flag
+    global buff, key, angle_degree, acceleration, angularVelocity
     angle_flag = False
     buff[key] = raw_data
 
@@ -60,11 +58,6 @@ def handle_serial_data(raw_data):
                 angle_flag = True
             else:
                 print('0x53 Check failure')
-        elif buff[1] == 0x54:
-            if check_sum(data_buff[0:10], data_buff[10]):
-                magnetometer = hex_to_short(data_buff[2:10])
-            else:
-                print('0x54 Check failure')
         else:
             buff = {}
             key = 0
@@ -72,38 +65,6 @@ def handle_serial_data(raw_data):
         buff = {}
         key = 0
         return angle_flag
-        # if angle_flag:
-        #     stamp = rospy.get_rostime()
-        #
-        #     imu_msg.header.stamp = stamp
-        #     imu_msg.header.frame_id = "base_link"
-        #
-        #     mag_msg.header.stamp = stamp
-        #     mag_msg.header.frame_id = "base_link"
-        #
-        #     angle_radian = [angle_degree[i] * math.pi / 180 for i in range(3)]
-        #     qua = quaternion_from_euler(angle_radian[0], angle_radian[1], angle_radian[2])
-        #
-        #     imu_msg.orientation.x = qua[0]
-        #     imu_msg.orientation.y = qua[1]
-        #     imu_msg.orientation.z = qua[2]
-        #     imu_msg.orientation.w = qua[3]
-        #
-        #     imu_msg.angular_velocity.x = angularVelocity[0]
-        #     imu_msg.angular_velocity.y = angularVelocity[1]
-        #     imu_msg.angular_velocity.z = angularVelocity[2]
-        #
-        #     imu_msg.linear_acceleration.x = acceleration[0]
-        #     imu_msg.linear_acceleration.y = acceleration[1]
-        #     imu_msg.linear_acceleration.z = acceleration[2]
-        #
-        #     mag_msg.magnetic_field.x = magnetometer[0]
-        #     mag_msg.magnetic_field.y = magnetometer[1]
-        #     mag_msg.magnetic_field.z = magnetometer[2]
-        #
-        #     imu_pub.publish(imu_msg)
-        #     mag_pub.publish(mag_msg)
-
 
 def get_quaternion_from_euler(roll, pitch, yaw):
     """
@@ -130,7 +91,7 @@ def get_quaternion_from_euler(roll, pitch, yaw):
 
 
 class IMUDriverNode(Node):
-    def __init__(self, port_name):
+    def __init__(self, port_name=None):
         super().__init__('imu_driver_node')
 
         # 初始化IMU消息
@@ -139,19 +100,19 @@ class IMUDriverNode(Node):
 
         # 创建IMU数据发布器
         self.imu_pub = self.create_publisher(Imu, 'imu', 10)
-        self.imu_counter = 0
-        #self.port = self.get_parameter('port')
-        #self.baud_rate = self.get_parameter('baud')
+        self.port = self.declare_parameter('port', port_name or '/dev/tty_imu').value
+        self.baud = self.declare_parameter('baud', 115200).value
+        self.stop_event = threading.Event()
 
         # 启动IMU驱动线程
-        self.driver_thread = threading.Thread(target=self.driver_loop, args=(port_name,))
+        self.driver_thread = threading.Thread(target=self.driver_loop, args=(self.port,))
         self.driver_thread.start()
 
     def driver_loop(self, port_name):
         # 打开串口
 
         try:
-            wt_imu = serial.Serial(port=port_name, baudrate=115200, timeout=0.5)
+            wt_imu = serial.Serial(port=port_name, baudrate=self.baud, timeout=0.5)
             if wt_imu.isOpen():
                 self.get_logger().info("\033[32mSerial port opened successfully...\033[0m")
             else:
@@ -160,10 +121,10 @@ class IMUDriverNode(Node):
         except Exception as e:
             print(e)
             self.get_logger().info("\033[31mSerial port opening failure\033[0m")
-            exit(0)
+            return
 
         # 循环读取IMU数据
-        while True:
+        while rclpy.ok() and not self.stop_event.is_set():
             # 读取加速度计数据
 
             try:
@@ -171,7 +132,7 @@ class IMUDriverNode(Node):
             except Exception as e:
                 print("exception:" + str(e))
                 print("imu disconnect")
-                exit(0)
+                break
             else:
                 if buff_count > 0:
                     buff_data = wt_imu.read(buff_count)
@@ -179,6 +140,10 @@ class IMUDriverNode(Node):
                         tag = handle_serial_data(buff_data[i])
                         if tag:
                             self.imu_data()
+                else:
+                    self.stop_event.wait(.001)
+
+        wt_imu.close()
 
     def imu_data(self):
         # acceleration / angularVelocity 已在 handle_serial_data 中换算为 m/s² 和 rad/s,
@@ -205,31 +170,11 @@ class IMUDriverNode(Node):
         self.imu_msg.orientation.w = float(qua[3])
         self.imu_pub.publish(self.imu_msg)
 
-    def compute_orientation(self, wx, wy, wz, ax, ay, az, dt):
-        # 计算旋转矩阵
-        Rx = np.array([[1, 0, 0],
-                       [0, math.cos(ax), -math.sin(ax)],
-                       [0, math.sin(ax), math.cos(ax)]])
-        Ry = np.array([[math.cos(ay), 0, math.sin(ay)],
-                       [0, 1, 0],
-                       [-math.sin(ay), 0, math.cos(ay)]])
-        Rz = np.array([[math.cos(wz), -math.sin(wz), 0],
-                       [math.sin(wz), math.cos(wz), 0],
-                       [0, 0, 1]])
-        R = Rz.dot(Ry).dot(Rx)
-
-        # 计算欧拉角
-        roll = math.atan2(R[2][1], R[2][2])
-        pitch = math.atan2(-R[2][0], math.sqrt(R[2][1] ** 2 + R[2][2] ** 2))
-        yaw = math.atan2(R[1][0], R[0][0])
-
-        return roll, pitch, yaw
-
 
 def main():
     # 初始化ROS 2节点
     rclpy.init()
-    node = IMUDriverNode('/dev/tty_imu')
+    node = IMUDriverNode()
 
     # 运行ROS 2节点
     try:
@@ -238,6 +183,8 @@ def main():
         pass
 
     # 停止ROS 2节点
+    node.stop_event.set()
+    node.driver_thread.join()
     node.destroy_node()
     rclpy.shutdown()
 

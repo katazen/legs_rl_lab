@@ -65,19 +65,17 @@ class Policy:
         with open(os.path.join(run_dir, "params", "agent.yaml")) as f:
             agent = yaml.safe_load(f)
         if dep.get("task_type") == "reference_motion_tracking":
-            self.motion = MotionReference(dep, repo, cfg["joint_index_in_real"],
-                                          cfg["joint_lower_limits"], cfg["joint_upper_limits"])
+            self.motion = MotionReference(dep, repo)
         elif dep.get("real_deployment_supported") is False:
             raise ValueError("此任务未实现实机部署")
 
         self.default_sim = np.array(dep["default_joint_pos"], np.float32)   # 策略序
         self.num_actions = len(self.default_sim)
         self.action_scale = np.asarray(dep["actions"]["JointPositionAction"]["scale"], np.float32)
-        if self.action_scale.size != self.num_actions:
-            raise ValueError(f"action scale 数量 {self.action_scale.size} != 动作维度 {self.num_actions}")
         self.action_offset = np.asarray(dep["actions"]["JointPositionAction"].get("offset", self.default_sim), np.float32)
-        term_clip = dep["actions"]["JointPositionAction"].get("clip")
-        self.action_term_clip = None if term_clip is None else np.asarray(term_clip, np.float32)
+        for values in (self.default_sim, self.action_scale, self.action_offset):
+            if values.shape != (12,) or not np.isfinite(values).all():
+                raise ValueError("模型动作参数必须为 12 个有限数")
         self.action_clip = dep.get("policy_action_clip", agent.get("clip_actions"))
         self.gait_period = float(dep["gait_period"]) if "gait_phase" in dep["observations"] else 1.0
         step_dt = float(dep["step_dt"])
@@ -87,12 +85,8 @@ class Policy:
                           else dep["commands"]["base_velocity"]["ranges"])
         self.cmd_min = np.array([command_ranges[name][0] for name in command_names], np.float32)
         self.cmd_max = np.array([command_ranges[name][1] for name in command_names], np.float32)
-        if np.any(self.cmd_min > 0) or np.any(self.cmd_max < 0):
-            raise ValueError("训练速度范围必须包含零速度")
         if self.motion is None and "velocity_command_limits" in cfg:
             limits = cfg["velocity_command_limits"]
-            if not isinstance(limits, dict) or set(limits) != set(command_names):
-                raise ValueError("velocity_command_limits 必须包含 lin_vel_x / lin_vel_y / ang_vel_z")
             configured = np.asarray([limits[name] for name in command_names], np.float32)
             if (configured.shape != (3, 2) or not np.isfinite(configured).all()
                     or np.any(configured[:, 0] > 0) or np.any(configured[:, 1] < 0)
@@ -114,6 +108,9 @@ class Policy:
         gait_params = obs.get("gait_phase", {}).get("params", {})
         self.gait_gate_by_cmd = bool(gait_params.get("gate_by_cmd", False))
         self.gait_command_threshold = float(gait_params.get("command_threshold", 0.1))
+        self.gait_stop_transition_time = float(gait_params.get("stop_transition_time", 0.0))
+        if not np.isfinite(self.gait_stop_transition_time) or self.gait_stop_transition_time < 0.0:
+            raise ValueError("gait_phase.stop_transition_time 必须为有限非负数")
 
         # ---------- 时序 ----------
         self.pub_dt = 1.0 / float(cfg.get("publish_rate", 200))
@@ -129,20 +126,16 @@ class Policy:
         self.real2sim = [real.index(n) for n in sim]                        # x_sim = x_real[real2sim]
         self.sim2real = [sim.index(n) for n in real]                        # x_real = x_sim[sim2real]
         self.default_real = self.default_sim[self.sim2real].astype(np.float32)
-        # load_settings 从 nlegs_limit.xml 解析硬件边界；保留训练动作裁剪。
-        self.lo = np.array(cfg["joint_lower_limits"], np.float32)
-        self.hi = np.array(cfg["joint_upper_limits"], np.float32)
-        if (self.lo.shape != (12,) or self.hi.shape != (12,)
-                or not np.isfinite([self.lo, self.hi]).all() or np.any(self.lo >= self.hi)):
-            raise ValueError("XML 关节限位无效")
         self.deploy, self.run_dir = dep, Path(run_dir)
         self.obs_raw = np.zeros(31, np.float32)
         self.cmd = np.zeros(3, np.float32)
-        self.cmd_bias = np.asarray(cfg.get("cmd_bias", [0., 0., 0.]), np.float32)
         self.last_action = np.zeros(self.num_actions, np.float32)
         self.hist = TermGroupedHistory(self.term_dims, self.num_history)
         self.run_t0 = None
         self.policy_step = 0
+        self._gait_last_motion_time = -np.inf
+        self._gait_last_step = -1
+        self._gait_history = self.hist
         self._load_policy(os.path.join(run_dir, "exported"))
 
     # ------------------------------------------------------------------ 策略
@@ -185,15 +178,27 @@ class Policy:
         q_sim = self.obs_raw[7:19][self.real2sim]
         qd_sim = self.obs_raw[19:31][self.real2sim]
         phase = 0.0 if self.motion is not None else (self.policy_step * self.step_dt / self.gait_period) % 1.0
-        # 门控策略(legs_static): 零速命令时相位归零, 与训练一致 -> 站立不踏步
+        # 仅改变相位观测；收步动作仍由策略决定。
         gait_flag = 1.0
-        if self.gait_gate_by_cmd and np.linalg.norm((self.cmd + self.cmd_bias)[:self.num_commands]) < np.float32(
-                getattr(self, "gait_command_threshold", 0.1)):
-            gait_flag = 0.0
+        if self.gait_gate_by_cmd:
+            moving = np.linalg.norm(self.cmd[:self.num_commands]) >= np.float32(self.gait_command_threshold)
+            if self.gait_stop_transition_time > 0.0:
+                # multi_task 重启时替换历史，步计数回退也视作新一轮。
+                if self.hist is not self._gait_history or self.policy_step < self._gait_last_step:
+                    self._gait_last_motion_time = -np.inf
+                self._gait_history = self.hist
+                self._gait_last_step = self.policy_step
+                now = self.policy_step * self.step_dt
+                if moving:
+                    self._gait_last_motion_time = now
+                gait_flag = np.clip(1.0 - (now - self._gait_last_motion_time)
+                                    / self.gait_stop_transition_time, 0.0, 1.0)
+            else:
+                gait_flag = float(moving)
         feats = {
             "base_ang_vel": self.obs_raw[0:3],
             "projected_gravity": gravity_from_quat(self.obs_raw[3:7]),
-            "velocity_commands": (self.cmd + self.cmd_bias)[:self.num_commands],
+            "velocity_commands": self.cmd[:self.num_commands],
             "joint_pos_rel": q_sim - self.default_sim,
             "joint_vel_rel": qd_sim,
             "last_action": self.last_action,
@@ -205,10 +210,6 @@ class Policy:
         return [(np.clip(feats[n], *clip) if clip is not None else feats[n]).astype(np.float32) * scale
                 for n, scale, clip in zip(self.obs_names, self.term_scales, self.term_clips)]
 
-    def _joint_range_details(self, q, lo, hi, outside):
-        return "; ".join(f"{self.real_joint_names[i]}={q[i]:.4f}，范围[{lo[i]:.4f}, {hi[i]:.4f}]"
-                         for i in np.flatnonzero(outside))
-
     def _target_from_action(self, action):
         action = np.asarray(action, dtype=np.float32)
         if action.shape != (self.num_actions,) or not np.isfinite(action).all():
@@ -216,12 +217,8 @@ class Policy:
         if self.action_clip is not None:
             action = np.clip(action, -self.action_clip, self.action_clip)
         target = self.action_offset + action * self.action_scale
-        if self.action_term_clip is not None:
-            target = np.clip(target, self.action_term_clip[:, 0], self.action_term_clip[:, 1])
-        if target.shape != (12,) or not np.isfinite(target).all():
-            raise ValueError("策略目标维度错误或含 NaN/Inf")
         self.last_action = action
-        return np.clip(target[self.sim2real], self.lo, self.hi).astype(np.float32)
+        return target[self.sim2real].astype(np.float32)
 
     def _check_policy(self):
         x = self.hist.update(self._build_terms())
@@ -241,6 +238,7 @@ class Policy:
 class RL_real(Node, Policy):
     motion = None
     multi = None
+    joint_target_limits = False
 
     def __init__(self):
         super().__init__("rl_real")
@@ -256,8 +254,6 @@ class RL_real(Node, Policy):
         Policy.__init__(self, cfg, run_dir, repo)
 
         # ---------- 速度来源 / 交互 ----------
-        self.use_derived_vel = bool(cfg.get("use_derived_vel", False))
-        self.vel_alpha = float(cfg.get("vel_ema_alpha", 0.5))
         # 手柄消息超时后归零；键盘指令由空格清零。
         self.ctrl_timeout = float(cfg.get("ctrl_timeout", 0.4))
         self.deadzone = float(cfg.get("deadzone", 0.12))
@@ -269,13 +265,9 @@ class RL_real(Node, Policy):
         self.target_pub = self.default_real.copy()
         self.tick = 0
 
-        self._qd = np.zeros(12, np.float32)
-        self._motor_vel = np.zeros(12, np.float32)   # 电机上报原始速度 msg.velocity (实机序, 始终记录)
-        self._motor_tau = np.zeros(12, np.float32)   # 电机上报力矩 msg.effort (实机序, 始终记录)
-        self._prev_q = None
-        self._prev_t = None
-        self._last_joint_rx = None     # 首次接管前要求收到关节和 IMU
-        self._last_imu_rx = None
+        self._motor_vel = np.zeros(12, np.float32)   # 驱动转换后的关节速度 msg.velocity (实机序, 始终记录)
+        self._motor_tau = np.zeros(12, np.float32)   # 驱动 effort msg.effort（电流相关、未标定输出力矩） (实机序, 始终记录)
+        self._received_joint = self._received_imu = False
         self._prev_buttons = []
         # 指令源由统一状态机合成。
         self._joy_cmd = np.zeros(3, np.float32)
@@ -287,10 +279,8 @@ class RL_real(Node, Policy):
         from .multi_task import MultiTaskController
         self.multi = MultiTaskController(self, cfg, repo)
         print(f"[config] {config_file}\n[run] {run_dir}")
-        print(f"[joint-limits] {cfg['joint_limits_xml']}（rad）\n"
-              + "; ".join(f"{name}=[{lo:g}, {hi:g}]" for name, lo, hi in zip(self.real_joint_names, self.lo, self.hi)))
         if self.preflight_only:
-            print("[preflight] PASS：配置/模型/观测/参考/限位检查完成；未创建控制话题、未使能电机。")
+            print("[preflight] PASS：配置/模型/观测/参考检查完成；未创建控制话题、未使能电机。")
             return
 
         # ---------- 通信 ----------
@@ -312,18 +302,12 @@ class RL_real(Node, Policy):
         """首次接管需要一组可用反馈，以原样保持当前角度。"""
         reason = None
         quat_norm = np.linalg.norm(self.obs_raw[3:7].astype(np.float64))
-        if self._last_joint_rx is None or self._last_imu_rx is None:
+        if not self._received_joint or not self._received_imu:
             reason = "尚未收到完整关节或 IMU 反馈"
         elif not np.all(np.isfinite(self.obs_raw)):
             reason = "关节/速度/IMU 含 NaN 或 Inf"
         elif not np.isfinite(quat_norm) or abs(quat_norm - 1.0) > 0.1:
             reason = f"IMU 四元数无效（范数 {quat_norm:.5f}，应接近 1）"
-        else:
-            q = self.obs_raw[7:19]
-            outside = (q < self.lo) | (q > self.hi)
-            if np.any(outside):
-                reason = ("反馈超出 XML 硬件限位（rad）: "
-                          + self._joint_range_details(q, self.lo, self.hi, outside))
         if reason is not None:
             self.get_logger().warn(f"当前姿态不可接管: {reason}", throttle_duration_sec=1.0)
             return False
@@ -346,7 +330,6 @@ class RL_real(Node, Policy):
         if self.target_pub.shape != (12,) or not np.isfinite(self.target_pub).all():
             self.get_logger().warn("下发目标维度错误或含 NaN/Inf，拒绝发布")
             return
-        self.target_pub = np.clip(self.target_pub, self.lo, self.hi).astype(np.float32)
         m = Float64MultiArray()
         m.data = self.target_pub.tolist()
         self.pub.publish(m)
@@ -365,56 +348,33 @@ class RL_real(Node, Policy):
 
     def _on_joint(self, msg):
         if len(msg.position) < 12 or len(msg.velocity) < 12:
-            self._last_joint_rx = None
+            self._received_joint = False
             self.get_logger().warn("当前姿态需要完整的 12 关节位置和速度", throttle_duration_sec=1.0)
             return
-        q = np.array(msg.position[:12], np.float32)
-        self.obs_raw[7:19] = q
-        # 电机上报的原始速度/力矩(始终记录, 用于验证解码与反推电机能力)
-        if len(msg.velocity) >= 12:
-            self._motor_vel = np.array(msg.velocity[:12], np.float32)
+        self.obs_raw[7:19] = np.asarray(msg.position[:12], np.float32)
+        self._motor_vel = np.asarray(msg.velocity[:12], np.float32)
+        self.obs_raw[19:31] = self._motor_vel
+        # effort 只记录；驱动已经转换为关节方向。
         if len(msg.effort) >= 12:
-            self._motor_tau = np.array(msg.effort[:12], np.float32)
-        if self.use_derived_vel:
-            t = time.monotonic()
-            if self._prev_q is not None and (t - self._prev_t) > 1e-4:
-                raw = (q - self._prev_q) / (t - self._prev_t)
-                self._qd = (self.vel_alpha * raw + (1 - self.vel_alpha) * self._qd).astype(np.float32)
-            self._prev_q, self._prev_t = q, t
-            self.obs_raw[19:31] = self._qd
-        else:
-            self.obs_raw[19:31] = self._motor_vel
-        self._last_joint_rx = time.monotonic()
+            self._motor_tau = np.asarray(msg.effort[:12], np.float32)
+        self._received_joint = True
 
     def _on_imu(self, msg):
         # IMU 相对机体绕前进方向 x 轴旋转 180°: x 不变, y/z 反向。
         self.obs_raw[0:3] = [msg.angular_velocity.x, -msg.angular_velocity.y, -msg.angular_velocity.z]
         w, x, y, z = msg.orientation.w, msg.orientation.x, msg.orientation.y, msg.orientation.z
         self.obs_raw[3:7] = [x, -w, -z, y]  # q_body = q_imu ⊗ q_x(-180°)
-        self._last_imu_rx = time.monotonic()
+        self._received_imu = True
 
     def _on_joy(self, msg):
-        try:
-            axes = np.asarray(msg.axes, np.float32)
-        except (TypeError, ValueError):
-            axes = np.empty(0, np.float32)
-        if (axes.shape != (6,) or len(msg.buttons) < 15 or not np.isfinite(axes).all()
-                or any(b not in (0, 1) for b in msg.buttons)):
-            b = self.multi.buttons["b"]
-            if b < len(msg.buttons) and msg.buttons[b] == 1:
-                self.multi.request("halt")
+        axes = np.asarray(msg.axes, np.float32)
+        if axes.shape != (6,) or len(msg.buttons) < 15 or not np.isfinite(axes).all():
             self.get_logger().warn("忽略格式错误的 /gamepad 消息", throttle_duration_sec=1.0)
             return
-        # SDL: LEFTY=1、LEFTX=0、RIGHTX=2；扳机 4/5 不参与速度控制。
-        axes = axes[[1, 0, 2]]
-        axes = np.where(np.abs(axes) > self.deadzone, axes, 0.0)
+        axes = self.multi.movement_axes(axes, msg.buttons)
         # 比例式(回中即0)；手柄停发时由状态机归零。
         self._joy_cmd[:] = axes * np.where(axes >= 0.0, self.cmd_max, -self.cmd_min)
         self._last_joy_rx = time.monotonic()
-        if not np.isfinite(self._joy_cmd).all():
-            self._joy_cmd[:] = 0.
-            self.get_logger().warn("忽略非有限手柄速度", throttle_duration_sec=1.0)
-            return
         self.multi.joy(msg)
 
     def _read_keys(self):
@@ -444,9 +404,9 @@ class RL_real(Node, Policy):
         header = (["t", "cmd_vx", "cmd_vy", "cmd_yaw", "wx", "wy", "wz",
                    "qw", "qx", "qy", "qz", "gx", "gy", "gz"]
             + [f"q{i}" for i in range(12)]                     # 关节位置(实机序)
-            + [f"qd{i}" for i in range(12)]                    # obs 用的关节速度(实机序; derived 或电机)
-            + [f"mvel{i}" for i in range(12)]                  # 电机上报原始速度 msg.velocity(实机序)
-            + [f"tau{i}" for i in range(12)]                   # 电机上报力矩 msg.effort(实机序; 与 q/mvel 同关节帧)
+            + [f"qd{i}" for i in range(12)]                    # obs 使用驱动关节速度(实机序)
+            + [f"mvel{i}" for i in range(12)]                  # 驱动转换后的关节速度 msg.velocity(实机序)
+            + [f"tau{i}" for i in range(12)]                   # 驱动 effort msg.effort（电流相关、未标定输出力矩）(实机序; 与 q/mvel 同关节帧)
             + [f"obs{i}" for i in range(p.num_obs)]         # 单帧观测(仿真序)
             + [f"act{i}" for i in range(p.num_actions)]     # 策略动作(仿真序)
             + [f"cmd{i}" for i in range(p.num_actions)])    # 下发目标角(实机序)

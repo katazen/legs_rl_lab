@@ -1,6 +1,28 @@
 import gymnasium as gym
 
 gym.register(
+    id="nlegs_body_rough_static",
+    entry_point="isaaclab.envs:ManagerBasedRLEnv",
+    disable_env_checker=True,
+    kwargs={
+        "env_cfg_entry_point": f"{__name__}.body_static_env_cfg:RoughBodyStaticEnvCfg",
+        "play_env_cfg_entry_point": f"{__name__}.body_static_env_cfg:RoughBodyStaticPlayEnvCfg",
+        "rsl_rl_cfg_entry_point": f"{__name__}.body_static_env_cfg:RoughBodyStaticPPORunnerCfg",
+    },
+)
+
+gym.register(
+    id="nlegs_body_rough",
+    entry_point="isaaclab.envs:ManagerBasedRLEnv",
+    disable_env_checker=True,
+    kwargs={
+        "env_cfg_entry_point": f"{__name__}.body_env_cfg:RoughBodyEnvCfg",
+        "play_env_cfg_entry_point": f"{__name__}.body_env_cfg:RoughBodyPlayEnvCfg",
+        "rsl_rl_cfg_entry_point": f"{__name__}.body_env_cfg:RoughBodyPPORunnerCfg",
+    },
+)
+
+gym.register(
     id="nlegs_rough_static",
     entry_point="isaaclab.envs:ManagerBasedRLEnv",
     disable_env_checker=True,

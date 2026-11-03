@@ -1,4 +1,4 @@
-"""rough_nogait 的 MuJoCo 回放：上坡、平台、下楼梯，不使用相位观测。
+"""rough_nogait 的 MuJoCo 回放：上坡、60cm 平台、下坡，不使用相位观测。
 
 按文件路径运行，避免包导入启动 Isaac Lab：
 python source/legs_rl_lab/legs_rl_lab/tasks/nlegs_task/task/rough/sim2sim_nogait.py

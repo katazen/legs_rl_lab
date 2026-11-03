@@ -38,6 +38,10 @@ def yaml_safe(x):
 
 
 def export_deploy_cfg(env: ManagerBasedRLEnv, log_dir, policy_action_clip=None):
+    if getattr(env.cfg, "task_type", None) == "nlegs_v2_pi":
+        from legs_rl_lab.tasks.nlegs_task.task.flat_pi.deploy import export_pi_deploy_cfg
+
+        return export_pi_deploy_cfg(env, log_dir)
     asset: Articulation = env.scene["robot"]
     joint_sdk_names = env.cfg.scene.robot.joint_sdk_names
     joint_ids_map, _ = resolve_matching_names(asset.data.joint_names, joint_sdk_names, preserve_order=True)

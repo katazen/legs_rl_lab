@@ -336,6 +336,10 @@ def _add_arrow(scene, start, end, radius, rgba):
 class MujocoRunner:
     def __init__(self, cfg, show_viewer=True, save_data=False):
         self.cfg = cfg
+        gait_params = cfg.observations.get("gait_phase", {}).get("params", {})
+        self.gait_stop_transition_time = float(gait_params.get("stop_transition_time", 0.0))
+        if not np.isfinite(self.gait_stop_transition_time) or self.gait_stop_transition_time < 0.0:
+            raise ValueError("gait_phase.stop_transition_time 必须为有限非负数")
         if not os.path.isfile(cfg.model_path):
             raise FileNotFoundError(f"没有导出的策略 {cfg.model_path}")
         self.model = self._make_model(cfg)
@@ -394,6 +398,8 @@ class MujocoRunner:
         self.last_action = np.zeros(len(cfg.joint_names), dtype=np.float32)
         self.command = np.zeros(3, dtype=np.float32)
         self.episode_step = 0
+        self._gait_last_motion_time = -np.inf
+        self._gait_last_step = -1
         self.listener = None
         self.save_data = save_data
         self.track_log = []
@@ -459,9 +465,20 @@ class MujocoRunner:
                  if "gait_phase" in self.cfg.observations else 0.0)
         gait_params = self.cfg.observations.get("gait_phase", {}).get("params", {})
         gait = np.array([np.sin(2 * np.pi * phase), np.cos(2 * np.pi * phase)], dtype=np.float32)
-        if (gait_params.get("gate_by_cmd", False)
-                and np.linalg.norm(self.command) < np.float32(gait_params.get("command_threshold", 0.1))):
-            gait[:] = 0.0  # 与训练一致：整个 sin/cos 观测为零，而不是相位角 0 对应的 [0, 1]。
+        if gait_params.get("gate_by_cmd", False):
+            moving = np.linalg.norm(self.command) >= np.float32(gait_params.get("command_threshold", 0.1))
+            if self.gait_stop_transition_time > 0.0:
+                if self.episode_step < self._gait_last_step:
+                    self._gait_last_motion_time = -np.inf
+                self._gait_last_step = self.episode_step
+                now = self.episode_step * self.cfg.step_dt
+                if moving:
+                    self._gait_last_motion_time = now
+                weight = np.clip(1.0 - (now - self._gait_last_motion_time)
+                                 / self.gait_stop_transition_time, 0.0, 1.0)
+                gait *= weight
+            elif not moving:
+                gait[:] = 0.0  # 整个 sin/cos 为零，不是相位角 0 对应的 [0, 1]。
         return {
             "ang_vel": self.data.sensor("imu_gyro").data.astype(np.float32),
             "gravity": gravity_from_quat(self.data.sensor("imu_quat").data),
@@ -543,6 +560,8 @@ class MujocoRunner:
         self.listener.start()
 
     def run(self, duration=SIM_DURATION, realtime=True):
+        self._gait_last_motion_time = -np.inf
+        self._gait_last_step = -1
         self._start_keyboard()
         try:
             end_time = self.data.time + duration

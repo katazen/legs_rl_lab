@@ -43,6 +43,18 @@ tests/*
 !tests/check_rough_domain_randomization.py
 !tests/check_rough_nogait.py
 !tests/check_rough_nogait_sim2sim.py
+!tests/check_rough_body.py
+!tests/test_body_sway_rewards.py
+!tests/test_feet_clearance_offsets.py
+!tests/check_pi.py
+!tests/test_pi_rewards.py
+!tests/test_pi_deploy.py
+!tests/test_observation_symmetry.py
+!tests/test_body_foot_twist_rewards.py
+!tests/test_body_yaw_reward.py
+!tests/test_gait_stop_transition.py
+!tests/test_standing_transition_runtime.py
+!tests/check_rough_body_static.py
 test/
 debug/
 diagnostics/
@@ -152,7 +164,7 @@ deploy/pose_logs/
 **/tactile_record/*
 **/gelsight_r15_data/*
 
-# ===== 只同步 nlegs 主线: tasks 只留 nlegs_task, assets 保留 nlegs 和 nlegs_body 的 XML/meshes;
+# ===== 只同步 nlegs 主线: assets 保留 nlegs 与 nlegs_body 的训练资产;
 # amp/amp_engineai/sysid 及其脚本不再入库 (本地文件保留) =====
 source/legs_rl_lab/legs_rl_lab/tasks/*
 !source/legs_rl_lab/legs_rl_lab/tasks/__init__.py
@@ -162,11 +174,27 @@ source/legs_rl_lab/legs_rl_lab/assets/*
 !source/legs_rl_lab/legs_rl_lab/assets/__init__.py
 !source/legs_rl_lab/legs_rl_lab/assets/nlegs/
 !source/legs_rl_lab/legs_rl_lab/assets/nlegs_body/
+!source/legs_rl_lab/legs_rl_lab/assets/nlegs_v2/
+source/legs_rl_lab/legs_rl_lab/assets/nlegs_v2/*
+!source/legs_rl_lab/legs_rl_lab/assets/nlegs_v2/__init__.py
+!source/legs_rl_lab/legs_rl_lab/assets/nlegs_v2/nlegs_v2.py
+!source/legs_rl_lab/legs_rl_lab/assets/nlegs_v2/*.xml
+!source/legs_rl_lab/legs_rl_lab/assets/nlegs_v2/*.urdf
+!source/legs_rl_lab/legs_rl_lab/assets/nlegs_v2/meshes/
+!source/legs_rl_lab/legs_rl_lab/assets/nlegs_v2/meshes/*.stl
+!source/legs_rl_lab/legs_rl_lab/assets/nlegs_v2/w1196/
+!source/legs_rl_lab/legs_rl_lab/assets/nlegs_v2/w1196/**/*.usd
 source/legs_rl_lab/legs_rl_lab/assets/nlegs_body/*
+!source/legs_rl_lab/legs_rl_lab/assets/nlegs_body/__init__.py
+!source/legs_rl_lab/legs_rl_lab/assets/nlegs_body/nlegs_body.py
 !source/legs_rl_lab/legs_rl_lab/assets/nlegs_body/meshes/
 !source/legs_rl_lab/legs_rl_lab/assets/nlegs_body/mjcf/
 source/legs_rl_lab/legs_rl_lab/assets/nlegs_body/mjcf/*
 !source/legs_rl_lab/legs_rl_lab/assets/nlegs_body/mjcf/*.xml
+!source/legs_rl_lab/legs_rl_lab/assets/nlegs_body/mjcf/nlegs_body/
+!source/legs_rl_lab/legs_rl_lab/assets/nlegs_body/mjcf/nlegs_body/**/*.usd
+!source/legs_rl_lab/legs_rl_lab/assets/nlegs_body/mjcf/nlegs_body_base2kg/
+!source/legs_rl_lab/legs_rl_lab/assets/nlegs_body/mjcf/nlegs_body_base2kg/**/*.usd
 source/legs_rl_lab/legs_rl_lab/amp/
 source/legs_rl_lab/legs_rl_lab/amp_engineai/
 scripts/amp/

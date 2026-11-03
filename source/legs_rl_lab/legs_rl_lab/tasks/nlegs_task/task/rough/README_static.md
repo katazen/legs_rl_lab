@@ -25,7 +25,7 @@ python source/legs_rl_lab/legs_rl_lab/tasks/nlegs_task/task/rough/sim2sim_static
 默认 run 为 `2026-09-18_18-36-41`，需有 `params/deploy.yaml` 和 `exported/policy.pt`。
 启动即执行策略，初始站姿和出生高度读取所选 run，不额外插值或修改策略。
 聚焦窗口：主键盘/小键盘 `8/2` 前后、`4/6` 左右、`7/9` 转向、`0` 清零速度进入站稳目标；`0` 不是暂停策略。
-地形复用 rough 的上坡—30 cm 平台—下楼梯，默认从路线前的平地开始。
+地形复用 rough 的上坡—60 cm 平台—下坡，默认从路线前的平地开始。
 `--save-data` 保存目标角、实际角、力矩及命令到所选 run 的 `sim2sim/`。
 执行器使用导出的名义 PD/惯量/摩擦和分组随机延迟；不声称复现全部训练域随机化或两个物理引擎完全相同。
 

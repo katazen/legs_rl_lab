@@ -1,5 +1,4 @@
 from setuptools import setup
-import os, glob
 
 package_name = 'wit_ros2_imu'
 
@@ -17,7 +16,7 @@ setup(
     zip_safe=True,
     maintainer='pi',
     maintainer_email='pi@todo.todo',
-    description='TODO: Package description',
+    description='WIT serial IMU driver for real-robot deployment',
     license='TODO: License declaration',
     tests_require=['pytest'],
     entry_points={

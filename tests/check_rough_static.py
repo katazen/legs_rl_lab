@@ -158,7 +158,7 @@ def main():
     calibration = common["crouch_calibration"]
     for name, bounds in task_limits.items():
         short = name.removeprefix("joint_")
-        side = 0 if calibration["stop_sides"][short] == "lower" else 1
+        side = 0 if bounds[0] is not None else 1
         assert bounds[side] == calibration["joint_pos"][short] and bounds[1 - side] is None
     assert old.actions.JointPositionAction.clip is None
     assert old.actions.JointPositionAction.class_type is mdp.JointPositionAction

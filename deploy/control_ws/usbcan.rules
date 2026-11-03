@@ -1,12 +1,12 @@
 # 双腿 USB-CAN 适配器固定别名规则
 # 背景: 两个适配器 vid(2e88)/pid(4603)/serial(00000000050C) 完全相同,无法靠序列号区分,
 #        按 PCI 控制器和物理 USB 端口 ID_PATH 区分,不依赖 usb1/usb3 总线编号。
-#        本机 2026-09-08 实测: 6.4 口为 ttyACM0,6.1 口为 ttyACM1; ttyACM 编号可变化。
+#        本机 2026-10-29 确认: 1.4 口为 ttyACM1(左腿),1.1 口为 ttyACM0(右腿); ttyACM 编号可变化。
 # arm_control_node 默认打开 /dev/ttyCANL (left_arm_device) 和 /dev/ttyCANR (right_arm_device)。
 #
-# 沿用旧接线约定: 6.4=左腿、6.1=右腿; 启动控制前核实接线,不能靠使能电机试左右。
+# 当前接线约定: 1.4=左腿、1.1=右腿; 启动控制前核实接线,不能靠使能电机试左右。
 # ponytail: 绑定本机端口和用户 woan; 换主机/插口/HUB 口/用户时重新核对 ID_PATH 和 OWNER。
 # 安装到 /etc/udev/rules.d/usbcan.rules,再重载规则并对两个串口触发 add。
 
-SUBSYSTEM=="tty", KERNEL=="ttyACM*", ENV{ID_VENDOR_ID}=="2e88", ENV{ID_MODEL_ID}=="4603", ENV{ID_PATH}=="pci-0000:80:14.0-usb-0:6.4:1.0", OWNER:="woan", MODE:="0660", SYMLINK+="ttyCANL"
-SUBSYSTEM=="tty", KERNEL=="ttyACM*", ENV{ID_VENDOR_ID}=="2e88", ENV{ID_MODEL_ID}=="4603", ENV{ID_PATH}=="pci-0000:80:14.0-usb-0:6.1:1.0", OWNER:="woan", MODE:="0660", SYMLINK+="ttyCANR"
+SUBSYSTEM=="tty", KERNEL=="ttyACM*", ENV{ID_VENDOR_ID}=="2e88", ENV{ID_MODEL_ID}=="4603", ENV{ID_PATH}=="pci-0000:80:14.0-usb-0:1.4:1.0", OWNER:="woan", MODE:="0660", SYMLINK+="ttyCANL"
+SUBSYSTEM=="tty", KERNEL=="ttyACM*", ENV{ID_VENDOR_ID}=="2e88", ENV{ID_MODEL_ID}=="4603", ENV{ID_PATH}=="pci-0000:80:14.0-usb-0:1.1:1.0", OWNER:="woan", MODE:="0660", SYMLINK+="ttyCANR"

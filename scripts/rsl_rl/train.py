@@ -186,6 +186,12 @@ def main(env_cfg: ManagerBasedRLEnvCfg | DirectRLEnvCfg | DirectMARLEnvCfg, agen
         inspect.getfile(env_cfg.__class__),
         os.path.join(log_dir, "params", os.path.basename(inspect.getfile(env_cfg.__class__))),
     )
+    if getattr(env_cfg, "task_type", None) == "nlegs_v2_pi":
+        shutil.copytree(
+            os.path.dirname(inspect.getfile(env_cfg.__class__)),
+            os.path.join(log_dir, "params", "task_source"),
+            ignore=shutil.ignore_patterns("__pycache__"),
+        )
 
     # run training
     runner.learn(num_learning_iterations=agent_cfg.max_iterations, init_at_random_ep_len=True)

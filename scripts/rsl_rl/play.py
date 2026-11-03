@@ -98,6 +98,14 @@ def main():
 
     log_dir = os.path.dirname(resume_path)
 
+    if getattr(env_cfg, "task_type", None) == "nlegs_v2_pi":
+        manifest_path = Path(log_dir) / "params" / "deploy.yaml"
+        if not manifest_path.is_file():
+            raise ValueError("nlegs_v2_pi 回放需要该训练目录的 params/deploy.yaml；旧 705 维模型不兼容。")
+        recorded_pi = yaml.safe_load(manifest_path.read_text())
+        if recorded_pi.get("task_type") != "nlegs_v2_pi" or recorded_pi.get("format_version") != 3:
+            raise ValueError("该模型不属于 nlegs_v2_pi，不能按 Pi 的整帧观测布局加载。")
+
     if hasattr(getattr(env_cfg, "commands", None), "motion"):
         # Observation meaning belongs to the trained run, not today's task defaults.
         with open(os.path.join(log_dir, "params", "deploy.yaml")) as stream:

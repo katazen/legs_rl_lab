@@ -49,3 +49,8 @@ meshes/
 sysid/data/
 sysid/doc/
 rl_real_py/policy/
+/analysis/
+
+# Hardware-free regression tests for the maintained driver
+!control_ws/src/armcontrol/test/
+!control_ws/src/armcontrol/test/*.cpp

@@ -1,4 +1,4 @@
-"""nlegs_rough：8.26 基准配置，使用修改 base 的 limit USD、成对零偏和质心随机化。"""
+"""nlegs_rough：8.26 机器人与 PPO 基准，使用成对零偏、质量和指定关节 PD 随机化。"""
 
 import isaaclab.sim as sim_utils
 import isaaclab.terrains as terrain_gen
@@ -18,7 +18,7 @@ from isaaclab.utils import configclass
 from isaaclab.utils.assets import ISAAC_NUCLEUS_DIR, ISAACLAB_NUCLEUS_DIR
 from isaaclab.utils.noise import AdditiveUniformNoiseCfg as Unoise
 
-from legs_rl_lab.assets.nlegs.nlegs import NLEGS_CFG
+from legs_rl_lab.assets.nlegs.nlegs import NLEGS_ROUGH_826_CFG
 from legs_rl_lab.tasks.nlegs_task import mdp
 
 
@@ -105,7 +105,7 @@ class RoughSceneCfg(InteractiveSceneCfg):
         ),
         debug_vis=False,
     )
-    robot: ArticulationCfg = NLEGS_CFG.replace(prim_path="{ENV_REGEX_NS}/Robot")
+    robot: ArticulationCfg = NLEGS_ROUGH_826_CFG.replace(prim_path="{ENV_REGEX_NS}/Robot")
 
     # sensors
     height_scanner = RayCasterCfg(
@@ -129,7 +129,7 @@ class RoughSceneCfg(InteractiveSceneCfg):
 
 @configclass
 class EventCfg:
-    """rough 的全部事件；执行器名义 PD 来自 NLEGS_CFG。"""
+    """rough 的全部事件；执行器名义 PD 沿用 8.26。"""
 
     # startup
     physics_material = EventTerm(
@@ -144,23 +144,24 @@ class EventCfg:
         },
     )
 
-    base_com = EventTerm(
-        func=mdp.randomize_rigid_body_com,
-        mode="startup",
-        params={
-            "asset_cfg": SceneEntityCfg("robot", body_names="base"),
-            "com_range": {"x": (-0.01, 0.01), "y": (-0.01, 0.01), "z": (0.02, 0.06)},
-        },
-    )
-
     # reset
     add_base_mass = EventTerm(
         func=mdp.randomize_rigid_body_mass,
         mode="reset",
         params={
             "asset_cfg": SceneEntityCfg("robot", body_names="base"),
-            "mass_distribution_params": (-5.0, 1.0),
+            "mass_distribution_params": (5.0, 7.0),
             "operation": "add",
+        },
+    )
+
+    link_mass = EventTerm(
+        func=mdp.randomize_rigid_body_mass,
+        mode="reset",
+        params={
+            "asset_cfg": SceneEntityCfg("robot", body_names="Link_[LR][1-6]"),
+            "mass_distribution_params": (0.9, 1.1),
+            "operation": "scale",
         },
     )
 
@@ -190,7 +191,7 @@ class EventCfg:
         },
     )
 
-    # 同一零偏 b：策略读 q_phys + b，编码器目标以 q_cmd - b 送入执行器。
+    # 同一零偏 b：观测加 b，执行器目标减 b。
     joint_zero_bias = EventTerm(
         func=mdp.randomize_joint_zero_bias,
         mode="reset",
@@ -201,8 +202,8 @@ class EventCfg:
         func=mdp.randomize_actuator_gains, mode="reset",
         params={
             "asset_cfg": SceneEntityCfg("robot", joint_names=[".*5"]),
-            "stiffness_distribution_params": (0.7, 1.1),
-            "damping_distribution_params": (0.9, 1.5),
+            "stiffness_distribution_params": (0.7, 1.3),
+            "damping_distribution_params": (0.7, 1.5),
             "operation": "scale", "distribution": "uniform",
         },
     )

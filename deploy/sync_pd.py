@@ -25,6 +25,7 @@ ARM_SRC = f"{H1}/control_ws/src/armcontrol/config/arm_control_node.yaml"
 ARM_INSTALL = f"{H1}/control_ws/install/armcontrol/share/armcontrol/config/arm_control_node.yaml"
 sys.path.insert(0, str(Path(H1) / "rl_real_py"))
 from rl_real_py.deployment_config import check_multi_pd, load_settings
+from motor_config import CONFIG as MOTOR_SRC, load_motors
 
 
 def main():
@@ -32,6 +33,7 @@ def main():
     parser.add_argument("--config", default=COMMON_SRC)
     parser.add_argument("--check-only", action="store_true", help="只校验和显示，不修改 PD 配置")
     args = parser.parse_args()
+    load_motors()
     cfg, run_dir, _ = load_settings(args.config)
     check_multi_pd(cfg)
     with (run_dir / "params/deploy.yaml").open() as stream:
@@ -74,8 +76,11 @@ def main():
             with open(p, "w") as f:
                 f.write(text)
             print(f"[sync_pd] 写入 {p}")
+        motor_install = Path(ARM_INSTALL).with_name("motors.yaml")
+        motor_install.write_text(MOTOR_SRC.read_text())
     else:
         print("[sync_pd] CHECK ONLY：未修改文件")
+    print(f"[sync_pd] motors={MOTOR_SRC}（自研 large/small；协议范围）")
     print(f"[sync_pd] walk={run_dir}")
     print(f"[sync_pd] kps={kps}")
     print(f"[sync_pd] kds={kds}  max_vel={max_vel}  enable_dual_leg_diag={enable_diag}")

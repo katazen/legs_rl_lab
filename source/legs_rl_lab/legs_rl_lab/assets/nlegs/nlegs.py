@@ -1,4 +1,4 @@
-"""旧 nlegs 腿部 + body 版 base 惯性；执行器沿用 2026-08-26 rough 配置。"""
+"""nlegs 资产与执行器配置；rough 使用独立的 8.26 基准副本。"""
 
 import os
 
@@ -60,8 +60,8 @@ NLEGS_CFG = UnitreeArticulationCfg(
             velocity_limit=7.0,
             stiffness={
                 ".*1": 200.0,
-                ".*2": 100.0,
-                ".*3": 100.0,
+                ".*2": 200.0,
+                ".*3": 200.0,
                 ".*4": 250.0,
             },
             damping={
@@ -73,8 +73,8 @@ NLEGS_CFG = UnitreeArticulationCfg(
             armature=0.0509,
             friction=0.5,
             dynamic_friction=0.5,
-            min_delay=4,
-            max_delay=6,
+            min_delay=1,
+            max_delay=5,
         ),
         "ankle_pitch": DelayedDCMotorCfg(
             joint_names_expr=[".*5"],
@@ -86,8 +86,8 @@ NLEGS_CFG = UnitreeArticulationCfg(
             armature=0.0509,
             friction=0.55,
             dynamic_friction=0.55,
-            min_delay=4,
-            max_delay=8,
+            min_delay=1,
+            max_delay=5,
         ),
         "ankle_roll": DelayedPDActuatorCfg(
             joint_names_expr=[".*6"],
@@ -96,6 +96,86 @@ NLEGS_CFG = UnitreeArticulationCfg(
             armature=0.00219,
             effort_limit_sim=5.8,
             velocity_limit_sim=14.0,
+            viscous_friction=0.54,
+            min_delay=1,
+            max_delay=5,
+        ),
+    },
+    joint_sdk_names=['joint_R1',
+                     'joint_R2',
+                     'joint_R3',
+                     'joint_R4',
+                     'joint_R5',
+                     'joint_R6',
+                     'joint_L1',
+                     'joint_L2',
+                     'joint_L3',
+                     'joint_L4',
+                     'joint_L5',
+                     'joint_L6'],
+)
+NLEGS_ROUGH_826_CFG = NLEGS_CFG.replace(
+    spawn=NLEGS_CFG.spawn.replace(
+        usd_path=os.path.join(_ASSET_DIR, "mjcf", "nlegs", "nlegs.usd"),
+    ),
+    actuators={
+        "legs": NLEGS_CFG.actuators["legs"].replace(
+            stiffness={".*1": 200.0, ".*2": 100.0, ".*3": 100.0, ".*4": 250.0},
+            min_delay=4, max_delay=6,
+        ),
+        "ankle_pitch": NLEGS_CFG.actuators["ankle_pitch"].replace(min_delay=4, max_delay=8),
+        "ankle_roll": NLEGS_CFG.actuators["ankle_roll"].replace(min_delay=4, max_delay=6),
+    },
+)
+
+# nlegs_body_rough：8.26 资产/执行器基准，仅踝 pitch 名义 Kp 改为 200。
+NLEGS_1_CFG = UnitreeArticulationCfg(
+    spawn=UnitreeUsdFileCfg(
+        usd_path=os.path.join(_ASSET_DIR, "mjcf", "nlegs", "nlegs.usd"),
+    ),
+    articulation_root_prim_path='/base/base',
+    init_state=ArticulationCfg.InitialStateCfg(
+        pos=(0.0, 0.0, 0.62),
+        joint_pos={
+            ".*1": -0.1,
+            ".*4": 0.2,
+            ".*5": -0.1,
+        },
+        joint_vel={".*": 0.0},
+    ),
+    actuators={
+        "legs": DelayedDCMotorCfg(
+            joint_names_expr=[".*1", ".*2", ".*3", ".*4",".*5"],
+            effort_limit=26.0,
+            saturation_effort=26.0,
+            velocity_limit=6.0,
+            stiffness={
+                ".*1": 200.0,
+                ".*2": 100.0,
+                ".*3": 100.0,
+                ".*4": 250.0,
+                ".*5": 200.0,
+            },
+            damping={
+                ".*1": 5.0,
+                ".*2": 5.0,
+                ".*3": 5.0,
+                ".*4": 5.0,
+                ".*5": 5.0,
+            },
+            armature=0.0509,
+            friction=0.5,
+            dynamic_friction=0.5,
+            min_delay=4,
+            max_delay=6,
+        ),
+        "ankle_roll": DelayedPDActuatorCfg(
+            joint_names_expr=[".*6"],
+            stiffness=40.0,
+            damping=0.5,
+            armature=0.00219,
+            effort_limit_sim=5.8,
+            velocity_limit_sim=29.0,
             viscous_friction=0.54,
             min_delay=4,
             max_delay=6,

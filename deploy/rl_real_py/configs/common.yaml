@@ -7,30 +7,21 @@ tasks:
   rise: null
 
 publish_rate: 200
-target_ema_alpha: 1.0       # 统一部署与 sim2sim 一致，不叠加目标 EMA
-cmd_bias: [0.0, 0.0, 0.0]   # 统一部署不叠加速度零偏
-# 走路速度指令截断范围 [最小, 最大]：前后/左右 m/s，转向 rad/s；不得超出训练范围。
-velocity_command_limits:
-  lin_vel_x: [-0.3, 0.3]
-  lin_vel_y: [-0.0, 0.0]
-  ang_vel_z: [-0.5, 0.5]
+# 速度范围直接读取所选模型 params/deploy.yaml，不额外覆盖训练范围。
 
 # 话题中的实机顺序；策略顺序从各模型按关节名读取。
 joint_index_in_real: ["L1","L2","L3","L4","L5","L6","R1","R2","R3","R4","R5","R6"]
-# 关节目标边界由 deployment_config.py 按名读取 assets/nlegs/mjcf/nlegs_limit.xml。
-# 不在 YAML 中重复配置；运行中不再因实测角越界自动中断。
+# RL 只做训练动作的 scale/offset 和关节顺序转换，不设置关节角度限位。
 
-use_derived_vel: false     # 默认直接使用电机上报速度
-vel_ema_alpha: 0.5         # 仅差分速度模式使用
 deadzone: 0.12
 ctrl_timeout: 0.4          # s，手柄消息过期归零
 keyboard:
   step: 0.05
-# game_controller_node 的 SDL 标准编号；LB+A/X/Y 选择任务，B 中断，Back 解锁。
-gamepad_buttons: {a: 0, b: 1, x: 2, y: 3, lb: 9, back: 4, start: 6}
+# SDL 标准编号；LB+A/X/Y 选择任务，RB 切换左摇杆/方向键平移，右摇杆始终转向。
+gamepad_buttons: {a: 0, b: 1, x: 2, y: 3, lb: 9, rb: 10, back: 4, start: 6}
 
 # 2026-09-17 11:02 只读标定，机身前倾 29.729°；与 v2 起身的 10 个单侧端点一致。
-# 仅在启用起身时用于初始姿态分类；stop_sides 保留为历史标定信息，不覆盖 XML 限位。
+# 仅在启用起身时用于初始姿态分类，不进入网络观测。
 crouch_calibration:
   joint_pos:
     L1: -0.9752422370
@@ -45,9 +36,6 @@ crouch_calibration:
     R4:  1.0912108034
     R5: -0.4224841688
     R6:  0.2233539330
-  body_quat_wxyz: [0.9590230509, -0.0273425805, 0.2551135463, 0.1201842318]
-  stop_sides: {L1: lower, L2: upper, L3: upper, L4: upper, L5: lower,
-              R1: lower, R2: lower, R3: lower, R4: upper, R5: lower}
 
 multi_task:
   handover_time: 0.20

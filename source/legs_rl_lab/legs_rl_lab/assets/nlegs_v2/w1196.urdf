@@ -1,0 +1,287 @@
+<?xml version="1.0"?>
+<!-- Serial equivalent candidate with supplied masses and approximate distribution. Unknown mechanical limits: unlimited joints are placeholders, not a hardware capability. No collisions or actuators. Four 5 g ankle rods contribute half mass and half full-shape inertia to each adjacent Link5/6; their visuals are omitted. Joint6 is the foot support axis, not the physical motor6 axis. Not training/deployment ready. -->
+<robot name="w1196_mass_serial_candidate">
+  <mujoco>
+    <compiler discardvisual="false" strippath="false" fusestatic="false" inertiafromgeom="false" />
+  </mujoco>
+  <link name="base">
+    <inertial>
+      <origin xyz="0.001311546152755235 0.008184832988821071 0.06444376579446" rpy="0 0 0" />
+      <mass value="4.462000000000001" />
+      <inertia ixx="0.02607940086791063" iyy="0.0236261825528591" izz="0.01067647350301191" ixy="6.388923588345428e-06" ixz="-0.0001954442494219474" iyz="-0.0001235184789469238" />
+    </inertial>
+    <visual name="base_visual">
+      <origin xyz="0 0 0" rpy="0 0 0" />
+      <geometry>
+        <mesh filename="meshes/base.stl" scale="1 1 1" />
+      </geometry>
+      <material name="base_color">
+        <color rgba="0.4823529411764706 0.5294117647058824 0.5803921568627451 1" />
+      </material>
+    </visual>
+  </link>
+  <link name="Link_R1">
+    <inertial>
+      <origin xyz="-0.001731789476731765 -0.07789059396692577 4.113476528994694e-05" rpy="0 0 0" />
+      <mass value="0.5233527419274361" />
+      <inertia ixx="0.0003582130801425279" iyy="0.0002561161944667759" izz="0.000411118822251735" ixy="6.848880413154678e-07" ixz="-3.50573806984792e-07" iyz="-1.834293638891301e-06" />
+    </inertial>
+    <visual name="Link_R1_visual">
+      <origin xyz="0 0 0" rpy="0 0 0" />
+      <geometry>
+        <mesh filename="meshes/Link_R1.stl" scale="1 1 1" />
+      </geometry>
+      <material name="Link_R1_color">
+        <color rgba="0.8313725490196079 0.6078431372549019 0.2235294117647059 1" />
+      </material>
+    </visual>
+  </link>
+  <link name="Link_R2">
+    <inertial>
+      <origin xyz="0.004390563796393174 2.387062672526419e-09 -0.07513064172299261" rpy="0 0 0" />
+      <mass value="0.5551540310987855" />
+      <inertia ixx="0.0007535684341087733" iyy="0.0008646327077814207" izz="0.0003385751736074426" ixy="8.860882365484056e-11" ixz="-0.0001457278691822788" iyz="2.275883381590696e-11" />
+    </inertial>
+    <visual name="Link_R2_visual">
+      <origin xyz="0 0 0" rpy="0 0 0" />
+      <geometry>
+        <mesh filename="meshes/Link_R2.stl" scale="1 1 1" />
+      </geometry>
+      <material name="Link_R2_color">
+        <color rgba="0.8784313725490196 0.4235294117647059 0.3411764705882353 1" />
+      </material>
+    </visual>
+  </link>
+  <link name="Link_R3">
+    <inertial>
+      <origin xyz="5.118034619443516e-07 0.0001383376466927849 -0.09607529632432829" rpy="0 0 0" />
+      <mass value="0.5365901536600597" />
+      <inertia ixx="0.000858877808690079" iyy="0.0007808097465560128" izz="0.000278077326076354" ixy="5.717959717365896e-11" ixz="5.994262665220275e-10" iyz="6.500442331546934e-06" />
+    </inertial>
+    <visual name="Link_R3_visual">
+      <origin xyz="0 0 0" rpy="0 0 0" />
+      <geometry>
+        <mesh filename="meshes/Link_R3.stl" scale="1 1 1" />
+      </geometry>
+      <material name="Link_R3_color">
+        <color rgba="0.2352941176470588 0.6666666666666666 0.5725490196078431 1" />
+      </material>
+    </visual>
+  </link>
+  <link name="Link_R4">
+    <inertial>
+      <origin xyz="-5.177772282975588e-07 -0.003945725905297029 -0.1708198407587629" rpy="0 0 0" />
+      <mass value="0.7011540310987853" />
+      <inertia ixx="0.004004916636731645" iyy="0.003872703011849385" izz="0.0003829514345940063" ixy="8.43603670460903e-11" ixz="-4.987461700261894e-10" iyz="0.0002820119987104675" />
+    </inertial>
+    <visual name="Link_R4_visual">
+      <origin xyz="0 0 0" rpy="0 0 0" />
+      <geometry>
+        <mesh filename="meshes/Link_R4.stl" scale="1 1 1" />
+      </geometry>
+      <material name="Link_R4_color">
+        <color rgba="0.3294117647058823 0.5607843137254902 0.7843137254901961 1" />
+      </material>
+    </visual>
+  </link>
+  <link name="Link_R5">
+    <inertial>
+      <origin xyz="0.0486708055372131 0.001789072597032357 -0.01560582680199324" rpy="0 0 0" />
+      <mass value="0.5683080621975707" />
+      <inertia ixx="0.0004194501461699472" iyy="0.0007800621324809716" izz="0.0008448113223529265" ixy="4.744981812912556e-05" ixz="-9.066706942641594e-05" iyz="-1.321591132929411e-05" />
+    </inertial>
+    <visual name="Link_R5_visual">
+      <origin xyz="0 0 0" rpy="0 0 0" />
+      <geometry>
+        <mesh filename="meshes/Link_R5.stl" scale="1 1 1" />
+      </geometry>
+      <material name="Link_R5_color">
+        <color rgba="0.6039215686274509 0.4549019607843137 0.7333333333333333 1" />
+      </material>
+    </visual>
+  </link>
+  <link name="Link_R6">
+    <inertial>
+      <origin xyz="0.05680809167050895 -9.669667844214302e-12 -0.01066791330438788" rpy="0 0 0" />
+      <mass value="0.3" />
+      <inertia ixx="0.0001659828081445008" iyy="0.00087892780908664" izz="0.00102713232447288" ixy="1.073739058244109e-13" ixz="-6.272115355006514e-06" iyz="2.260267185683106e-14" />
+    </inertial>
+    <visual name="Link_R6_visual">
+      <origin xyz="0 0 0" rpy="0 0 0" />
+      <geometry>
+        <mesh filename="meshes/Link_R6.stl" scale="1 1 1" />
+      </geometry>
+      <material name="Link_R6_color">
+        <color rgba="0.5607843137254902 0.6705882352941176 0.3137254901960784 1" />
+      </material>
+    </visual>
+  </link>
+  <link name="Link_L1">
+    <inertial>
+      <origin xyz="-0.001947001459798387 0.07789933399858653 4.113501054479035e-05" rpy="0 0 0" />
+      <mass value="0.52335272582709" />
+      <inertia ixx="0.0003582160628454823" iyy="0.0002561131853922171" izz="0.0004111188038821091" ixy="-4.028283754489905e-07" ixz="-3.556402641481541e-07" iyz="1.833323081431891e-06" />
+    </inertial>
+    <visual name="Link_L1_visual">
+      <origin xyz="0 0 0" rpy="0 0 0" />
+      <geometry>
+        <mesh filename="meshes/Link_L1.stl" scale="1 1 1" />
+      </geometry>
+      <material name="Link_L1_color">
+        <color rgba="0.8313725490196079 0.6078431372549019 0.2235294117647059 1" />
+      </material>
+    </visual>
+  </link>
+  <link name="Link_L2">
+    <inertial>
+      <origin xyz="0.004404364981875374 1.217224169594577e-05 -0.07513064548391389" rpy="0 0 0" />
+      <mass value="0.5551540310987855" />
+      <inertia ixx="0.0007535690642515051" iyy="0.0008646316555480233" izz="0.0003385751937382929" ixy="-3.067560801116176e-07" ixz="-0.0001457272963299569" iyz="-4.026254526900662e-07" />
+    </inertial>
+    <visual name="Link_L2_visual">
+      <origin xyz="0 0 0" rpy="0 0 0" />
+      <geometry>
+        <mesh filename="meshes/Link_L2.stl" scale="1 1 1" />
+      </geometry>
+      <material name="Link_L2_color">
+        <color rgba="0.8784313725490196 0.4235294117647059 0.3411764705882353 1" />
+      </material>
+    </visual>
+  </link>
+  <link name="Link_L3">
+    <inertial>
+      <origin xyz="8.939839874908461e-07 -0.0001383445396463678 -0.0960752840108053" rpy="0 0 0" />
+      <mass value="0.5365901546665754" />
+      <inertia ixx="0.0008588777147758481" iyy="0.0007808108531930358" izz="0.0002780773248713863" ixy="2.156112496379684e-07" ixz="1.855861566543155e-08" iyz="-6.500432945112204e-06" />
+    </inertial>
+    <visual name="Link_L3_visual">
+      <origin xyz="0 0 0" rpy="0 0 0" />
+      <geometry>
+        <mesh filename="meshes/Link_L3.stl" scale="1 1 1" />
+      </geometry>
+      <material name="Link_L3_color">
+        <color rgba="0.2352941176470588 0.6666666666666666 0.5725490196078431 1" />
+      </material>
+    </visual>
+  </link>
+  <link name="Link_L4">
+    <inertial>
+      <origin xyz="-1.141924561192298e-05 0.003945706037208702 -0.1708198528873571" rpy="0 0 0" />
+      <mass value="0.7011540310987854" />
+      <inertia ixx="0.004004913510379201" iyy="0.003872701931520562" izz="0.0003829514533629364" ixy="3.651915223414464e-07" ixz="7.787116907269639e-07" iyz="-0.0002820104473526872" />
+    </inertial>
+    <visual name="Link_L4_visual">
+      <origin xyz="0 0 0" rpy="0 0 0" />
+      <geometry>
+        <mesh filename="meshes/Link_L4.stl" scale="1 1 1" />
+      </geometry>
+      <material name="Link_L4_color">
+        <color rgba="0.3294117647058823 0.5607843137254902 0.7843137254901961 1" />
+      </material>
+    </visual>
+  </link>
+  <link name="Link_L5">
+    <inertial>
+      <origin xyz="0.04867556228784679 -0.001654608209141289 -0.0156058268019274" rpy="0 0 0" />
+      <mass value="0.5683080621975707" />
+      <inertia ixx="0.0004197150663153892" iyy="0.0007797972123893643" izz="0.0008448113223299656" ixy="-4.844531368609111e-05" ixz="-9.070323355165069e-05" iyz="1.296538480341408e-05" />
+    </inertial>
+    <visual name="Link_L5_visual">
+      <origin xyz="0 0 0" rpy="0 0 0" />
+      <geometry>
+        <mesh filename="meshes/Link_L5.stl" scale="1 1 1" />
+      </geometry>
+      <material name="Link_L5_color">
+        <color rgba="0.6039215686274509 0.4549019607843137 0.7333333333333333 1" />
+      </material>
+    </visual>
+  </link>
+  <link name="Link_L6">
+    <inertial>
+      <origin xyz="0.05682169301887194 0.0001569757387385184 -0.01066791330875627" rpy="0 0 0" />
+      <mass value="0.3" />
+      <inertia ixx="0.0001659882493063904" iyy="0.0008789223682702896" izz="0.001027132324832856" ixy="-1.9695684582097e-06" ixz="-6.272091388552784e-06" iyz="-1.732730270401076e-08" />
+    </inertial>
+    <visual name="Link_L6_visual">
+      <origin xyz="0 0 0" rpy="0 0 0" />
+      <geometry>
+        <mesh filename="meshes/Link_L6.stl" scale="1 1 1" />
+      </geometry>
+      <material name="Link_L6_color">
+        <color rgba="0.5607843137254902 0.6705882352941176 0.3137254901960784 1" />
+      </material>
+    </visual>
+  </link>
+  <joint name="joint_R1" type="continuous">
+    <parent link="base" />
+    <child link="Link_R1" />
+    <origin xyz="3.250733016102e-15 -0.03170000000000001 -7.169376203819e-15" rpy="0 0 0" />
+    <axis xyz="0 1 0" />
+  </joint>
+  <joint name="joint_R2" type="continuous">
+    <parent link="Link_R1" />
+    <child link="Link_R2" />
+    <origin xyz="9.999999973017282e-05 -0.08689435624619021 4.65451635567403e-14" rpy="0 0 0" />
+    <axis xyz="1 -1.201721881727291e-12 -1.020489248659828e-12" />
+  </joint>
+  <joint name="joint_R3" type="continuous">
+    <parent link="Link_R2" />
+    <child link="Link_R3" />
+    <origin xyz="8.904671704862421e-14 3.418099137064701e-14 -0.1215000000000394" rpy="0 0 0" />
+    <axis xyz="-8.226804654176687e-13 3.732691239433094e-14 1" />
+  </joint>
+  <joint name="joint_R4" type="continuous">
+    <parent link="Link_R3" />
+    <child link="Link_R4" />
+    <origin xyz="5.220772591361743e-07 -3.418099137064701e-14 -0.1120000000001222" rpy="0 0 0" />
+    <axis xyz="-8.079648061709575e-13 1 4.039086773377498e-14" />
+  </joint>
+  <joint name="joint_R5" type="continuous">
+    <parent link="Link_R4" />
+    <child link="Link_R5" />
+    <origin xyz="-5.221045894395458e-07 0 -0.2209999999844697" rpy="0 0 0" />
+    <axis xyz="4.842742873378825e-11 1 1.080902263662132e-11" />
+  </joint>
+  <joint name="joint_R6" type="continuous">
+    <parent link="Link_R5" />
+    <child link="Link_R6" />
+    <origin xyz="2.72412602051646e-11 3.393313408039944e-12 -0.04999999999976518" rpy="0 0 0" />
+    <axis xyz="1 -6.402126424712338e-13 -2.459174385492478e-13" />
+  </joint>
+  <joint name="joint_L1" type="continuous">
+    <parent link="base" />
+    <child link="Link_L1" />
+    <origin xyz="-0.000107718151074424 0.04629707628935469 -7.169376203819e-15" rpy="0 0 0" />
+    <axis xyz="-0.002762591649061026 0.9999961840364096 0" />
+  </joint>
+  <joint name="joint_L2" type="continuous">
+    <parent link="Link_L1" />
+    <child link="Link_L2" />
+    <origin xyz="-0.0001539103241635637 0.08690808323034344 4.655926487271371e-14" rpy="0 0 0" />
+    <axis xyz="0.9999961840364062 0.002762591650262745 -1.020489248659828e-12" />
+  </joint>
+  <joint name="joint_L3" type="continuous">
+    <parent link="Link_L2" />
+    <child link="Link_L3" />
+    <origin xyz="1.381813896891555e-05 3.817398683270135e-08 -0.1215000000000394" rpy="0 0 0" />
+    <axis xyz="-8.225746472856341e-13 -3.9603520116116e-14 1" />
+  </joint>
+  <joint name="joint_L4" type="continuous">
+    <parent link="Link_L3" />
+    <child link="Link_L4" />
+    <origin xyz="5.220752668187441e-07 1.442320402000874e-09 -0.1120000000001222" rpy="0 0 0" />
+    <axis xyz="-0.002762591648253098 0.9999961840364118 -4.039086773377497e-14" />
+  </joint>
+  <joint name="joint_L5" type="continuous">
+    <parent link="Link_L4" />
+    <child link="Link_L5" />
+    <origin xyz="-5.221025971005534e-07 -1.442361063919151e-09 -0.2209999999844697" rpy="0 0 0" />
+    <axis xyz="-0.00276259169748827 0.9999961840362758 -1.080902263662132e-11" />
+  </joint>
+  <joint name="joint_L6" type="continuous">
+    <parent link="Link_L5" />
+    <child link="Link_L6" />
+    <origin xyz="-1.381811162926526e-05 -3.817733931765765e-08 -0.04999999999976529" rpy="0 0 0" />
+    <axis xyz="0.9999961840364078 0.002762591649701237 -2.459174385492478e-13" />
+  </joint>
+</robot>

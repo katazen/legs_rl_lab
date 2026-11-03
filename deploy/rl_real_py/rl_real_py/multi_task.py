@@ -6,25 +6,33 @@ import time
 import numpy as np
 
 from .deployment_config import check_multi_pd
-from .motion_reference import rotation_matrix
 from .rl_real_common import Policy, TermGroupedHistory
 
 
 class MultiTaskController:
     KEYS = {"1": "walk", "2": "crouch", "3": "rise", "4": "return_stand", "0": "stop", "r": "reset"}
+    joy_move_mode = "stick"
+    joy_wait_neutral = False
+
+    @staticmethod
+    def gamepad_buttons(configured):
+        buttons = {"rb": 10, **configured}
+        required = {"a", "b", "x", "y", "lb", "rb", "back", "start"}
+        if (set(buttons) != required
+                or any(type(i) is not int or not 0 <= i <= 20 for i in buttons.values())
+                or len(set(buttons.values())) != len(buttons)
+                or set(buttons.values()) & {11, 12, 13, 14}):
+            raise ValueError("gamepad_buttons 须配置不同的 SDL 整数索引 0..20，不能占用方向键 11..14；rb 默认 10")
+        return buttons
 
     def __init__(self, node, cfg, root):
         self.n, self.cfg = node, cfg["multi_task"]
         required = {"handover_time", "stop_blend_time", "return_max_speed"}
         if set(self.cfg) != required or any(not np.isfinite(v) or v <= 0 for v in self.cfg.values()):
             raise ValueError("multi_task 阈值必须完整且为有限正数")
-        if cfg["target_ema_alpha"] != 1.0 or np.any(node.cmd_bias):
-            raise ValueError("统一切换与 sim2sim 一致：关闭额外 EMA 和速度偏置")
-        self.buttons = cfg["gamepad_buttons"]
-        if (set(self.buttons) != {"a", "b", "x", "y", "lb", "back", "start"}
-                or any(type(i) is not int or i < 0 for i in self.buttons.values())
-                or len(set(self.buttons.values())) != len(self.buttons)):
-            raise ValueError("gamepad_buttons 必须配置七个不同的非负整数索引")
+        self.buttons = self.gamepad_buttons(cfg["gamepad_buttons"])
+        self.joy_move_mode = "stick"
+        self.joy_wait_neutral = False
         check_multi_pd(cfg)
         self.policies = {"walk": node}
         for name in ("crouch", "rise"):
@@ -40,18 +48,6 @@ class MultiTaskController:
             raise ValueError("启用 crouch 时必须同时启用 rise")
         if (up is not None and up.motion is None) or (down is not None and down.motion is None):
             raise ValueError("crouch / rise 必须是参考动作跟踪策略")
-        for p in self.policies.values():
-            if not np.array_equal(p.default_real, walk.default_real):
-                raise ValueError("启用任务的默认站姿必须相同")
-            if any(v["history_length"] != p.num_history for v in p.deploy["observations"].values()):
-                raise ValueError("当前部署要求各观测项历史长度相同")
-        if down is not None:
-            for fa, fb in ((0, -1), (-1, 0)):
-                if (not np.allclose(down.motion.positions[fa, down.sim2real], up.motion.positions[fb, up.sim2real], atol=1e-5)
-                        or not np.allclose(down.motion.rotations[fa], up.motion.rotations[fb], atol=1e-5)):
-                    raise ValueError("下蹲、起身参考端点不衔接")
-            if not np.allclose(down.motion.limits[down.sim2real], up.motion.limits[up.sim2real], atol=1e-6):
-                raise ValueError("下蹲和起身任务限位不一致")
         if up is not None:
             if not np.allclose(up.motion.positions[-1, up.sim2real], walk.default_real, atol=1e-5):
                 raise ValueError("起身末帧必须与走路默认站姿一致")
@@ -59,12 +55,8 @@ class MultiTaskController:
                            "crouch": up.motion.positions[0, up.sim2real]}
         else:
             self.pose_q = {"stand": walk.default_real.copy()}
-        self.lo, self.hi = node.lo.copy(), node.hi.copy()
         if up is not None and cfg.get("crouch_calibration") is not None:
             self._calibrate_crouch(cfg["crouch_calibration"])
-        lo, hi = self.lo, self.hi
-        if (np.any(lo >= hi) or np.any(walk.default_real < lo) or np.any(walk.default_real > hi)):
-            raise ValueError("walk 任务边界无效或排除了默认站姿")
         for name, p in self.policies.items():
             p.obs_raw[:] = 0.
             p.obs_raw[3:7] = p.motion.quaternions[0] if p.motion else [1., 0., 0., 0.]
@@ -77,10 +69,9 @@ class MultiTaskController:
             print(f"[multi {name}] {p.run_dir}")
         self.active = None
         self.has_target = False
-        self.state = node.mode = "wait_current"
+        self.state = "wait_current"
         self.state_since = time.monotonic()
         self.pending_target = None
-        self.reason = "等待首次完整关节/IMU 反馈，先保持实测姿态"
         self.end_announced = False
         self.key_escape = False
         if not getattr(node, "preflight_only", False):
@@ -88,30 +79,18 @@ class MultiTaskController:
             self.show_status()
 
     def _calibrate_crouch(self, calibration):
-        """实测蹲姿仅用于分类；历史 stop_sides 不覆盖 XML 目标边界。"""
-        names = self.n.real_joint_names
-        if (not isinstance(calibration, dict)
-                or set(calibration) != {"joint_pos", "body_quat_wxyz", "stop_sides"}
-                or not isinstance(calibration["joint_pos"], dict)
-                or set(calibration["joint_pos"]) != set(names)
-                or not isinstance(calibration["stop_sides"], dict)
-                or set(calibration["stop_sides"]) != set(names) - {"L6", "R6"}
-                or any(side not in ("lower", "upper") for side in calibration["stop_sides"].values())):
-            raise ValueError("crouch_calibration 需要完整 12 关节姿态、机身四元数和除 ankle roll 外的 10 个限位方向")
-        q = np.asarray([calibration["joint_pos"][name] for name in names], dtype=np.float32)
-        if q.shape != (12,) or not np.isfinite(q).all():
-            raise ValueError("实测蹲姿必须为 12 个有限角度")
-        rotation_matrix(calibration["body_quat_wxyz"])
-        self.pose_q["crouch"] = q
-        print("[multi] 实测蹲姿仅用于入口分类；所有任务关节边界读取 nlegs_limit.xml。")
+        """实测蹲姿只用于入口分类，不修改网络观测。"""
+        self.pose_q["crouch"] = np.asarray(
+            [calibration["joint_pos"][name] for name in self.n.real_joint_names], np.float32)
 
     def show_status(self):
         crouch_key = "；2/LB+X 下蹲" if "crouch" in self.policies else ""
+        move_input = "左摇杆" if self.joy_move_mode == "stick" else "左方向键"
         label, actions = {
             "wait_current": ("等待关节/IMU", "收到后保持当前姿态"),
             "stand_ready": ("站立就绪", f"1/LB+A 走路{crouch_key}；4/LB+Start 慢回站姿"),
             "crouch_ready": ("下蹲就绪", "3/LB+Y 起身；4/LB+Start 慢回站姿"),
-            "walking": ("行走中", "0/Start 立即停策略并回站姿；W/S 前后 A/D 左右 Q/E 转向（或摇杆）；空格零速"),
+            "walking": ("行走中", f"0/Start 立即停策略并回站姿；W/S 前后 A/D 左右 Q/E 转向；{move_input}移动、右摇杆转向；RB 切换移动输入；空格零速"),
             "standing_transition": ("慢回站姿中", "请等待，不能切换"),
             "lowering": ("下蹲中", "请等待，不能切换"),
             "rising": ("起身中", "请等待，不能切换"),
@@ -120,8 +99,8 @@ class MultiTaskController:
         print(f"[操作提示] {label} | {actions} | 手柄 B 中断", flush=True)
 
     def change(self, state, reason):
-        self.state = self.n.mode = state
-        self.reason, self.state_since = reason, time.monotonic()
+        self.state = state
+        self.state_since = time.monotonic()
         if state == "stopped":
             self.n.get_logger().warn(f"[停止] {reason}")
         elif state == "standing_transition":
@@ -140,9 +119,6 @@ class MultiTaskController:
         self.n._close_log()
         self.change("stopped", reason)
 
-    def _policy_limits(self, policy):
-        return self.lo, self.hi
-
     def closest_pose(self):
         q = self.n.obs_raw[7:19]
         return min(self.pose_q, key=lambda pose: np.linalg.norm(q - self.pose_q[pose]))
@@ -153,7 +129,7 @@ class MultiTaskController:
         return None
 
     def start_blend(self, duration, reason, goal, done_state):
-        self.blend_start = np.clip(self.n.target_pub, self.lo, self.hi).astype(np.float32)
+        self.blend_start = self.n.target_pub.copy()
         self.blend_goal = goal
         self.blend_done_state = done_state
         self.stand_blend_time = duration
@@ -173,9 +149,7 @@ class MultiTaskController:
             if (reason := self.return_error()) is not None:
                 return self.reject(reason)
             goal = self.pose_q["stand"]
-            if np.any(goal < self.lo) or np.any(goal > self.hi):
-                return self.reject("站姿超出当前关节目标边界，拒绝回站姿")
-            distance = np.max(np.abs(np.clip(n.target_pub, self.lo, self.hi) - goal))
+            distance = np.max(np.abs(n.target_pub - goal))
             # smoothstep 的峰值导数是 1.5；限制的是目标速度，不是电机实际速度。
             duration = max(self.cfg["stop_blend_time"], 1.5 * distance / self.cfg["return_max_speed"])
             self.start_blend(duration, f"操作者确认已支撑；{duration:.1f}s 同步慢回站姿，不运行策略", goal, "stand_ready")
@@ -189,8 +163,6 @@ class MultiTaskController:
         if task == "stop":
             if self.state == "walking":
                 goal = self.pose_q["stand"]
-                if np.any(goal < self.lo) or np.any(goal > self.hi):
-                    return self.reject("站姿超出当前关节目标边界，拒绝停步回站姿")
                 self.active = self.pending_target = None
                 n._clear_cmd_sources()
                 n._close_log()
@@ -204,7 +176,6 @@ class MultiTaskController:
             label = {"walk": "走路", "crouch": "下蹲", "rise": "起身"}.get(task, task)
             return self.reject(f"{label}未启动：当前任务状态不允许")
         p = self.policies[task]
-        lo, hi = self._policy_limits(p)
         p.policy_step = 0
         p.last_action[:] = 0.
         p.hist = TermGroupedHistory(p.term_dims, p.num_history)
@@ -220,11 +191,8 @@ class MultiTaskController:
             return self.reject(f"策略接管预检失败: {exc}")
         n._close_log()
         n._clear_cmd_sources()
-        # 所有任务、保持与慢回站姿共用 XML 边界。
-        self.lo, self.hi = lo, hi
         self.active, self.pending_target = task, target
-        # 初始保持可能来自边界外少量测量偏差；策略接管起点也必须严格落在指令边界内。
-        self.handover_from = np.clip(n.target_pub, self.lo, self.hi).astype(np.float32)
+        self.handover_from = n.target_pub.copy()
         self.activated_at = now
         self.end_announced = False
         p.run_t0 = now
@@ -242,8 +210,7 @@ class MultiTaskController:
         start = time.monotonic()
         target = p._target_from_action(p._infer(x))
         self.policy_ms = (time.monotonic() - start) * 1000
-        lo, hi = self._policy_limits(p)
-        return np.clip(target, lo, hi).astype(np.float32), terms
+        return target, terms
 
     def update_state(self):
         now = time.monotonic()
@@ -309,7 +276,7 @@ class MultiTaskController:
         elif self.state == "standing_transition":
             a = np.clip((now - self.state_since) / self.stand_blend_time, 0., 1.)
             s = a*a*(3-2*a)
-            n.target_pub = np.clip((1-s)*self.blend_start + s*self.blend_goal, self.lo, self.hi).astype(np.float32)
+            n.target_pub = ((1-s)*self.blend_start + s*self.blend_goal).astype(np.float32)
             n.target_real = n.target_pub.copy()
         n._publish_target()
 
@@ -340,10 +307,24 @@ class MultiTaskController:
             print(f"[键盘速度设置] 前后={vx:.2f}m/s，左右={vy:.2f}m/s，转向={wz:.2f}rad/s；未含手柄输入。")
             self.show_status()
 
+    def movement_axes(self, axes, buttons):
+        # game_controller_node: 方向键是 SDL buttons 11..14，扳机不参与回中检查。
+        stick = np.asarray(axes, np.float32)[[1, 0, 2]]
+        stick = np.where(np.abs(stick) > self.n.deadzone, stick, 0.)
+        dpad = np.array([int(buttons[11] == 1) - int(buttons[12] == 1),
+                         int(buttons[13] == 1) - int(buttons[14] == 1)], np.float32)
+        if self.joy_wait_neutral:
+            if not np.any(stick) and not any(buttons[11:15]):
+                self.joy_wait_neutral = False
+            return np.zeros(3, np.float32)
+        if self.joy_move_mode == "dpad":
+            stick[:2] = dpad
+        return stick
+
     def joy(self, msg):
         n = self.n
         def down(name, buttons):
-            i = self.buttons[name]
+            i = self.buttons.get("rb", 10) if name == "rb" else self.buttons[name]
             return i < len(buttons) and buttons[i] == 1
         def pressed(name):
             return down(name, msg.buttons) and not down(name, n._prev_buttons)
@@ -358,6 +339,12 @@ class MultiTaskController:
                 if pressed(button):
                     self.request(task)
                     break
+        elif pressed("rb"):
+            self.joy_move_mode = "dpad" if self.joy_move_mode == "stick" else "stick"
+            self.joy_wait_neutral = True
+            n._joy_cmd[:] = 0.
+            label = "左方向键" if self.joy_move_mode == "dpad" else "左摇杆"
+            print(f"[手柄移动输入] 已切换为{label}；松开方向键、左摇杆和右摇杆横轴后生效。键盘指令保持不变。", flush=True)
         n._prev_buttons = list(msg.buttons)
         if self.state != "walking":
             n._joy_cmd[:] = 0.

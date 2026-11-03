@@ -8,53 +8,43 @@ import pytest
 
 from rl_real_py.multi_task import MultiTaskController
 from rl_real_py.rl_real_common import Policy, RL_real
-from rl_real_py.deployment_config import load_settings, read_joint_limits
+from rl_real_py.deployment_config import load_settings
 
 
-def test_xml_limits_reach_policy_controller_and_publisher(monkeypatch, tmp_path):
+def test_targets_capture_handover_and_publisher_do_not_limit_joint_angles(monkeypatch):
     cfg, run_dir, repo = load_settings(Path(__file__).parent / "configs/common.yaml")
-    names = cfg["joint_index_in_real"]
-    xml = Path(cfg["joint_limits_xml"])
-    lo, hi = read_joint_limits(xml, names)
-    reversed_lo, reversed_hi = read_joint_limits(xml, names[::-1])
-    np.testing.assert_allclose(reversed_lo, lo[::-1])
-    np.testing.assert_allclose(reversed_hi, hi[::-1])
-    with pytest.raises(ValueError, match="12 个唯一关节"):
-        read_joint_limits(xml, [names[0]] * 12)
-    # Old config arrays and measured stop_sides cannot become a second limit authority.
-    import yaml
-    legacy = dict(cfg, joint_lower_limits=[-12.] * 12, joint_upper_limits=[12.] * 12)
-    config_file = tmp_path / "legacy.yaml"
-    config_file.write_text(yaml.safe_dump(legacy))
-    parsed, _, _ = load_settings(config_file)
-    np.testing.assert_allclose(parsed["joint_lower_limits"], lo)
-    np.testing.assert_allclose(parsed["joint_upper_limits"], hi)
+    assert "joint_lower_limits" not in cfg and "joint_limits_xml" not in cfg
     monkeypatch.setattr(Policy, "_load_policy", lambda *_: None)
     monkeypatch.setattr(Policy, "_check_policy", lambda *_: None)
-    policy = Policy(parsed, run_dir, repo)
+    policy = Policy(cfg, run_dir, repo)
     policy.preflight_only = True
-    controller = MultiTaskController(policy, parsed, repo)
-    np.testing.assert_allclose(controller.lo, lo)
-    np.testing.assert_allclose(controller.hi, hi)
-    np.testing.assert_allclose(controller._policy_limits(policy), [lo, hi])
-    assert "crouch" not in controller.pose_q
-    controller._calibrate_crouch(parsed["crouch_calibration"])
-    np.testing.assert_allclose(controller.lo, lo)
-    np.testing.assert_allclose(controller.hi, hi)
-    action = np.zeros(12, np.float32)
-    for name, value in (("L5", -2.), ("R5", -2.), ("L6", 4.), ("R6", -4.), ("L4", 10.)):
-        action[policy.sim2real[names.index(name)]] = value
+    controller = MultiTaskController(policy, cfg, repo)
+    assert not hasattr(policy, "lo") and not hasattr(controller, "lo")
+    action = np.full(12, 4., np.float32)
+    policy.action_clip = None
     target = policy._target_from_action(action)
-    np.testing.assert_allclose(target[[4, 10, 5, 11, 3]], [-.44, -.44, .26, -.26, 1.45], atol=1e-6)
-    # Exported training clipping is separate and still takes effect before XML clipping.
-    policy.action_term_clip = np.tile([-10., 10.], (12, 1))
-    policy.action_term_clip[policy.sim2real[4]] = [-.2, .3]
-    assert np.isclose(policy._target_from_action(action)[4], -.2)
+    expected = (policy.action_offset + 4 * policy.action_scale)[policy.sim2real]
+    np.testing.assert_allclose(target, expected)
+    assert target[5] > .26 and target[11] > .26  # Beyond the old ankle-roll bounds.
+    policy.action_clip = .5
+    np.testing.assert_allclose(policy._target_from_action(action),
+                               (policy.action_offset + .5 * policy.action_scale)[policy.sim2real])
     published = []
-    policy.target_pub = np.full(12, 10., np.float32)
+    policy.target_pub = target.copy()
     policy.pub = SimpleNamespace(publish=lambda message: published.append(message.data))
     RL_real._publish_target(policy)
-    np.testing.assert_allclose(published[-1], hi)
+    np.testing.assert_allclose(published[-1], target)
+    policy._current_state_ready = lambda: RL_real._current_state_ready(policy)
+    policy._received_joint = policy._received_imu = True
+    policy.obs_raw[3] = 1.
+    policy.obs_raw[7:19] = target
+    assert RL_real._capture_current_target(policy)
+    np.testing.assert_allclose(policy.target_pub, target)
+    policy._clear_cmd_sources = lambda: None
+    policy._close_log = lambda: None
+    controller.n = policy
+    controller.start_blend(.5, "offline", policy.default_real, "stand_ready")
+    np.testing.assert_allclose(controller.blend_start, target)
 
 
 def test_common_velocity_limits_override_training_limits_without_widening(monkeypatch):
@@ -154,8 +144,6 @@ def test_key_four_returns_to_stand_then_one_starts_walk():
     walk = SimpleNamespace(policy_step=0, last_action=np.zeros(12, np.float32),
                            term_dims=[12], num_history=1, motion=None, cmd=np.zeros(3, np.float32))
     m.policies = {"walk": walk}
-    m.lo, m.hi = np.full(12, -1., np.float32), np.full(12, 1., np.float32)
-    m.walk_limits = (m.lo, m.hi)
     m.pose_q = {"stand": np.full(12, 0.2, np.float32), "crouch": np.zeros(12, np.float32)}
     m.key_escape = False
     m.show_status = lambda: None
@@ -192,3 +180,49 @@ def test_key_four_returns_to_stand_then_one_starts_walk():
     m.joy(SimpleNamespace(buttons=[0, 0, 0, 0, 0, 0, 1]))
     assert m.state == "stand_ready" and m.active is None
     np.testing.assert_array_equal(published[-1], m.pose_q["stand"])
+
+
+def test_ros_boundary_rejects_bad_values_without_angle_limits():
+    warnings, published = [], []
+    n = SimpleNamespace(
+        obs_raw=np.zeros(31, np.float32), target_pub=np.zeros(12, np.float32),
+        _received_joint=True, _received_imu=True, _motor_tau=np.zeros(12, np.float32),
+        get_logger=lambda: SimpleNamespace(warn=lambda msg, **kw: warnings.append(msg)),
+        pub=SimpleNamespace(publish=lambda msg: published.append(msg.data)),
+    )
+    n.obs_raw[3] = 1.
+    n._current_state_ready = lambda: RL_real._current_state_ready(n)
+    RL_real._on_joint(n, SimpleNamespace(position=[0.] * 11, velocity=[0.] * 12, effort=[]))
+    assert not n._received_joint and not RL_real._capture_current_target(n)
+    RL_real._on_joint(n, SimpleNamespace(position=[2.] * 12, velocity=[.2] * 12, effort=[3.] * 12))
+    assert RL_real._capture_current_target(n)
+    np.testing.assert_array_equal(n.target_pub, 2.)
+    np.testing.assert_allclose(n.obs_raw[19:31], .2)
+    RL_real._publish_target(n)
+    np.testing.assert_array_equal(published[-1], 2.)
+    n.target_pub[0] = np.nan
+    RL_real._publish_target(n)
+    assert len(published) == 1 and warnings
+
+
+def test_reference_loading_does_not_require_or_enforce_angle_clip(tmp_path):
+    import hashlib
+    import yaml
+    from rl_real_py.motion_reference import MotionReference
+
+    cfg, _, repo = load_settings(Path(__file__).parent / "configs/common.yaml")
+    exported = repo / "logs/rsl_rl/nlegs_mimic_stand/2026-09-17_15-40-44/params/deploy.yaml"
+    dep = yaml.safe_load(exported.read_text())
+    model = tmp_path / "model.xml"
+    model.write_text("<mujoco/>")
+    motion_file = tmp_path / "motion.npz"
+    positions = np.full((3, 12), .75, np.float32)
+    np.savez(motion_file, model_sha256=hashlib.sha256(model.read_bytes()).hexdigest(),
+             fps=100., joint_names=dep["joint_names"], body_names=["base"],
+             joint_pos=positions, joint_vel=np.zeros_like(positions),
+             body_quat_w=np.tile([1., 0., 0., 0.], (3, 1, 1)))
+    dep["commands"]["motion"].update(model_file=str(model), motion_file=str(motion_file))
+    dep["actions"]["JointPositionAction"].pop("clip", None)
+    motion = MotionReference(dep, repo)
+    np.testing.assert_array_equal(motion.positions, positions)
+    assert motion.features([1., 0., 0., 0.])["motion_command"].shape == (24,)

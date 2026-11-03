@@ -2,11 +2,9 @@
 #define SERIAL_PORT_H
 
 #include <fcntl.h>
-#include <linux/serial.h>
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
-#include <sys/ioctl.h>
 #include <sys/select.h>
 #include <termios.h>
 #include <unistd.h>
@@ -19,15 +17,6 @@
 #include <string>
 #include <mutex>
 #include <stdexcept>
-
-void print_data(const uint8_t* data, uint8_t len)
-{
-  for (int i = 0; i < len; i++)
-  {
-    printf("%02x ", data[i]);
-  }
-  printf("\n");
-}
 
 class SerialPort
 {
@@ -48,9 +37,7 @@ public:
   ssize_t send(const uint8_t* data, size_t len)
   {
     std::lock_guard<std::mutex> lock(mutex_);
-    // tcflush(fd_, TCIFLUSH);
     ssize_t ret = ::write(fd_, data, len);
-    // tcdrain(fd_);
     return ret;
   }
 
@@ -65,10 +52,8 @@ public:
     switch (select(fd_ + 1, &rSet_, NULL, NULL, &timeout))
     {
     case -1: // error
-      // std::cout << "communication error" << std::endl;
       break;
     case 0: // timeout
-      // std::cout << "timeout" << std::endl;
       break;
     default:
       recv_len = ::read(fd_, data, len);
@@ -80,7 +65,6 @@ public:
 
   bool recv(uint8_t* data, uint8_t head, ssize_t len)
   {
-    // 存入队列
     ssize_t recv_len = this->recv(recv_buf.data(), len);
     std::lock_guard<std::mutex> lock(mutex_);
     for (int i = 0; i < recv_len; i++)
@@ -88,8 +72,7 @@ public:
       recv_queue.push(recv_buf[i]);
     }
 
-    // 查找帧头
-    while (recv_queue.size() >= len)
+    while (recv_queue.size() >= static_cast<size_t>(len))
     {
       if(recv_queue.front() != head)
       {
@@ -99,9 +82,8 @@ public:
       break;
     }
 
-    if(recv_queue.size() < len) return false;
+    if(recv_queue.size() < static_cast<size_t>(len)) return false;
 
-    // 读取数据
     for(int i = 0; i < len; i++)
     {
       data[i] = recv_queue.front();
@@ -119,19 +101,16 @@ public:
 private:
   void Init(std::string port, speed_t baudrate)
   {
-    int ret;
-    // Open serial port
     fd_ = open(port.c_str(), O_RDWR | O_NOCTTY);
     if (fd_ < 0)
     {
       printf("Open serial port %s failed\n", port.c_str());
-      exit(-1);
+      throw std::runtime_error("Unable to open USB-CAN serial port: " + port);
     }
 
-    // Set attributes
     struct termios option;
     memset(&option, 0, sizeof(option));
-    ret = tcgetattr(fd_, &option);
+    if (tcgetattr(fd_, &option) < 0) { close(fd_); throw std::runtime_error("tcgetattr failed"); }
 
     option.c_oflag = 0;
     option.c_lflag = 0;
@@ -150,8 +129,8 @@ private:
     option.c_cc[VMIN] = 0;
     option.c_lflag |= CBAUDEX;
 
-    ret = tcflush(fd_, TCIFLUSH);
-    ret = tcsetattr(fd_, TCSANOW, &option);
+    tcflush(fd_, TCIFLUSH);
+    if (tcsetattr(fd_, TCSANOW, &option) < 0) { close(fd_); throw std::runtime_error("tcsetattr failed"); }
   }
 
   int fd_;

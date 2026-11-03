@@ -10,7 +10,7 @@ from isaaclab.assets import Articulation, RigidObject
 from isaaclab.managers import SceneEntityCfg
 from isaaclab.sensors import ContactSensor
 
-from .gait import command_is_moving, get_phase
+from .gait import command_is_moving, gait_motion_weight, get_phase
 
 if TYPE_CHECKING:
     from isaaclab.envs import ManagerBasedRLEnv
@@ -44,6 +44,15 @@ def ang_vel_xy_l2(env: ManagerBasedRLEnv, asset_cfg: SceneEntityCfg = SceneEntit
     return torch.sum(torch.square(asset.data.root_ang_vel_b[:, :2]), dim=1)
 
 
+def ang_vel_xy_l2_with_tolerance(
+    env: ManagerBasedRLEnv, threshold: float, asset_cfg: SceneEntityCfg = SceneEntityCfg("robot")
+) -> torch.Tensor:
+    """Squared roll/pitch angular speed above ``threshold`` (rad/s)."""
+    asset: RigidObject = env.scene[asset_cfg.name]
+    speed = torch.linalg.vector_norm(asset.data.root_ang_vel_b[:, :2], dim=1)
+    return torch.square(torch.clamp(speed - threshold, min=0.0))
+
+
 def base_lateral_move_l2(env: ManagerBasedRLEnv, asset_cfg: SceneEntityCfg = SceneEntityCfg("robot")) -> torch.Tensor:
     """无 y 速度命令时惩罚 base 体系左右(y)线速度, 抑制身体左右平移/漂移。
     体系 y 速度对纯前进/转向都应≈0, 故用 base 体系而非世界系; 有横移命令(|cmd_y|>=0.1)时自动关闭, 不干扰主动横移。"""
@@ -51,6 +60,16 @@ def base_lateral_move_l2(env: ManagerBasedRLEnv, asset_cfg: SceneEntityCfg = Sce
     lateral_vel_sq = torch.square(asset.data.root_lin_vel_b[:, 1])
     y_vel_flag = torch.abs(env.command_manager.get_command("base_velocity")[:, 1]) < 0.1
     return lateral_vel_sq * y_vel_flag
+
+
+def base_lateral_move_l2_with_tolerance(
+    env: ManagerBasedRLEnv, threshold: float, asset_cfg: SceneEntityCfg = SceneEntityCfg("robot")
+) -> torch.Tensor:
+    """Squared lateral speed above ``threshold`` (m/s) when |command_y| < 0.1 m/s."""
+    asset: RigidObject = env.scene[asset_cfg.name]
+    excess = torch.clamp(torch.abs(asset.data.root_lin_vel_b[:, 1]) - threshold, min=0.0)
+    y_vel_flag = torch.abs(env.command_manager.get_command("base_velocity")[:, 1]) < 0.1
+    return torch.square(excess) * y_vel_flag
 
 
 def joint_vel_l2(env: ManagerBasedRLEnv, asset_cfg: SceneEntityCfg = SceneEntityCfg("robot")) -> torch.Tensor:
@@ -143,6 +162,15 @@ def flat_orientation_l2(env: ManagerBasedRLEnv, asset_cfg: SceneEntityCfg = Scen
     return torch.sum(torch.square(asset.data.projected_gravity_b[:, :2]), dim=1)
 
 
+def flat_orientation_l2_with_tolerance(
+    env: ManagerBasedRLEnv, threshold: float, asset_cfg: SceneEntityCfg = SceneEntityCfg("robot")
+) -> torch.Tensor:
+    """Squared total tilt above ``threshold`` (rad), independent of yaw."""
+    asset: RigidObject = env.scene[asset_cfg.name]
+    tilt = torch.acos(torch.clamp(-asset.data.projected_gravity_b[:, 2], min=-1.0, max=1.0))
+    return torch.square(torch.clamp(tilt - threshold, min=0.0))
+
+
 def _get_leg_phases(env: ManagerBasedRLEnv):
     cycle_phase = get_phase(env)
     off_tensor = torch.tensor(env.cfg.gait.feet_offset, device=env.device).unsqueeze(0)
@@ -151,7 +179,8 @@ def _get_leg_phases(env: ManagerBasedRLEnv):
 
 
 def feet_gait(
-    env: ManagerBasedRLEnv, sensor_cfg: SceneEntityCfg, moving_only: bool = False, command_threshold: float = 0.1
+    env: ManagerBasedRLEnv, sensor_cfg: SceneEntityCfg, moving_only: bool = False, command_threshold: float = 0.1,
+    stop_transition_time: float = 0.0,
 ) -> torch.Tensor:
     contact_sensor = env.scene.sensors[sensor_cfg.name]
     is_contact = contact_sensor.data.current_contact_time[:, sensor_cfg.body_ids] > 0
@@ -160,7 +189,7 @@ def feet_gait(
     match = (should_be_stance == is_contact)
     reward = torch.mean(torch.where(match, 1.0, -0.5), dim=1)
     if moving_only:  # 速度开关: 零速命令时不奖励踏步(用于静止站立任务)
-        reward = reward * command_is_moving(env, command_threshold)
+        reward = reward * gait_motion_weight(env, command_threshold, stop_transition_time)
     return reward
 
 
@@ -173,10 +202,11 @@ def feet_slide(env, sensor_cfg: SceneEntityCfg, asset_cfg: SceneEntityCfg = Scen
     return reward
 
 
-def feet_clearance(env: ManagerBasedRLEnv, asset_cfg: SceneEntityCfg, target_height: float = 0.1, moving_only: bool = False, sensor_cfg: SceneEntityCfg | None = None, command_threshold: float = 0.1) -> torch.Tensor:
+def feet_clearance(env: ManagerBasedRLEnv, asset_cfg: SceneEntityCfg, target_height: float = 0.1, moving_only: bool = False, sensor_cfg: SceneEntityCfg | None = None, command_threshold: float = 0.1, foot_height_offset: float = 0.0135, stop_transition_time: float = 0.0) -> torch.Tensor:
+    """Reward swing clearance using the foot body's nominal origin-to-sole height."""
     asset = env.scene[asset_cfg.name]
     feet_pos = asset.data.body_pos_w[:, asset_cfg.body_ids, :]
-    feet_pos_z = feet_pos[:, :, 2] - 0.0135
+    feet_pos_z = feet_pos[:, :, 2] - foot_height_offset
     if sensor_cfg is not None:
         # 地形相对化: 每只脚取 height_scanner 中水平距离最近的命中点作为脚下地面高度(rough 用)
         ray_hits = env.scene.sensors[sensor_cfg.name].data.ray_hits_w  # (N, R, 3), 未命中为 inf
@@ -193,7 +223,7 @@ def feet_clearance(env: ManagerBasedRLEnv, asset_cfg: SceneEntityCfg, target_hei
     error = weight * shortfall ** 2
     reward = torch.exp(-error / 0.005).mean(dim=1)
     if moving_only:  # 速度开关: 零速命令时不奖励抬脚(用于静止站立任务)
-        reward = reward * command_is_moving(env, command_threshold)
+        reward = reward * gait_motion_weight(env, command_threshold, stop_transition_time)
     return reward
 
 

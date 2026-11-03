@@ -1,4 +1,4 @@
-"""nlegs_rough 的 MuJoCo sim2sim 回放器 —— 上坡、平台、下楼梯连续地形。
+"""nlegs_rough 的 MuJoCo sim2sim 回放器 —— 上坡、平台、下坡连续地形。
 
 用法(按文件路径直接运行, 不要 python -m 走包导入):
     python source/legs_rl_lab/legs_rl_lab/tasks/nlegs_task/task/rough/sim2sim.py \
@@ -6,8 +6,7 @@
 
 地形(参数见下方可改块):
   沿 +X 行进，距原点 2m 开始，整条路线宽 2m：
-  上坡水平长 2m、抬高 20cm(约 5.71°) -> 30cm 长平台 -> 每级下降 5cm、踏面深 20cm。
-  下行踏面高度依次为 15/10/5cm，最后落回地面，共 4 次落差；踏面越高灰度越浅。
+  上坡水平长 2m、抬高 20cm(约 5.71°) -> 60cm 长平台 -> 同坡度下坡回到地面。
   --check-terrain 只检查地形碰撞面高度与衔接，不加载策略或打开窗口。
 键盘/可视化与 flat 版一致: 小键盘 8/2 4/6 7/9 调速, 原点三轴 + 速度跟踪箭头。
 """
@@ -34,106 +33,62 @@ def _load_flat_sim2sim():
 flat = _load_flat_sim2sim()
 
 # ===================== 需要自己填/改的部分（全部集中在这里） =====================
-# 要回放的训练 run（logs/rsl_rl/nlegs_rough/ 下的目录名，需先用 play 导出 exported/policy.pt）
-RUN = "2026-10-07_18-37-35"
+# 要回放的训练 run（logs/rsl_rl/nlegs_body_rough/ 下的目录名，需已有 exported/policy.pt）
+RUN = "2026-11-03_11-24-26_w1196"
 # run 所在的 logs 根目录（想用平地策略先试地形，可临时指到 .../nlegs_flat）
-LOGS_ROOT = os.path.join(flat._REPO_ROOT, "logs", "rsl_rl", "nlegs_rough")
+LOGS_ROOT = os.path.join(flat._REPO_ROOT, "logs", "rsl_rl", "nlegs_body_rough")
 # 机器人场景 XML（包含地面）；可直接改这里，或用 --xml / --scene-xml 覆盖。
 SCENE_XML = os.path.join(
-    flat._REPO_ROOT, "source", "legs_rl_lab", "legs_rl_lab", "assets", "nlegs_body", "mjcf",
-    "nlegs_body_scene.xml",
+    flat._REPO_ROOT, "source", "legs_rl_lab", "legs_rl_lab", "assets", "nlegs_v2",
+    "w1196_scene.xml",
 )
 
-# --- 平台与下楼梯（接在上坡末端，沿 +X 行进）---
-STAIR_STEP_H = 0.05      # 每级高(m)
-STAIR_STEP_D = 0.2       # 每级深(m)
-STAIR_NUM_STEPS = 4      # 下行落差次数(含最后到地面)，也决定上坡总高度
-STAIR_PLATFORM_D = 0.3   # 顶部平台长(m), 高 = NUM_STEPS * STEP_H = 0.20m
-STAIR_TREAD_GRAY = (0.35, 0.95)   # 踏面灰度区间: (最低一级, 顶部平台), 按级数线性变亮
-STAIR_RISER_RGBA = (0.05, 0.05, 0.05, 1.0)   # 立面(前后/侧面)
-STAIR_TREAD_T = 0.004    # 踏面薄板厚(m), 从黑色主体高度里扣掉, 总高不变
+# --- 顶部平台（接在上坡末端，高度与宽度沿用坡体）---
+PLATFORM_LENGTH = 0.60
+PLATFORM_RGBA = (1.0, 0.8, 0.05, 1.0)  # 亮黄色，区分平台与两侧坡面
 
 # --- 上坡（沿 +X 行进, 宽度沿 Y 居中）---
 RAMP_START = 2.0         # 近端边缘距原点(m)
-RAMP_WIDTH = 2.0         # 整条路线宽(m)，平台与下楼梯使用相同宽度
+RAMP_WIDTH = 2.0         # 整条路线宽(m)，平台与下坡使用相同宽度
 RAMP_RUN = 2.0           # 上坡水平投影长度(m)，坡度由总高度/此长度计算
-RAMP_THICKNESS = 0.01     # 坡面板厚(m), 只影响外观/底部
+RAMP_HEIGHT = 0.20       # 上坡抬高(m)，下坡使用相同高度和水平长度
+RAMP_THICKNESS = 0.30    # 地下厚度(m)：底面埋入地面，避免足底下陷时碰到坡体背面
 RAMP_RGBA = (0.55, 0.5, 0.45, 1.0)
 
 # --- 出生高度（base 原点的世界 z, 覆盖 deploy.yaml 的 base_init_state.pos[2]）---
-# 默认站姿 base_z ≈ 0.582, 故 0.82 = 约 0.24m 自由下落, 用来验证落地抗冲击/自恢复。
-DROP_HEIGHT = 0.62
+# 与 W1196 训练初始高度一致，默认站姿足底距地约 3.7cm。
+DROP_HEIGHT = 0.555
 # ==============================================================================
 
 # flat.load_config 读取模块全局 LOGS_ROOT
 flat.LOGS_ROOT = LOGS_ROOT
 
 
-def _add_box(spec, name, pos, size, rgba, quat=(1.0, 0.0, 0.0, 0.0)):
+def add_terrain(spec):
+    """用单一凸棱柱连接上下坡与平台，避免分块内部端面产生横向接触力。"""
+    up_end = RAMP_START + RAMP_RUN
+    down_start = up_end + PLATFORM_LENGTH
+    end = down_start + RAMP_RUN
+    profile = [(RAMP_START, -RAMP_THICKNESS), (end, -RAMP_THICKNESS),
+               (end, 0.0), (down_start, RAMP_HEIGHT),
+               (up_end, RAMP_HEIGHT), (RAMP_START, 0.0)]
+    vertices = [[x, y, z] for y in (-RAMP_WIDTH / 2, RAMP_WIDTH / 2) for x, z in profile]
+    spec.add_mesh(name="ramp_course_mesh", uservert=np.asarray(vertices).ravel().tolist())
     spec.worldbody.add_geom(
-        name=name, type=mujoco.mjtGeom.mjGEOM_BOX,
-        pos=list(pos), size=list(size), quat=list(quat), rgba=list(rgba),
+        name="ramp_course", type=mujoco.mjtGeom.mjGEOM_MESH, meshname="ramp_course_mesh",
+        rgba=list(RAMP_RGBA), contype=1, conaffinity=1, group=0,
+    )
+    # 仅用于着色；抬高 0.2mm 避免共面闪烁，碰撞仍使用完整坡体。
+    spec.worldbody.add_geom(
+        name="platform_color", type=mujoco.mjtGeom.mjGEOM_BOX,
+        pos=[(up_end + down_start) / 2, 0.0, RAMP_HEIGHT + 0.0001],
+        size=[PLATFORM_LENGTH / 2, RAMP_WIDTH / 2, 0.0001],
+        rgba=list(PLATFORM_RGBA), contype=0, conaffinity=0, group=2,
     )
 
 
-def _tread_rgba(level):
-    """第 level 级(1..N)踏面的灰度: 最低一级最深、顶部平台最浅。"""
-    lo, hi = STAIR_TREAD_GRAY
-    gray = lo + (hi - lo) * (level - 1) / max(STAIR_NUM_STEPS - 1, 1)
-    return (gray, gray, gray, 1.0)
-
-
-def _add_step(spec, name, x0, depth, h, half_w, tread_rgba):
-    """一级台阶 = 黑色立面主体(高 h - t) + 顶面灰阶踏面薄板(厚 t)。
-
-    拆成两块而不是直接叠一层薄板: 黑块高度扣掉板厚, 两者拼起来总高仍精确为 h,
-    碰撞面高度与改色前一致, 也不会因共面产生 z-fighting。
-    """
-    t = min(STAIR_TREAD_T, h)
-    body_h = h - t
-    if body_h > 0:
-        _add_box(spec, f"{name}_riser", (x0 + depth / 2, 0.0, body_h / 2),
-                 (depth / 2, half_w, body_h / 2), STAIR_RISER_RGBA)
-    _add_box(spec, f"{name}_tread", (x0 + depth / 2, 0.0, h - t / 2),
-             (depth / 2, half_w, t / 2), tread_rgba)
-
-
-def _add_stairs(spec):
-    """从上坡末端接平台，再逐级下行回到地面。"""
-    half_w = RAMP_WIDTH / 2
-    x = RAMP_START + RAMP_RUN
-    h_top = STAIR_NUM_STEPS * STAIR_STEP_H
-    _add_step(spec, "stair_platform", x, STAIR_PLATFORM_D, h_top, half_w,
-              _tread_rgba(STAIR_NUM_STEPS))
-    x += STAIR_PLATFORM_D
-    for i in range(STAIR_NUM_STEPS - 1, 0, -1):
-        _add_step(spec, f"stair_down_{i}", x, STAIR_STEP_D, i * STAIR_STEP_H, half_w, _tread_rgba(i))
-        x += STAIR_STEP_D
-
-
-def _add_ramp(spec):
-    """沿 +X 上坡，板顶面从地面准确接到平台高度。"""
-    rise = STAIR_NUM_STEPS * STAIR_STEP_H
-    angle = np.arctan2(rise, RAMP_RUN)
-    slope_len = RAMP_RUN / np.cos(angle)
-    half_w, half_t = RAMP_WIDTH / 2, RAMP_THICKNESS / 2
-    half_angle = angle / 2
-
-    # 绕 Y 轴转 -angle，并沿法线下移半个板厚，保证顶面两端没有额外台阶。
-    top_mid_x = RAMP_START + RAMP_RUN / 2
-    _add_box(spec, "ramp_up",
-             (top_mid_x + half_t * np.sin(angle), 0.0, rise / 2 - half_t * np.cos(angle)),
-             (slope_len / 2, half_w, half_t), RAMP_RGBA,
-             quat=(np.cos(half_angle), 0.0, -np.sin(half_angle), 0.0))
-
-
-def add_terrain(spec):
-    _add_ramp(spec)
-    _add_stairs(spec)
-
-
 def _check_terrain():
-    """用 MuJoCo 射线检查坡面、平台、各级踏面及接缝两侧。"""
+    """用 MuJoCo 射线检查上下坡、平台及接缝两侧，并检查坡面接触法向。"""
     spec = mujoco.MjSpec.from_string(
         '<mujoco><worldbody><geom type="plane" size="10 10 0.1"/></worldbody></mujoco>'
     )
@@ -141,43 +96,69 @@ def _check_terrain():
     model = spec.compile()
     data = mujoco.MjData(model)
     mujoco.mj_forward(model, data)
-    rise = STAIR_NUM_STEPS * STAIR_STEP_H
+    rise = RAMP_HEIGHT
+    # 射线避开 mesh 共享边的浮点歧义；精确接缝另用下方接触检查覆盖。
     epsilon = 1e-6
     samples = [(RAMP_START - epsilon, 0.0)]
     samples += [(RAMP_START + s, rise * s / RAMP_RUN)
                 for s in (epsilon, RAMP_RUN / 2, RAMP_RUN - epsilon)]
     x = RAMP_START + RAMP_RUN
-    for level in range(STAIR_NUM_STEPS, 0, -1):
-        depth = STAIR_PLATFORM_D if level == STAIR_NUM_STEPS else STAIR_STEP_D
-        samples += [(x + s, level * STAIR_STEP_H)
-                    for s in (epsilon, depth / 2, depth - epsilon)]
-        x += depth
-    samples.append((x + epsilon, 0.0))
+    samples += [(x + s, rise) for s in (epsilon, PLATFORM_LENGTH / 2, PLATFORM_LENGTH - epsilon)]
+    x += PLATFORM_LENGTH
+    samples += [(x + s, rise * (1 - s / RAMP_RUN))
+                for s in (epsilon, RAMP_RUN / 2, RAMP_RUN - epsilon)]
+    samples.append((x + RAMP_RUN + epsilon, 0.0))
     geom_id = np.zeros(1, dtype=np.int32)
-    for x, height in samples:
-        for y in (-RAMP_WIDTH / 2 + epsilon, 0.0, RAMP_WIDTH / 2 - epsilon,
+    collision_groups = np.array([1, 0, 0, 0, 0, 0], dtype=np.uint8)
+    for sample_x, height in samples:
+        for y in (-RAMP_WIDTH / 2 - epsilon, -RAMP_WIDTH / 2 + epsilon, 0.0, RAMP_WIDTH / 2 - epsilon,
                   RAMP_WIDTH / 2 + epsilon):
             expected = height if abs(y) < RAMP_WIDTH / 2 else 0.0
-            distance = mujoco.mj_ray(model, data, np.array([x, y, rise + 1.0]),
-                                    np.array([0.0, 0.0, -1.0]), None, 1, -1, geom_id)
+            distance = mujoco.mj_ray(model, data, np.array([sample_x, y, rise + 1.0]),
+                                    np.array([0.0, 0.0, -1.0]), collision_groups, 1, -1, geom_id)
             assert distance >= 0.0 and np.isclose(rise + 1.0 - distance, expected, atol=1e-8), (
-                x, y, expected, rise + 1.0 - distance
+                sample_x, y, expected, rise + 1.0 - distance
             )
-    assert model.ngeom == 2 + 2 * STAIR_NUM_STEPS
-    print("[sim2sim] 地形检查通过：上坡、平台、下楼梯高度/宽度及接缝正确")
+    assert model.ngeom == 3  # 地面、连续坡体和无碰撞的着色面
+
+    # 原 10mm 薄板在脚底球心穿过中面后会产生向下接触；复现该侵入量。
+    assert RAMP_THICKNESS > 0.0, "坡体底面必须埋入地面"
+    probe = spec.worldbody.add_body(name="terrain_contact_probe")
+    probe.add_freejoint()
+    probe.add_geom(name="probe", type=mujoco.mjtGeom.mjGEOM_SPHERE,
+                   size=[0.0035, 0.0, 0.0], mass=1.0)
+    model = spec.compile()
+    data = mujoco.MjData(model)
+    ramp_id, probe_id = model.geom("ramp_course").id, model.geom("probe").id
+    up_end = RAMP_START + RAMP_RUN
+    down_start = up_end + PLATFORM_LENGTH
+    contact_x = [RAMP_START + RAMP_RUN / 2, down_start + RAMP_RUN / 2]
+    contact_x += [seam + offset for seam in (up_end, down_start) for offset in (-0.001, 0.0, 0.001)]
+    for sample_x in contact_x:
+        height = np.interp(sample_x, [RAMP_START, up_end, down_start, down_start + RAMP_RUN],
+                           [0.0, rise, rise, 0.0])
+        data.qpos[:3] = (sample_x, 0.0, height - 0.0055)
+        mujoco.mj_forward(model, data)
+        contacts = [c for c in data.contact if {c.geom1, c.geom2} == {ramp_id, probe_id}]
+        assert contacts, f"侵入坡面 x={sample_x} 的探针必须产生接触"
+        for contact in contacts:
+            sign = 1.0 if contact.geom2 == probe_id else -1.0
+            assert sign * contact.frame[2] > 0.99, "坡面及接缝接触法向必须向上"
+    print(f"[sim2sim] 地形检查通过：上下坡/{PLATFORM_LENGTH:g}m平台高度、宽度及接缝正确，"
+          "坡面和接缝侵入9mm仍向上支撑")
 
 
 class RoughRunner(flat.MujocoRunner):
-    """flat 的 MujocoRunner + 连续上坡/平台/下楼梯地形。"""
+    """flat 的 MujocoRunner + 连续上坡/平台/下坡地形。"""
 
     def _make_model(self, cfg):
         spec = mujoco.MjSpec.from_file(cfg.scene_xml)
         add_terrain(spec)
-        rise = STAIR_NUM_STEPS * STAIR_STEP_H
+        rise = RAMP_HEIGHT
         angle = np.rad2deg(np.arctan2(rise, RAMP_RUN))
         print(f"[sim2sim] 地形: +X {RAMP_START}m 起，宽 {RAMP_WIDTH}m，上坡 {RAMP_RUN}m "
-              f"抬高 {rise:.2f}m ({angle:.2f}°) → 平台 {STAIR_PLATFORM_D}m → "
-              f"下楼 {STAIR_NUM_STEPS} 级，每级高 {STAIR_STEP_H}m / 深 {STAIR_STEP_D}m")
+              f"抬高 {rise:.2f}m ({angle:.2f}°) → 平台 {PLATFORM_LENGTH}m → "
+              f"下坡 {RAMP_RUN}m 降低 {rise:.2f}m ({angle:.2f}°)")
         return spec.compile()
 
 

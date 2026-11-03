@@ -1,0 +1,112 @@
+<?xml version="1.0"?>
+<!-- Serial equivalent candidate with supplied masses and approximate distribution. Joint angle limits initialized from ../nlegs/mjcf/nlegs.xml; W1196 hardware limits remain unverified. Sole contact uses six capsules per foot in geom group 3. No actuators. Four 5 g ankle rods contribute half mass and half full-shape inertia to each adjacent Link5/6; their visuals are omitted. Joint6 is the foot support axis, not the physical motor6 axis. Not deployment ready. -->
+<mujoco model="w1196_mass_serial_candidate">
+  <compiler angle="radian" meshdir="meshes" inertiafromgeom="false" fusestatic="false" />
+  <option gravity="0 0 -9.81" timestep=".002" />
+  <statistic center="0 0 .35" extent=".8" />
+  <visual>
+    <global azimuth="135" elevation="-15" />
+  </visual>
+  <default>
+    <geom type="mesh" contype="0" conaffinity="0" group="1" mass="0" />
+    <joint type="hinge" limited="true" damping="0" frictionloss="0" armature="0" />
+    <default class="collision">
+      <geom type="capsule" contype="1" conaffinity="1" group="3" rgba="0.9373 0.2667 0.2667 1" mass="0" />
+    </default>
+  </default>
+  <asset>
+    <mesh name="base" file="base.stl" />
+    <mesh name="Link_R1" file="Link_R1.stl" />
+    <mesh name="Link_R2" file="Link_R2.stl" />
+    <mesh name="Link_R3" file="Link_R3.stl" />
+    <mesh name="Link_R4" file="Link_R4.stl" />
+    <mesh name="Link_R5" file="Link_R5.stl" />
+    <mesh name="Link_R6" file="Link_R6.stl" />
+    <mesh name="Link_L1" file="Link_L1.stl" />
+    <mesh name="Link_L2" file="Link_L2.stl" />
+    <mesh name="Link_L3" file="Link_L3.stl" />
+    <mesh name="Link_L4" file="Link_L4.stl" />
+    <mesh name="Link_L5" file="Link_L5.stl" />
+    <mesh name="Link_L6" file="Link_L6.stl" />
+  </asset>
+  <worldbody>
+    <body name="base" pos="0 0 0.5344999999846612">
+      <freejoint name="base_freejoint" />
+      <site name="imu" pos="0 0 0" quat="1 0 0 0" size="0.005" group="3" />
+      <inertial pos="0.001311546152755235 0.008184832988821071 0.06444376579446" mass="4.462000000000001" fullinertia="0.02607940086791063 0.0236261825528591 0.01067647350301191 6.388923588345428e-06 -0.0001954442494219474 -0.0001235184789469238" />
+      <geom name="base_visual" mesh="base" rgba="0.4823529411764706 0.5294117647058824 0.5803921568627451 1" />
+      <body name="Link_R1" pos="3.250733016102e-15 -0.03170000000000001 -7.169376203819e-15">
+        <joint name="joint_R1" axis="0 1 0" range="-3.14 1.05" />
+        <inertial pos="-0.001731789476731765 -0.07789059396692577 4.113476528994694e-05" mass="0.5233527419274361" fullinertia="0.0003582130801425279 0.0002561161944667759 0.000411118822251735 6.848880413154678e-07 -3.50573806984792e-07 -1.834293638891301e-06" />
+        <geom name="Link_R1_visual" mesh="Link_R1" rgba="0.8313725490196079 0.6078431372549019 0.2235294117647059 1" />
+        <body name="Link_R2" pos="9.999999973017282e-05 -0.08689435624619021 4.65451635567403e-14">
+          <joint name="joint_R2" axis="1 -1.201721881727291e-12 -1.020489248659828e-12" range="-3.14 0.26" />
+          <inertial pos="0.004390563796393174 2.387062672526419e-09 -0.07513064172299261" mass="0.5551540310987855" fullinertia="0.0007535684341087733 0.0008646327077814207 0.0003385751736074426 8.860882365484056e-11 -0.0001457278691822788 2.275883381590696e-11" />
+          <geom name="Link_R2_visual" mesh="Link_R2" rgba="0.8784313725490196 0.4235294117647059 0.3411764705882353 1" />
+          <body name="Link_R3" pos="8.904671704862421e-14 3.418099137064701e-14 -0.1215000000000394">
+            <joint name="joint_R3" axis="-8.226804654176687e-13 3.732691239433094e-14 1" range="-2.75 2.75" />
+            <inertial pos="5.118034619443516e-07 0.0001383376466927849 -0.09607529632432829" mass="0.5365901536600597" fullinertia="0.000858877808690079 0.0007808097465560128 0.000278077326076354 5.717959717365896e-11 5.994262665220275e-10 6.500442331546934e-06" />
+            <geom name="Link_R3_visual" mesh="Link_R3" rgba="0.2352941176470588 0.6666666666666666 0.5725490196078431 1" />
+            <body name="Link_R4" pos="5.220772591361743e-07 -3.418099137064701e-14 -0.1120000000001222">
+              <joint name="joint_R4" axis="-8.079648061709575e-13 1 4.039086773377498e-14" range="0 1.92" />
+              <inertial pos="-5.177772282975588e-07 -0.003945725905297029 -0.1708198407587629" mass="0.7011540310987853" fullinertia="0.004004916636731645 0.003872703011849385 0.0003829514345940063 8.43603670460903e-11 -4.987461700261894e-10 0.0002820119987104675" />
+              <geom name="Link_R4_visual" mesh="Link_R4" rgba="0.3294117647058823 0.5607843137254902 0.7843137254901961 1" />
+              <body name="Link_R5" pos="-5.221045894395458e-07 0 -0.2209999999844697">
+                <joint name="joint_R5" axis="4.842742873378825e-11 1 1.080902263662132e-11" range="-0.8 0.8" />
+                <inertial pos="0.0486708055372131 0.001789072597032357 -0.01560582680199324" mass="0.5683080621975707" fullinertia="0.0004194501461699472 0.0007800621324809716 0.0008448113223529265 4.744981812912556e-05 -9.066706942641594e-05 -1.321591132929411e-05" />
+                <geom name="Link_R5_visual" mesh="Link_R5" rgba="0.6039215686274509 0.4549019607843137 0.7333333333333333 1" />
+                <body name="Link_R6" pos="2.72412602051646e-11 3.393313408039944e-12 -0.04999999999976518">
+                  <joint name="joint_R6" axis="1 -6.402126424712338e-13 -2.459174385492478e-13" range="-0.35 0.35" />
+                  <inertial pos="0.05680809167050895 -9.669667844214302e-12 -0.01066791330438788" mass="0.3" fullinertia="0.0001659828081445008 0.00087892780908664 0.00102713232447288 1.073739058244109e-13 -6.272115355006514e-06 2.260267185683106e-14" />
+                  <geom name="Link_R6_visual" mesh="Link_R6" rgba="0.5607843137254902 0.6705882352941176 0.3137254901960784 1" />
+                  <geom name="right_sole_1" class="collision" fromto="-0.02 -0.039 -0.012 0.13 -0.039 -0.012" size="0.0035" />
+                  <geom name="right_sole_2" class="collision" fromto="-0.035 -0.025 -0.012 0.148 -0.025 -0.012" size="0.0035" />
+                  <geom name="right_sole_3" class="collision" fromto="-0.04 -0.01 -0.012 0.154 -0.01 -0.012" size="0.0035" />
+                  <geom name="right_sole_4" class="collision" fromto="-0.04 0.01 -0.012 0.154 0.01 -0.012" size="0.0035" />
+                  <geom name="right_sole_5" class="collision" fromto="-0.035 0.025 -0.012 0.148 0.025 -0.012" size="0.0035" />
+                  <geom name="right_sole_6" class="collision" fromto="-0.02 0.039 -0.012 0.13 0.039 -0.012" size="0.0035" />
+                </body>
+              </body>
+            </body>
+          </body>
+        </body>
+      </body>
+      <body name="Link_L1" pos="-0.000107718151074424 0.04629707628935469 -7.169376203819e-15">
+        <joint name="joint_L1" axis="-0.002762591649061026 0.9999961840364096 0" range="-3.14 1.04" />
+        <inertial pos="-0.001947001459798387 0.07789933399858653 4.113501054479035e-05" mass="0.52335272582709" fullinertia="0.0003582160628454823 0.0002561131853922171 0.0004111188038821091 -4.028283754489905e-07 -3.556402641481541e-07 1.833323081431891e-06" />
+        <geom name="Link_L1_visual" mesh="Link_L1" rgba="0.8313725490196079 0.6078431372549019 0.2235294117647059 1" />
+        <body name="Link_L2" pos="-0.0001539103241635637 0.08690808323034344 4.655926487271371e-14">
+          <joint name="joint_L2" axis="0.9999961840364062 0.002762591650262745 -1.020489248659828e-12" range="-0.26 3.14" />
+          <inertial pos="0.004404364981875374 1.217224169594577e-05 -0.07513064548391389" mass="0.5551540310987855" fullinertia="0.0007535690642515051 0.0008646316555480233 0.0003385751937382929 -3.067560801116176e-07 -0.0001457272963299569 -4.026254526900662e-07" />
+          <geom name="Link_L2_visual" mesh="Link_L2" rgba="0.8784313725490196 0.4235294117647059 0.3411764705882353 1" />
+          <body name="Link_L3" pos="1.381813896891555e-05 3.817398683270135e-08 -0.1215000000000394">
+            <joint name="joint_L3" axis="-8.225746472856341e-13 -3.9603520116116e-14 1" range="-2.75 2.75" />
+            <inertial pos="8.939839874908461e-07 -0.0001383445396463678 -0.0960752840108053" mass="0.5365901546665754" fullinertia="0.0008588777147758481 0.0007808108531930358 0.0002780773248713863 2.156112496379684e-07 1.855861566543155e-08 -6.500432945112204e-06" />
+            <geom name="Link_L3_visual" mesh="Link_L3" rgba="0.2352941176470588 0.6666666666666666 0.5725490196078431 1" />
+            <body name="Link_L4" pos="5.220752668187441e-07 1.442320402000874e-09 -0.1120000000001222">
+              <joint name="joint_L4" axis="-0.002762591648253098 0.9999961840364118 -4.039086773377497e-14" range="0 1.92" />
+              <inertial pos="-1.141924561192298e-05 0.003945706037208702 -0.1708198528873571" mass="0.7011540310987854" fullinertia="0.004004913510379201 0.003872701931520562 0.0003829514533629364 3.651915223414464e-07 7.787116907269639e-07 -0.0002820104473526872" />
+              <geom name="Link_L4_visual" mesh="Link_L4" rgba="0.3294117647058823 0.5607843137254902 0.7843137254901961 1" />
+              <body name="Link_L5" pos="-5.221025971005534e-07 -1.442361063919151e-09 -0.2209999999844697">
+                <joint name="joint_L5" axis="-0.00276259169748827 0.9999961840362758 -1.080902263662132e-11" range="-0.8 0.8" />
+                <inertial pos="0.04867556228784679 -0.001654608209141289 -0.0156058268019274" mass="0.5683080621975707" fullinertia="0.0004197150663153892 0.0007797972123893643 0.0008448113223299656 -4.844531368609111e-05 -9.070323355165069e-05 1.296538480341408e-05" />
+                <geom name="Link_L5_visual" mesh="Link_L5" rgba="0.6039215686274509 0.4549019607843137 0.7333333333333333 1" />
+                <body name="Link_L6" pos="-1.381811162926526e-05 -3.817733931765765e-08 -0.04999999999976529">
+                  <joint name="joint_L6" axis="0.9999961840364078 0.002762591649701237 -2.459174385492478e-13" range="-0.35 0.35" />
+                  <inertial pos="0.05682169301887194 0.0001569757387385184 -0.01066791330875627" mass="0.3" fullinertia="0.0001659882493063904 0.0008789223682702896 0.001027132324832856 -1.9695684582097e-06 -6.272091388552784e-06 -1.732730270401076e-08" />
+                  <geom name="Link_L6_visual" mesh="Link_L6" rgba="0.5607843137254902 0.6705882352941176 0.3137254901960784 1" />
+                  <geom name="left_sole_1" class="collision" fromto="-0.02009384703577 0.03894463756053 -0.012 0.12990558056969 0.03935902630799 -0.012" size="0.0035" />
+                  <geom name="left_sole_2" class="collision" fromto="-0.03505511351322 0.02490325210928 -0.012 0.14794418816545 0.02540880638117 -0.012" size="0.0035" />
+                  <geom name="left_sole_3" class="collision" fromto="-0.04001365555865 0.00988949639048 -0.012 0.15398560414441 0.01042543917052 -0.012" size="0.0035" />
+                  <geom name="left_sole_4" class="collision" fromto="-0.03995840372566 -0.01011042729025 -0.012 0.1540408559774 -0.00957448451021 -0.012" size="0.0035" />
+                  <geom name="left_sole_5" class="collision" fromto="-0.03491698393073 -0.02509655709255 -0.012 0.14808231774793 -0.02459100282065 -0.012" size="0.0035" />
+                  <geom name="left_sole_6" class="collision" fromto="-0.01987836488709 -0.03905506479431 -0.012 0.13012106271837 -0.03864067604685 -0.012" size="0.0035" />
+                </body>
+              </body>
+            </body>
+          </body>
+        </body>
+      </body>
+    </body>
+  </worldbody>
+</mujoco>

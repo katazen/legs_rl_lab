@@ -21,15 +21,16 @@ Layout assumptions (validated against this task's config):
   i.e. sin/cos both negate.
 - A group may end with a height_scan term. The scan is an nx(x) x ny(y) grid in the
   base-yaw frame (GridPatternCfg with ordering="xy" -> flattened as idx = iy*nx + ix);
-  its mirror flips the grid along y (iy -> ny-1-iy), heights keep their sign. Three
+  its mirror flips the grid along y (iy -> ny-1-iy), heights keep their sign. Four
   flavours are in use:
     * nlegs_rough      critic only, 17x11=187, group-level history (10 frames) -> 2490
+    * nlegs_body_rough critic only, 17x11=187, group-level history (15 frames) -> 3735
     * nlegs_rough_step critic only, 17x11=187, current frame only            ->  807
     * nlegs_rough_info policy AND critic, 16x11=176, current frame only      ->  646 / 796
   (the 16x11 grid is size=[1.5, 1.0] with offset x=+0.25, i.e. 1.0m ahead / 0.5m behind
   / 0.5m each side of the base.)
   ``_mirror_maps`` picks the layout among the candidates by the observation dimension
-  (policy: 470 / 646; critic: 620 / 2490 / 807 / 796).
+  (policy: 470 / 646 / 705; critic: 620 / 2490 / 807 / 796 / 3735).
 """
 
 from __future__ import annotations
@@ -129,6 +130,11 @@ def _mirror_maps(obs_type: str, obs_dim: int, device: torch.device):
         candidates.append(_TERMS[obs_type] + [_HSCAN_TERM])
         candidates.append(_TERMS[obs_type] + [_HSCAN_TERM_CURRENT])
     candidates.append(_TERMS[obs_type] + [_HSCAN_TERM_INFO])
+    # body_rough: all terms (including critic height scan) carry 15 frames.
+    body_terms = [(*term, 15) for term in _TERMS[obs_type]]
+    if obs_type == "critic":
+        body_terms.append(_hscan_term(17, 11, 15))
+    candidates.append(body_terms)
     expected = [sum(t[0] * _term_history(t) for t in terms) for terms in candidates]
     if obs_dim not in expected:
         raise ValueError(

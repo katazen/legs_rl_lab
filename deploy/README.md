@@ -1,176 +1,150 @@
-# 统一三任务实机部署
+# 实机部署
 
-## 统一走路 / 下蹲 / 起身
+实机使用两款自研电机：L1–L5、R1–R5 为大电机，L6/R6（ankle roll）为小电机。
+旧代码的达妙名称只是历史软件标签，不能用于推断实际硬件、固件或电流—力矩关系。
 
-只用 `start_real.sh` 和一个 `rl_real_common` 节点。唯一公共配置是
-`rl_real_py/configs/common.yaml`：`tasks` 选择三份模型，其余字段配置硬件与动作过渡，无配置覆盖层。
-不会自动选择最新 checkpoint；实机模型由此配置显式选择，不跟随 sim2sim 默认值。
-当前启用走路 `nlegs_rough/2026-09-20_19-15-58`、
-下蹲 `nlegs_mimic_crouch/2026-09-17_16-42-11`、起身 `nlegs_mimic_stand/2026-09-17_15-40-44`。
-下蹲按 2 / LB+X，起身按 3 / LB+Y；换模型仍须通过端点、任务限位与 PD 一致性检查。
-需要临时禁用下蹲时可设 `tasks.crouch: null`，禁用按键不会改变当前目标。
-当前下蹲训练已改用 `nlegs_crouch/motions/stand_to_crouch_v3.npz`：341 帧、100Hz、3.4s，
-末帧与 `crouch_to_stand_v2.npz` 首帧的关节角和机身姿态一致。沿用当前 limit USD/XML、原奖励和朝向跟踪，
-随机推扰仍只在 1.48–2.28s 下蹲段施加；旧 v2 文件保留，仅供旧记录核对。
-`rl_real_common.py` 中的 `Policy` 共用模型加载、观测、动作映射；`multi_task.py` 只管理切换。
-旧单策略入口、`start_mimic.sh`、`start_now.sh`、`--multi`、`--start-from-current` 和自动回站立已退役。
+## 配置与数据流
 
-当前模型回放（仓库根目录、`unitree_lab` 环境）：
+- `rl_real_py/configs/common.yaml`：选择策略、手柄映射、部署频率和过渡参数。
+  当前只启用 rough `2026-08-26_20-37-55`，`crouch` / `rise` 均为 null。
+- `control_ws/src/armcontrol/config/motors.yaml`：唯一电机型号、CAN ID、方向及协议编码量程定义。
+- 各策略 `params/deploy.yaml`：训练观测、动作、PD 和周期；`sync_pd.py` 按关节名同步 PD。
+- RL 节点不读取关节限位；`joint_limits.py` 仅供独立实验工具读取 MJCF 边界。
 
-```bash
-python source/legs_rl_lab/legs_rl_lab/tasks/mimic_task/task/nlegs_crouch/sim2sim.py
-python scripts/sim2sim.py
+```text
+电机反馈 → direction × (q, dq, effort) → /left_joint_states
+q/dq + IMU → 按关节名重排 → 策略
+策略动作 → 原始 action 幅度裁剪 → offset + scale × action → 重排 → /dog_joint_pos
+direction × 关节位置目标 → MIT(q_des, dq_des=0, effort_ff=0, Kp, Kd)
 ```
 
-独立下蹲回放从站姿等待，按 5 开始；统一回放按 2 下蹲、3 起身。
-统一回放未指定的模型读取 common 的 `tasks`，不再默认混用旧下蹲/旧起身；可用 `--rise-run` 验证新起身。
-Play 使用所选 run 记录的参考文件，不会把旧权重自动配成新版数据；旧模型与当前模型校验不符时仍拒绝运行。
-以后更新权重需先用对应任务的 Play 导出，再用 `--run` / `--crouch-run` 离线验证，最后显式更新 `tasks.crouch`。
-部署代码自动读取该 run 的参考和训练 action clip；关节目标边界统一从 `nlegs_limit.xml` 读取。
-参考端点匹配和仿真通过不能代替实机验证；不混用旧 v2 下蹲权重与 v3 数据。
+ROS 数组顺序固定为 `[L1..L6,R1..R6]`，`JointState.name` 使用这些名称。
+`/joint_states` 和 `/left_joint_states` 都发布完整 12 关节。
+策略顺序由模型按关节名映射；重排不取反。IMU 安装旋转独立在 `_on_imu()` 转换。
+驱动 `max_vel` 必须为 0，保持训练使用的零目标速度 PD。
 
-在实际控制机器人的主机上编译、预检：
+## 电机参数与方向来源
+
+| 关节 | 用途 | 型号 | 每侧 Slave/Master ID | 左侧 direction | 右侧 direction | 当前 Kp / Kd |
+|---|---|---|---|---:|---:|---|
+| 1 | 髋 pitch | large | 1 / 17 | +1 | −1 | 200 / 5 |
+| 2 | 髋 roll | large | 2 / 18 | +1 | +1 | 100 / 5 |
+| 3 | 髋 yaw | large | 3 / 19 | −1 | −1 | 100 / 5 |
+| 4 | 膝 | large | 4 / 20 | +1 | −1 | 250 / 5 |
+| 5 | 踝 pitch | large | 6 / 22 | −1 | +1 | 40 / 2 |
+| 6 | 踝 roll | small | 7 / 23 | +1 | +1 | 40 / 0.5 |
+
+左右使用独立通信接口，故 CAN ID 可以相同。
+大小电机当前都继承原编码范围：位置 ±12.5、速度 ±45、effort ±30。
+位置/速度接口使用 rad、rad/s；effort 保留固件反馈标度。
+这些量程不是机械行程、实测转速上限或关节输出力矩上限。
+PD 表对应当前 walk 模型；换模型时以导出配置与同步结果为准。
+
+方向值继承 Git 提交 `374cc3a`（2026-09-18）中的 `kLegCmdSign` / `kLegFbSign`，本次没有重新测量或改值。
+历史反馈注释称 L3、L5、R1、R3、R4 按实测取反；命令注释还提到右腿 3/5/6 的执行方向修正。
+但该提交为整份源码导入，没有逐电机标定过程；旧注释描述的修改过程也不能完整推导出最终表。
+因此只能确认这些是已有部署约定，不能证明它们与模型物理正方向逐项一致。
+型号、CAN ID、左右镜像关系都不能单独推导安装方向。
+
+`direction` 同时用于命令及 q/dq/带符号 effort 反馈，避免两张表各自漂移。
+命令与反馈一起取反时，目标跟踪仍能自洽；effort 的相关性检查同样不能证明物理方向正确。
+若要标定，需逐关节记录已知姿态下的实际运动方向，与模型小幅正角度变化比较。
+
+## 编译与预检
+
+在机器人使用的主机上执行：
 
 ```bash
-cd /home/woan/workspace/legs_rl_lab/deploy/rl_real_py
 source /opt/ros/humble/setup.bash
-colcon build --packages-select rl_real_py
-cd /home/woan/workspace/legs_rl_lab/deploy
-./start_real.sh --check-only
+(cd deploy/control_ws && colcon build --packages-select armcontrol)
+(cd deploy/imu_ws && colcon build --packages-select wit_ros2_imu)
+(cd deploy/rl_real_py && colcon build --packages-select rl_real_py)
+./deploy/start_real.sh --check-only
 ```
 
-`--check-only` 不启动驱动、不发布目标、不改 PD。正常启动前也会预检启用的模型、参考端点、共同 PD/周期和限位；不一致就拒绝启动。
-检查通过且现场准备好后，使用 `./start_real.sh`。启动收到完整关节和 IMU 反馈后保持当前实测姿态，按关节角选择就近的站姿或蹲姿入口；**不自动插值回站立**，也不自动运行策略。
+默认 x86 使用 USB-CAN 串口 `/dev/ttyCANL` / `/dev/ttyCANR`、921600 baud；
+ARM 默认使用 SocketCAN `can2` / `can1`。可用 `-DARMCOMM=SERIAL` 或 `CAN` 显式选择。
+两条通信路径使用同一套编码、解码及方向转换。
 
-RL 窗口在启动、状态切换（包括动作完成）、操作被拒绝及键盘调速/清零后显示 `[操作提示]`：
-只用一行显示当前中文状态和可用按键。
-正常控制循环和连续摇杆输入不重复刷屏；`--check-only` 不显示控制操作提示。
+`--check-only` 检查模型、PD、硬件配置及安装版驱动的离线模式；不打开电机端口、不使能、不发布控制目标。
+正常启动先同步 PD 和 motors.yaml 至安装目录，再启动 IMU、驱动和 RL。
+驱动正常启动会使能电机；RL 收到完整反馈后保持当前实测姿态，等待操作者开始。
 
-| 操作 | 键盘 | 手柄 | 允许的起点 |
-|---|---|---|---|
-| 走路 | 1 | LB+A | `stand_ready` |
-| 下蹲 | 2 | LB+X | `stand_ready` |
-| 起身 | 3 | LB+Y | `crouch_ready` |
-| 手动慢回准备站姿 | 4 | LB+Start | `stand_ready` / `crouch_ready` / `stopped` |
-| 立即停止走路策略并下发默认站姿 | 0 | Start | `walking` |
-| 中断并锁存，保持最后下发目标 | 无 | B | 任意阶段 |
-| 解锁，不自动复位或续播 | R | Back | `stopped` |
+## 操作
 
-W/S、A/D、Q/E 控制速度；空格清零速度，不等于退出走路策略。小键盘使用数字模式。
-手柄统一使用 ROS `game_controller_node` 的 SDL 标准映射，发布到专用 `/gamepad`；不再读取原始 `/joy`。
-机器人电脑另开终端运行一份手柄节点（`start_real.sh` 不重复启动它）：
+| 操作 | 键盘 | 标准 SDL 手柄 |
+|---|---|---|
+| 开始走路 | 1 | LB+A |
+| 停止走路并立即下发默认站姿 | 0 | Start |
+| 中断并保持最后目标 | — | B |
+| 解锁，不自动恢复运动 | R | Back |
+| 保持状态下慢回站姿 | 4 | LB+Start |
+| 下蹲 / 起身（启用对应模型后） | 2 / 3 | LB+X / LB+Y |
+| 切换左摇杆 / 方向键平移 | — | RB（右肩键，不是 RT 扳机） |
+
+慢回站姿使用 `return_max_speed` 限制目标插值速度，现场须支撑机器人。
+B 保持目标，不切断电源；运行中反馈异常、推理异常或电机告警不会自动锁停。
+推理异常保留上一目标并重试。0/Start 不等待接地确认；默认站姿目标不代表瞬间到位。
+启用下蹲/起身时仍核对 PD、周期、参考文件和起身末帧；参考关节角不再做范围验收。
+
+`start_real.sh` 自动启动手柄节点（需安装 `ros-humble-joy`），已有正确的 `/gamepad` 节点时复用；`stop_real.sh` 一并关闭手柄节点。`--check-only` 不启动手柄。仅在单独诊断手柄时使用以下命令，不与普通 `joy_node` 混用：
 
 ```bash
 source /opt/ros/humble/setup.bash
 ros2 run joy game_controller_node --ros-args -p autorepeat_rate:=20.0 -r joy:=/gamepad
 ```
 
-左摇杆前后/左右控制前后/横移，右摇杆左右控制转向，扳机不控制速度。
-速度指令不做缓升/缓降，摇杆回中后下一控制周期归零；保留死区、失联归零和任务接管过渡。
-键盘与手柄合成后的 `vx/vy/wz` 按 `rl_real_py/configs/common.yaml` 的 `velocity_command_limits` 截断；范围必须包含零，且不得超出走路策略训练时的命令范围。
-标准轴为 LEFTX/LEFTY/RIGHTX/RIGHTY/LT/RT=0/1/2/3/4/5；按钮 A/B/X/Y=0/1/2/3、LB=9、Back=4、Start=6。
-`gamepad_buttons` 已按此标准配置；不能把普通 `joy_node` 重映射到 `/gamepad`，原始轴序与标准轴序不同。
-首次连接或切换有线/无线后，先不运行机器人控制，用 `ros2 topic echo /gamepad` 核对回中、方向及按钮。
-摇杆回中仅归零速度命令，当前 rough 仍会踏步；按 Start 会停止策略并立即下发默认站姿目标。
-组合键由 A/X/Y/Start 的按下边沿触发，须先按住 LB，再按动作键；长按不会重复启动。
+W/S、A/D、Q/E 调节速度，空格清零速度。键盘速度与手柄速度叠加后裁剪到模型的训练范围。
+手柄默认用左摇杆前后/左右平移；单按 RB 切换为方向键上/下/左/右平移，再按一次切回。
+两种模式都由右摇杆左右控制转向。方向键为数字输入，按下即使用对应方向的训练速度上限；同时按相反方向会抵消。
+切换时只清空手柄速度，需要左摇杆、方向键和右摇杆转向轴全部回中/松开一次后再操作；键盘速度保持原值。
+手柄回中归零，超过 `ctrl_timeout`（默认 0.4 s）未收到消息则手柄速度归零。B、Back、Start 和 LB 组合操作优先于 RB 切换。
+`common.yaml` 不再设置 `velocity_command_limits`，速度范围直接读取所选模型 `params/deploy.yaml`。
+显式使用带此字段的实验配置时仍会覆盖速度范围，且不得超出训练范围。
+关闭前支撑机器人，再执行 `./deploy/stop_real.sh`；退出驱动的实际失力行为不能仅由源码确认。
 
-北通手柄访问权限在机器人电脑安装一次（从仓库根目录执行），以后重插/重启仍生效：
+## 日志与实验工具
 
-```bash
-sudo install -m 0644 deploy/99-beitong-joystick.rules /etc/udev/rules.d/99-beitong-joystick.rules
-sudo udevadm control --reload-rules
-```
+RL CSV 的 q、qd、mvel、tau、cmd、pub 都使用关节方向；obs/act 使用策略顺序。
+`tau` 是电流相关的驱动 effort 标度，不是独立标定的关节输出力矩，当前只记录、不进入 RL 观测。
+驱动诊断 `dual_leg_state_*.csv` 和 `dual_leg_cmd_*.csv` 保留电机坐标；默认关闭诊断。
+旧 RL/姿态日志可能有 q/dq 已转换、effort 未转换的混合格式，分析前需确认生成版本和坐标。
+`motor_config.detect_effort_frame()` 检查两种格式，激励不足时报告无法判定；不能据相关性完成物理标定。
+电机方向更改后分析旧数据还须使用该实验保存的方向配置。
 
-随后只重插手柄/接收器，再重启手柄节点；不重插电机 CAN。
-规则按 USB 身份匹配并保留旧型号，仅授权 joystick 输入，不依赖 `eventN` 编号，也不放开所有输入设备。
-权限与无线配对是两回事：接收器被识别不等于手柄已配对；未知 SDL 映射需先核对，不能猜测轴号。
+- `tools/`：姿态、插值、重心、上电跳变诊断；有独立入口，不随正常启动自动执行。
+- `sysid/src/`：实验采集、分析和 Isaac 回放；由实验流程或 CLI 调用。
+- `sysid/doc/`、`sysid/data/`、`pose_logs/`、`analysis/`：历史证据与结果，本次保留。
+- `sysid/_scratch/compare_voltage.py` 必须显式指定 `--effort-frame motor` 或 `joint`，避免新日志重复取反。
+- `sysid/_scratch/check_stage4_48v.py` 只针对写死的历史电机帧数据目录。
 
-`4 / LB+Start` 是有支撑的手动复位，不是自主起身策略。无需匹配站姿/蹲姿模板；在保持状态下可立即触发，动作执行中拒绝，不排队。
-关节静止不代表已接地、重心稳定或具有承重能力，执行前须先扶稳或吊起。
-沿用现有 smoothstep 插值，从最后保持目标开始（不是突然重设为实测角），12 关节同步到走路模型的默认准备站姿。
-峰值目标速度由 `multi_task.return_max_speed=0.15rad/s` 限制，时长按最大目标差自动计算；这不限制电机实际速度，也不负责平衡或消除地面摩擦。
-插值结束后进入站立就绪；确认机器人站稳后按 1 / LB+A 开始走路，不会自动启动。手柄 B 可中断。
+2026-10-13 清理了旧机械臂、夹爪、升降、碰撞/同步发布、空线程池、6/7 自由度分支、
+旧方向修正函数、路径平滑器、机械臂 URDF/SRDF、logger 和三个未使用的 vendor 包，
+以及生成缓存与旧构建产物。反馈及告警只访问每侧实际存在的 6 台电机。
+正常启动、实验采集和可重新启用的任务模块都有入口，保留这些功能。
 
-与仿真的必要区别：实机目前没有足底接触和机身线速度反馈，所以不声称能自动验收双脚承重。
-任务键表示操作者已确认可以开始；走路时按 0/Start 立即退出策略并下发默认站姿目标，不等待接地确认。实际关节运动仍受电机和负载影响，并非瞬间到位。
+RL 节点已取消全部关节角度限位：不读 XML，不使用导出的 `JointPositionAction.clip`，
+不裁剪首次保持角、策略目标、接管起点、插值目标或最终发布目标。
+保留训练的 `policy_action_clip`（原始网络 action 幅度）、观测裁剪和速度指令范围。
+因此部署目标在导出的角度 clip 外会与训练/仿真裁剪后的目标不同。
+驱动协议编码范围仍由 motors.yaml 定义。
 
-切换有 0.2s 平滑接管，不再检查首拍跳变量；各策略的历史、last_action、参考时钟独立，起身会从下蹲首帧开始。
-Mimic 参考按有效策略步推进，参考结束后直接进入就绪，继续末帧策略；不检查实测是否到位。
-走路停步不做插值；4/LB+Start 的手动慢回站姿仍使用限速插值。
-所有任务的关节目标、首次接管与插值边界均按关节名读取
-`source/legs_rl_lab/legs_rl_lab/assets/nlegs/mjcf/nlegs_limit.xml`，统一转换为 rad。
-`common.yaml` 不再维护手写关节上下限；旧配置中的同名数组也不会覆盖 XML。
-策略仍保留导出的 `policy_action_clip` 和 `actions.JointPositionAction.clip`。
-启用下蹲时要求下蹲/起身训练边界相同，参考动作还必须通过训练边界与 XML 边界校验。
-站姿与蹲姿参考端点用于入口分类。
-`common.yaml` 的可选 `crouch_calibration` 用实测 12 关节角和机身 WXYZ 四元数替换蹲姿分类基准，
-仅在启用起身时生效；`stop_sides` 保留为历史信息，不再覆盖任何关节限位。
-任务目标与插值目标均按 XML 边界裁剪；实测角度越界不再自动中断。
-这不是关节零位偏移：网络仍接收真实关节/IMU，原训练 clip、NPZ 和模型均不变。
-当前标定为 2026-09-17 11:02 实测蹲姿（前倾 29.729°），10 个单侧边界与 v2 起身首帧一致。
-网络参考保持生成数据中的几何求解值（前倾约 28.282°），不伪造真实观测。
-新起身为 336 帧、100Hz、3.35s；50Hz 策略每步推进两帧，末帧 335 在末尾钳住并继续策略保持。
-新训练的起身任务设置 `commands.motion.track_heading: false`：不追绝对朝向，仍跟踪机身倾斜、全部关节角、角速度与相对脚姿，保留落地防滑奖励。
-参考不变，训练在末帧额外保持 5s，完整回合 8.35s；实际部署仍连续保持，不因训练时长自动停机。
-训练、sim2sim、部署均使用该 run 的观测语义；旧导出缺少此字段时保持原朝向跟踪，不能手改旧模型 YAML 冒充新模型。
-当前起身 `2026-09-17_15-40-44` 已使用关闭朝向跟踪的新权重；下蹲仍保留朝向跟踪，各自读取导出配置。
-完整组合先在 sim2sim 验证；实机仍需现场保护，裁剪目标不能消除惯性造成的实测超调。
-删除 `crouch_calibration` 只恢复参考蹲姿分类，不改变 XML 目标边界。
-预检通过不代表实际反馈或起身动力学通过。策略接管时把插值起点裁到当前任务目标边界，不限制这个修正的幅度。
-运行中的关节/IMU 反馈越界或过期、电机告警、推理/调度延迟、参考结束未到位均不再自动锁停；手柄 B 是唯一的中断锁存入口。
-格式错误的手柄反馈被忽略；策略推理异常时保留上一个目标并重试。首次接管仍须收到有限数值的完整关节与 IMU 反馈。
+删除了未启用的差分速度/EMA、速度零偏、重复参数检查、旧角度限位辅助函数，
+以及依赖旧限位/自动停止 API 的回归目录。实测蹲姿的关节角继续用于入口分类，
+未被使用的 `stop_sides` 和机身四元数字段已移除。
+保留完整反馈等待、模型输入输出与发布目标的基本维度/有限数检查、任务切换和手动 B 中断。
 
-日志按当前模型分别写入其 `sim2real` 目录，记录 `task`、`state`、参考帧及实际待发布目标 `pub*`。
-手柄 B 只保持最后目标，不切断电机，也无法在手柄消息中断时触发。首次运行应核对左右腿、零位和按钮映射。
-
-离线验证命令见本文末尾；新增检查仅验证自动异常不锁停与手柄 B 中断，不连接机器人。
-
-## 文件分工
-
-- `rl_real_common.py`：三任务共用的模型推理、ROS 输入/输出、键盘/手柄输入和日志。
-- `multi_task.py`：唯一切换状态机；不是另一个 ROS 节点或发布者。
-- `motion_reference.py`：下蹲/起身参考文件、坐标和训练参数校验。
-- `deployment_config.py`：读取完整配置、解析仓库路径、核对共同 PD。
-- `sync_pd.py`：驱动启动前同步 PD；保留 `max_vel=0`，不添加训练外速度前馈。
-- `tools/`：`pose_move.py` / `pose_transition.py` 实验插值，`latch_check.py` 上电跳变诊断，`com_check.py` 重心分析，`analyze_pose_log.py` 日志分析。不会被正常部署自动调用。实验控制工具不能与 RL 同时发布。
-- 实验数据仍在 `deploy/pose_logs/`，未迁移、未删除；已有 `sysid/` 辨识工作区保持独立。
-
-每个 run 的 `params/deploy.yaml` 是训练导出元数据，不属于需要合并的公共配置。
-ROS 工作区的 `setup.py`、`package.xml` 和驱动配置也保留；`build/`、`install/`、`log/` 是生成产物。
-
-## 模型同步与目标边界
-
-Git 同步部署源码及各策略的 `exported/`、`params/`；训练检查点、实机日志和其他 `logs/` 数据仍不随 Git 同步。
-
-同步到机器人主机后重新编译 `rl_real_py`，然后运行 `./start_real.sh --check-only`。
-模型需包含启用 run 的 `params/`、`exported/`，以及训练使用的参考 NPZ 和 XML；禁用下蹲时不依赖旧下蹲文件。
-参考模型 XML 用于 SHA256 校验；`nlegs_limit.xml` 用于全部部署关节目标边界。
-参考路径可按仓库的 `source/` 相对位置重定位，不会自动替换动作。
-旧导出器的 `real_deployment_supported: false` 不必手改；只有通过完整格式校验的参考动作类型才受支持。
-
-动作仍为训练的 `offset + scale * action`，参考 q/dq 仅作为网络输入；
-保留策略动作限幅、训练角度 clip 与 XML 关节边界。
-通过离线测试不等于机械限位块的强度或承载验收。
-聚合关节消息持续到达也不能证明每台电机反馈都新鲜，现场仍需核实零位、方向、通信和供电。
-贴靠限位后的目标保持不等于可断电，实际接地、平衡和限位块承重需独立确认。
-
-## 离线测试
-
-从仓库根目录运行；不会初始化控制节点或连接电机：
+## 离线检查
 
 ```bash
 source /opt/ros/humble/setup.bash
-PYTHONPATH="$PWD/deploy/rl_real_py:$PYTHONPATH" /usr/bin/python3 -m pytest deploy/rl_real_py/test_manual_stop_only.py -q
+source deploy/control_ws/install/local_setup.bash
+ctest --test-dir deploy/control_ws/build/armcontrol --output-on-failure
+PYTHONPATH="$PWD/deploy/rl_real_py:$PWD/deploy:$PYTHONPATH" \
+  /usr/bin/python3 -m pytest deploy/tests deploy/rl_real_py/test_manual_stop_only.py deploy/rl_real_py/test_gamepad_modes.py -q
+PYTHONPATH="$PWD/deploy/rl_real_py:$PYTHONPATH" /usr/bin/python3 tests/check_sysid_capture.py
+./deploy/start_real.sh --check-only
 ```
 
-跨运行时对齐先在训练环境生成当前下蹲、起身回放（输出到自己的临时目录）：
-
-```bash
-python tests/check_crouch_mimic_sim2sim.py --task crouch --parity-output /tmp/crouch.npz
-python tests/check_crouch_mimic_sim2sim.py --task stand --parity-output /tmp/rise.npz
-```
-
-再给上述 pytest 命令设置 `MULTI_PARITY_DIR=/tmp`，验证当前两份模型的观测、ONNX 输出和训练裁剪目标逐帧一致。
-部署随后仍会按 XML 关节边界裁剪，不能把模型输出对齐等同于实机动力学对齐。
-未提供回放文件的动作跳过对齐检查，其余测试照常执行；旧三任务/事故回归使用固定旧模型与测试专用 XML，
-不会修改当前训练资产或恢复旧下蹲部署。
+整节点回归只连接自动创建的两个 `/dev/pts/*` 虚拟串口，在独立 ROS domain 验证 12 台电机的命令/反馈方向、告警数量及退出。
+这些检查不验证实机标零、物理方向、固件电流标度或实际行走动力学。

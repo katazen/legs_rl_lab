@@ -1,0 +1,36 @@
+<mujoco model="w1196_scene">
+  <include file="w1196.xml"/>
+
+  <asset>
+    <texture name="ground_tex" type="2d" builtin="checker" rgb1=".2 .3 .4" rgb2=".1 .15 .2"
+             width="512" height="512"/>
+    <material name="ground_mat" texture="ground_tex" texrepeat="1 1" texuniform="true"/>
+  </asset>
+
+  <worldbody>
+    <light directional="true" pos="0 0 4" dir="0 0 -1"/>
+    <geom name="ground" type="plane" size="0 0 .05" material="ground_mat"
+          contype="1" conaffinity="1" group="0" condim="3" friction="1 .005 .0001"/>
+  </worldbody>
+
+  <actuator>
+    <!-- sim2sim supplies the PD gains, torque limits and delays from deploy.yaml. -->
+    <motor name="joint_R1_servo" joint="joint_R1"/>
+    <motor name="joint_R2_servo" joint="joint_R2"/>
+    <motor name="joint_R3_servo" joint="joint_R3"/>
+    <motor name="joint_R4_servo" joint="joint_R4"/>
+    <motor name="joint_R5_servo" joint="joint_R5"/>
+    <motor name="joint_R6_servo" joint="joint_R6"/>
+    <motor name="joint_L1_servo" joint="joint_L1"/>
+    <motor name="joint_L2_servo" joint="joint_L2"/>
+    <motor name="joint_L3_servo" joint="joint_L3"/>
+    <motor name="joint_L4_servo" joint="joint_L4"/>
+    <motor name="joint_L5_servo" joint="joint_L5"/>
+    <motor name="joint_L6_servo" joint="joint_L6"/>
+  </actuator>
+
+  <sensor>
+    <framequat name="imu_quat" objtype="site" objname="imu"/>
+    <gyro name="imu_gyro" site="imu"/>
+  </sensor>
+</mujoco>
