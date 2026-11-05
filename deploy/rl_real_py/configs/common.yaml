@@ -2,16 +2,12 @@
 # 模型的观测、动作、PD、参考轨迹仍读取各 run 的 params/deploy.yaml。
 # 路径相对仓库根目录；不自动选择最新模型。
 tasks:
-  walk: logs/rsl_rl/nlegs_rough/2026-08-26_20-37-55
+  walk: logs/rsl_rl/nlegs_body_rough/2026-11-03_11-24-26_w1196
   crouch: null
   rise: null
 
 publish_rate: 200
-# 走路速度指令截断范围 [最小, 最大]：前后/左右 m/s，转向 rad/s；不得超出训练范围。
-velocity_command_limits:
-  lin_vel_x: [-0.3, 0.3]
-  lin_vel_y: [-0.0, 0.0]
-  ang_vel_z: [-0.5, 0.5]
+# 速度范围直接读取所选模型 params/deploy.yaml，不额外覆盖训练范围。
 
 # 话题中的实机顺序；策略顺序从各模型按关节名读取。
 joint_index_in_real: ["L1","L2","L3","L4","L5","L6","R1","R2","R3","R4","R5","R6"]
@@ -21,8 +17,8 @@ deadzone: 0.12
 ctrl_timeout: 0.4          # s，手柄消息过期归零
 keyboard:
   step: 0.05
-# game_controller_node 的 SDL 标准编号；LB+A/X/Y 选择任务，B 中断，Back 解锁。
-gamepad_buttons: {a: 0, b: 1, x: 2, y: 3, lb: 9, back: 4, start: 6}
+# SDL 标准编号；LB+A/X/Y 选择任务，RB 切换左摇杆/方向键平移，右摇杆始终转向。
+gamepad_buttons: {a: 0, b: 1, x: 2, y: 3, lb: 9, rb: 10, back: 4, start: 6}
 
 # 2026-09-17 11:02 只读标定，机身前倾 29.729°；与 v2 起身的 10 个单侧端点一致。
 # 仅在启用起身时用于初始姿态分类，不进入网络观测。

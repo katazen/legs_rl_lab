@@ -11,13 +11,28 @@ from .rl_real_common import Policy, TermGroupedHistory
 
 class MultiTaskController:
     KEYS = {"1": "walk", "2": "crouch", "3": "rise", "4": "return_stand", "0": "stop", "r": "reset"}
+    joy_move_mode = "stick"
+    joy_wait_neutral = False
+
+    @staticmethod
+    def gamepad_buttons(configured):
+        buttons = {"rb": 10, **configured}
+        required = {"a", "b", "x", "y", "lb", "rb", "back", "start"}
+        if (set(buttons) != required
+                or any(type(i) is not int or not 0 <= i <= 20 for i in buttons.values())
+                or len(set(buttons.values())) != len(buttons)
+                or set(buttons.values()) & {11, 12, 13, 14}):
+            raise ValueError("gamepad_buttons 须配置不同的 SDL 整数索引 0..20，不能占用方向键 11..14；rb 默认 10")
+        return buttons
 
     def __init__(self, node, cfg, root):
         self.n, self.cfg = node, cfg["multi_task"]
         required = {"handover_time", "stop_blend_time", "return_max_speed"}
         if set(self.cfg) != required or any(not np.isfinite(v) or v <= 0 for v in self.cfg.values()):
             raise ValueError("multi_task 阈值必须完整且为有限正数")
-        self.buttons = cfg["gamepad_buttons"]
+        self.buttons = self.gamepad_buttons(cfg["gamepad_buttons"])
+        self.joy_move_mode = "stick"
+        self.joy_wait_neutral = False
         check_multi_pd(cfg)
         self.policies = {"walk": node}
         for name in ("crouch", "rise"):
@@ -70,11 +85,12 @@ class MultiTaskController:
 
     def show_status(self):
         crouch_key = "；2/LB+X 下蹲" if "crouch" in self.policies else ""
+        move_input = "左摇杆" if self.joy_move_mode == "stick" else "左方向键"
         label, actions = {
             "wait_current": ("等待关节/IMU", "收到后保持当前姿态"),
             "stand_ready": ("站立就绪", f"1/LB+A 走路{crouch_key}；4/LB+Start 慢回站姿"),
             "crouch_ready": ("下蹲就绪", "3/LB+Y 起身；4/LB+Start 慢回站姿"),
-            "walking": ("行走中", "0/Start 立即停策略并回站姿；W/S 前后 A/D 左右 Q/E 转向（或摇杆）；空格零速"),
+            "walking": ("行走中", f"0/Start 立即停策略并回站姿；W/S 前后 A/D 左右 Q/E 转向；{move_input}移动、右摇杆转向；RB 切换移动输入；空格零速"),
             "standing_transition": ("慢回站姿中", "请等待，不能切换"),
             "lowering": ("下蹲中", "请等待，不能切换"),
             "rising": ("起身中", "请等待，不能切换"),
@@ -291,10 +307,24 @@ class MultiTaskController:
             print(f"[键盘速度设置] 前后={vx:.2f}m/s，左右={vy:.2f}m/s，转向={wz:.2f}rad/s；未含手柄输入。")
             self.show_status()
 
+    def movement_axes(self, axes, buttons):
+        # game_controller_node: 方向键是 SDL buttons 11..14，扳机不参与回中检查。
+        stick = np.asarray(axes, np.float32)[[1, 0, 2]]
+        stick = np.where(np.abs(stick) > self.n.deadzone, stick, 0.)
+        dpad = np.array([int(buttons[11] == 1) - int(buttons[12] == 1),
+                         int(buttons[13] == 1) - int(buttons[14] == 1)], np.float32)
+        if self.joy_wait_neutral:
+            if not np.any(stick) and not any(buttons[11:15]):
+                self.joy_wait_neutral = False
+            return np.zeros(3, np.float32)
+        if self.joy_move_mode == "dpad":
+            stick[:2] = dpad
+        return stick
+
     def joy(self, msg):
         n = self.n
         def down(name, buttons):
-            i = self.buttons[name]
+            i = self.buttons.get("rb", 10) if name == "rb" else self.buttons[name]
             return i < len(buttons) and buttons[i] == 1
         def pressed(name):
             return down(name, msg.buttons) and not down(name, n._prev_buttons)
@@ -309,6 +339,12 @@ class MultiTaskController:
                 if pressed(button):
                     self.request(task)
                     break
+        elif pressed("rb"):
+            self.joy_move_mode = "dpad" if self.joy_move_mode == "stick" else "stick"
+            self.joy_wait_neutral = True
+            n._joy_cmd[:] = 0.
+            label = "左方向键" if self.joy_move_mode == "dpad" else "左摇杆"
+            print(f"[手柄移动输入] 已切换为{label}；松开方向键、左摇杆和右摇杆横轴后生效。键盘指令保持不变。", flush=True)
         n._prev_buttons = list(msg.buttons)
         if self.state != "walking":
             n._joy_cmd[:] = 0.
