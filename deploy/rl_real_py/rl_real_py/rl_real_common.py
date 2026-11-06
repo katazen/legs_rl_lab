@@ -108,6 +108,11 @@ class Policy:
         gait_params = obs.get("gait_phase", {}).get("params", {})
         self.gait_gate_by_cmd = bool(gait_params.get("gate_by_cmd", False))
         self.gait_command_threshold = float(gait_params.get("command_threshold", 0.1))
+        self.gait_yaw_command_threshold = gait_params.get("yaw_command_threshold")
+        if self.gait_yaw_command_threshold is not None:
+            self.gait_yaw_command_threshold = float(self.gait_yaw_command_threshold)
+            if not np.isfinite(self.gait_yaw_command_threshold) or self.gait_yaw_command_threshold < 0.0:
+                raise ValueError("gait_phase.yaw_command_threshold 必须为有限非负数")
         self.gait_stop_transition_time = float(gait_params.get("stop_transition_time", 0.0))
         if not np.isfinite(self.gait_stop_transition_time) or self.gait_stop_transition_time < 0.0:
             raise ValueError("gait_phase.stop_transition_time 必须为有限非负数")
@@ -178,10 +183,17 @@ class Policy:
         q_sim = self.obs_raw[7:19][self.real2sim]
         qd_sim = self.obs_raw[19:31][self.real2sim]
         phase = 0.0 if self.motion is not None else (self.policy_step * self.step_dt / self.gait_period) % 1.0
-        # 仅改变相位观测；收步动作仍由策略决定。
+        # 收步动作仍由策略决定；新任务将低于双门限的命令按训练语义归零。
         gait_flag = 1.0
+        command = self.cmd[:self.num_commands]
         if self.gait_gate_by_cmd:
-            moving = np.linalg.norm(self.cmd[:self.num_commands]) >= np.float32(self.gait_command_threshold)
+            if self.gait_yaw_command_threshold is None:
+                moving = np.linalg.norm(command) >= np.float32(self.gait_command_threshold)
+            else:
+                moving = (np.linalg.norm(command[:2]) >= np.float32(self.gait_command_threshold)
+                          or abs(command[2]) >= np.float32(self.gait_yaw_command_threshold))
+                if not moving:
+                    command = np.zeros_like(command)
             if self.gait_stop_transition_time > 0.0:
                 # multi_task 重启时替换历史，步计数回退也视作新一轮。
                 if self.hist is not self._gait_history or self.policy_step < self._gait_last_step:
@@ -198,7 +210,7 @@ class Policy:
         feats = {
             "base_ang_vel": self.obs_raw[0:3],
             "projected_gravity": gravity_from_quat(self.obs_raw[3:7]),
-            "velocity_commands": self.cmd[:self.num_commands],
+            "velocity_commands": command,
             "joint_pos_rel": q_sim - self.default_sim,
             "joint_vel_rel": qd_sim,
             "last_action": self.last_action,

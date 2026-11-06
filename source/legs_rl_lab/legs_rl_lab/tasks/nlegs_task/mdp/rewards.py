@@ -135,25 +135,36 @@ def joint_deviation_l1(env: ManagerBasedRLEnv, asset_cfg: SceneEntityCfg = Scene
     return torch.sum(torch.abs(angle), dim=1)
 
 
-def feet_x_distance(env: ManagerBasedRLEnv, asset_cfg: SceneEntityCfg) -> torch.Tensor:
+def feet_x_distance(
+    env: ManagerBasedRLEnv, asset_cfg: SceneEntityCfg, command_threshold: float = 0.1,
+    sensor_cfg: SceneEntityCfg | None = None,
+) -> torch.Tensor:
+    """Body-frame fore/aft separation at low forward command, optionally only in double support."""
     asset = env.scene[asset_cfg.name]
     leftfoot = asset.data.body_pos_w[:, asset_cfg.body_ids[0], :] - asset.data.root_link_pos_w[:, :]
     rightfoot = asset.data.body_pos_w[:, asset_cfg.body_ids[1], :] - asset.data.root_link_pos_w[:, :]
     leftfoot_b = quat_apply(quat_conjugate(asset.data.root_link_quat_w[:, :]), leftfoot)
     rightfoot_b = quat_apply(quat_conjugate(asset.data.root_link_quat_w[:, :]), rightfoot)
     x_distance_b = torch.abs(leftfoot_b[:, 0] - rightfoot_b[:, 0])
-    x_vel_flag = torch.abs(env.command_manager.get_command("base_velocity")[:, 0]) < 0.1
+    x_vel_flag = torch.abs(env.command_manager.get_command("base_velocity")[:, 0]) < command_threshold
+    if sensor_cfg is not None:
+        sensor = env.scene.sensors[sensor_cfg.name]
+        both_contact = (sensor.data.current_contact_time[:, sensor_cfg.body_ids] > 0).all(dim=1)
+        x_vel_flag = x_vel_flag & both_contact
     return x_distance_b * x_vel_flag
 
 
-def feet_y_distance(env: ManagerBasedRLEnv, asset_cfg: SceneEntityCfg, threshold: float = 0.36) -> torch.Tensor:
+def feet_y_distance(
+    env: ManagerBasedRLEnv, asset_cfg: SceneEntityCfg, threshold: float = 0.36,
+    command_threshold: float = 0.1,
+) -> torch.Tensor:
     asset = env.scene[asset_cfg.name]
     leftfoot = asset.data.body_pos_w[:, asset_cfg.body_ids[0], :] - asset.data.root_link_pos_w[:, :]
     rightfoot = asset.data.body_pos_w[:, asset_cfg.body_ids[1], :] - asset.data.root_link_pos_w[:, :]
     leftfoot_b = quat_apply(quat_conjugate(asset.data.root_link_quat_w[:, :]), leftfoot)
     rightfoot_b = quat_apply(quat_conjugate(asset.data.root_link_quat_w[:, :]), rightfoot)
     y_distance_b = torch.abs(torch.abs(leftfoot_b[:, 1] - rightfoot_b[:, 1]) - threshold)
-    y_vel_flag = torch.abs(env.command_manager.get_command("base_velocity")[:, 1]) < 0.1
+    y_vel_flag = torch.abs(env.command_manager.get_command("base_velocity")[:, 1]) < command_threshold
     return y_distance_b * y_vel_flag
 
 
@@ -180,7 +191,7 @@ def _get_leg_phases(env: ManagerBasedRLEnv):
 
 def feet_gait(
     env: ManagerBasedRLEnv, sensor_cfg: SceneEntityCfg, moving_only: bool = False, command_threshold: float = 0.1,
-    stop_transition_time: float = 0.0,
+    stop_transition_time: float = 0.0, yaw_command_threshold: float | None = None,
 ) -> torch.Tensor:
     contact_sensor = env.scene.sensors[sensor_cfg.name]
     is_contact = contact_sensor.data.current_contact_time[:, sensor_cfg.body_ids] > 0
@@ -189,7 +200,7 @@ def feet_gait(
     match = (should_be_stance == is_contact)
     reward = torch.mean(torch.where(match, 1.0, -0.5), dim=1)
     if moving_only:  # 速度开关: 零速命令时不奖励踏步(用于静止站立任务)
-        reward = reward * gait_motion_weight(env, command_threshold, stop_transition_time)
+        reward = reward * gait_motion_weight(env, command_threshold, stop_transition_time, yaw_command_threshold)
     return reward
 
 
@@ -202,7 +213,7 @@ def feet_slide(env, sensor_cfg: SceneEntityCfg, asset_cfg: SceneEntityCfg = Scen
     return reward
 
 
-def feet_clearance(env: ManagerBasedRLEnv, asset_cfg: SceneEntityCfg, target_height: float = 0.1, moving_only: bool = False, sensor_cfg: SceneEntityCfg | None = None, command_threshold: float = 0.1, foot_height_offset: float = 0.0135, stop_transition_time: float = 0.0) -> torch.Tensor:
+def feet_clearance(env: ManagerBasedRLEnv, asset_cfg: SceneEntityCfg, target_height: float = 0.1, moving_only: bool = False, sensor_cfg: SceneEntityCfg | None = None, command_threshold: float = 0.1, foot_height_offset: float = 0.0135, stop_transition_time: float = 0.0, yaw_command_threshold: float | None = None) -> torch.Tensor:
     """Reward swing clearance using the foot body's nominal origin-to-sole height."""
     asset = env.scene[asset_cfg.name]
     feet_pos = asset.data.body_pos_w[:, asset_cfg.body_ids, :]
@@ -223,7 +234,7 @@ def feet_clearance(env: ManagerBasedRLEnv, asset_cfg: SceneEntityCfg, target_hei
     error = weight * shortfall ** 2
     reward = torch.exp(-error / 0.005).mean(dim=1)
     if moving_only:  # 速度开关: 零速命令时不奖励抬脚(用于静止站立任务)
-        reward = reward * gait_motion_weight(env, command_threshold, stop_transition_time)
+        reward = reward * gait_motion_weight(env, command_threshold, stop_transition_time, yaw_command_threshold)
     return reward
 
 

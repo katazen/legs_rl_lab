@@ -1,6 +1,17 @@
 import gymnasium as gym
 
 gym.register(
+    id="nlegs_body_flat",
+    entry_point="isaaclab.envs:ManagerBasedRLEnv",
+    disable_env_checker=True,
+    kwargs={
+        "env_cfg_entry_point": f"{__name__}.body_env_cfg:FlatBodyEnvCfg",
+        "play_env_cfg_entry_point": f"{__name__}.body_env_cfg:FlatBodyPlayEnvCfg",
+        "rsl_rl_cfg_entry_point": f"{__name__}.body_env_cfg:FlatBodyPPORunnerCfg",
+    },
+)
+
+gym.register(
     id="nlegs_flat_static",
     entry_point="isaaclab.envs:ManagerBasedRLEnv",
     disable_env_checker=True,

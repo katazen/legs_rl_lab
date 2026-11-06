@@ -30,7 +30,8 @@ Layout assumptions (validated against this task's config):
   (the 16x11 grid is size=[1.5, 1.0] with offset x=+0.25, i.e. 1.0m ahead / 0.5m behind
   / 0.5m each side of the base.)
   ``_mirror_maps`` picks the layout among the candidates by the observation dimension
-  (policy: 470 / 646 / 705; critic: 620 / 2490 / 807 / 796 / 3735).
+  (policy: 470 / 646 / 705; critic: 620 / 2490 / 807 / 796 / 930 / 3735).
+  nlegs_body_flat uses the same 15-frame terms as body_rough without height_scan.
 """
 
 from __future__ import annotations
@@ -130,11 +131,11 @@ def _mirror_maps(obs_type: str, obs_dim: int, device: torch.device):
         candidates.append(_TERMS[obs_type] + [_HSCAN_TERM])
         candidates.append(_TERMS[obs_type] + [_HSCAN_TERM_CURRENT])
     candidates.append(_TERMS[obs_type] + [_HSCAN_TERM_INFO])
-    # body_rough: all terms (including critic height scan) carry 15 frames.
+    # body_flat/body_rough: all terms carry 15 frames; only rough adds height_scan.
     body_terms = [(*term, 15) for term in _TERMS[obs_type]]
-    if obs_type == "critic":
-        body_terms.append(_hscan_term(17, 11, 15))
     candidates.append(body_terms)
+    if obs_type == "critic":
+        candidates.append(body_terms + [_hscan_term(17, 11, 15)])
     expected = [sum(t[0] * _term_history(t) for t in terms) for terms in candidates]
     if obs_dim not in expected:
         raise ValueError(

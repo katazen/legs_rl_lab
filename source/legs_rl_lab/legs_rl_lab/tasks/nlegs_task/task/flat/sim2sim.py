@@ -337,6 +337,11 @@ class MujocoRunner:
     def __init__(self, cfg, show_viewer=True, save_data=False):
         self.cfg = cfg
         gait_params = cfg.observations.get("gait_phase", {}).get("params", {})
+        self.gait_yaw_command_threshold = gait_params.get("yaw_command_threshold")
+        if self.gait_yaw_command_threshold is not None:
+            self.gait_yaw_command_threshold = float(self.gait_yaw_command_threshold)
+            if not np.isfinite(self.gait_yaw_command_threshold) or self.gait_yaw_command_threshold < 0.0:
+                raise ValueError("gait_phase.yaw_command_threshold 必须为有限非负数")
         self.gait_stop_transition_time = float(gait_params.get("stop_transition_time", 0.0))
         if not np.isfinite(self.gait_stop_transition_time) or self.gait_stop_transition_time < 0.0:
             raise ValueError("gait_phase.stop_transition_time 必须为有限非负数")
@@ -465,8 +470,16 @@ class MujocoRunner:
                  if "gait_phase" in self.cfg.observations else 0.0)
         gait_params = self.cfg.observations.get("gait_phase", {}).get("params", {})
         gait = np.array([np.sin(2 * np.pi * phase), np.cos(2 * np.pi * phase)], dtype=np.float32)
+        command = self.command
         if gait_params.get("gate_by_cmd", False):
-            moving = np.linalg.norm(self.command) >= np.float32(gait_params.get("command_threshold", 0.1))
+            command_threshold = np.float32(gait_params.get("command_threshold", 0.1))
+            if self.gait_yaw_command_threshold is None:
+                moving = np.linalg.norm(command) >= command_threshold
+            else:
+                moving = (np.linalg.norm(command[:2]) >= command_threshold
+                          or abs(command[2]) >= np.float32(self.gait_yaw_command_threshold))
+                if not moving:
+                    command = np.zeros_like(command)  # 与训练的有效零速命令一致，不修改用户输入。
             if self.gait_stop_transition_time > 0.0:
                 if self.episode_step < self._gait_last_step:
                     self._gait_last_motion_time = -np.inf
@@ -482,7 +495,7 @@ class MujocoRunner:
         return {
             "ang_vel": self.data.sensor("imu_gyro").data.astype(np.float32),
             "gravity": gravity_from_quat(self.data.sensor("imu_quat").data),
-            "command": self.command,
+            "command": command,
             "dof_pos": q_sdk[self.cfg.policy_to_sdk] - self.cfg.default_policy,
             "dof_vel": qd_sdk[self.cfg.policy_to_sdk],
             "last_action": self.last_action,

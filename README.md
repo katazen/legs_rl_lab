@@ -1,12 +1,13 @@
 # legs_rl_lab
 
-12-DOF 双足机器人 nlegs 的强化学习工程：Isaac Lab 训练 → MuJoCo 仿真验证 → ROS 2 实机部署。
+以 12-DOF 双足机器人 nlegs 为主的强化学习工程：Isaac Lab 训练 → MuJoCo 仿真验证 → ROS 2 实机部署，另含 Unitree G1 训练任务。
 
 ## 任务
 
 | 任务 | 用途 |
 |---|---|
 | `nlegs_flat` | 平地速度跟踪 |
+| [`nlegs_body_flat`](source/legs_rl_lab/legs_rl_lab/tasks/nlegs_task/task/flat/README_body.md) | W1196 平地行走与低速站稳；以当前 rough 为基准加强平地稳定约束，独立 MDP/PPO |
 | [`nlegs_v2_pi`](source/legs_rl_lab/legs_rl_lab/tasks/nlegs_task/task/flat_pi/README.md) | Mini Pi 的步态、奖励和 PPO，适配 nlegs v2；705 维整帧历史，独立训练与 sim2sim |
 | `nlegs_flat_static` | 行走与零速站稳 |
 | `nlegs_flat_crouch` | 从站立或蹲姿起步的行走策略 |
@@ -17,6 +18,9 @@
 | [`nlegs_rough_static`](source/legs_rl_lab/legs_rl_lab/tasks/nlegs_task/task/rough/README_static.md) | rough 行走＋零速站稳；实测下蹲侧限位与辨识驱动的执行器随机化，不修改 XML/USD |
 | `nlegs_mimic_crouch` | 跟踪下蹲参考动作 v3 |
 | `nlegs_mimic_stand` | 跟踪起身参考动作 v2 |
+| [`g1qie`](source/legs_rl_lab/legs_rl_lab/tasks/g1_task/task/qie/qie_env_cfg.py) | Unitree G1 23-DOF 速度跟踪 |
+
+`g1qie` 依赖同级 `TienKung-Lab/legged_lab/assets/g1/` 下的 USD/XML；路径见 [G1 配置](source/legs_rl_lab/legs_rl_lab/assets/robots/g123.py)。
 
 ## Mimic 参考动作
 
@@ -45,7 +49,7 @@ python -m pip install -e source/legs_rl_lab
 ## 训练与回放
 
 在仓库根目录运行，将 `--task` 替换为上表中的任务名。
-`nlegs_rough` 沿用 `2026-08-26_20-37-55` 的名义执行器、PPO 和原始 `assets/nlegs/mjcf/nlegs/nlegs.usd`；域随机化使用成对零偏（观测加、目标减）、base 质量 +5～+7 kg、腿部连杆质量 ×0.9～1.1，以及5号关节 Kp×0.7～1.3、Kd×0.7～1.5。检查：`python tests/check_rough_826_base.py --headless --device cpu`。
+`nlegs_rough` 沿用 `2026-08-26_20-37-55` 的名义执行器、PPO 和原始 `assets/nlegs/mjcf/nlegs/nlegs.usd`；域随机化使用成对零偏（观测加、目标减）、base 质量 +5～+7 kg、腿部连杆质量 ×0.9～1.1，以及5号关节 Kp×0.7～1.3、Kd×0.7～1.5。
 
 ```bash
 # 训练
@@ -120,6 +124,7 @@ source/legs_rl_lab/legs_rl_lab/
 ├── actuators/                       # 执行器模型
 ├── tasks/nlegs_task/                # 行走任务
 ├── tasks/mimic_task/                # 下蹲与起身任务
+├── tasks/g1_task/                   # Unitree G1 任务
 └── utils/                          # 配置读取与部署参数导出
 deploy/                              # ROS 2 驱动、策略节点与启动脚本
 ```

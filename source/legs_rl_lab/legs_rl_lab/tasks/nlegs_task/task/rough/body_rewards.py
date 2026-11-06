@@ -15,15 +15,16 @@ if TYPE_CHECKING:
 def base_yaw_no_command_l2(
     env: ManagerBasedRLEnv,
     asset_cfg: SceneEntityCfg = SceneEntityCfg("robot"),
+    command_threshold: float = 0.1,
 ) -> torch.Tensor:
-    """Penalize body-z angular speed squared when abs(yaw command) < 0.1 rad/s.
+    """Penalize body-z angular speed squared below the yaw-command threshold.
 
     Angular speed is in rad/s. Translation commands do not disable this cost;
     yaw commands at or above the magnitude threshold do. This does not constrain absolute heading.
     """
     asset = env.scene[asset_cfg.name]
     command = env.command_manager.get_command("base_velocity")
-    return asset.data.root_ang_vel_b[:, 2].square() * (command[:, 2].abs() < 0.1)
+    return asset.data.root_ang_vel_b[:, 2].square() * (command[:, 2].abs() < command_threshold)
 
 
 def feet_contact_yaw_l2(

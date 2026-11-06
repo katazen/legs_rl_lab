@@ -8,13 +8,25 @@ if TYPE_CHECKING:
     from isaaclab.envs import ManagerBasedRLEnv
 
 
-def command_is_moving(env: ManagerBasedRLEnv, command_threshold: float = 0.1) -> torch.Tensor:
-    """按完整速度命令判断；原地转向也属于运动，不按实际速度切换。"""
-    return torch.norm(env.command_manager.get_command("base_velocity"), dim=1) >= command_threshold
+def command_is_moving(
+    env: ManagerBasedRLEnv, command_threshold: float = 0.1,
+    yaw_command_threshold: float | None = None,
+) -> torch.Tensor:
+    """按命令判断运动；可分别设置平移 m/s 和转向 rad/s 的阈值。
+
+    不传 yaw 阈值时保留旧任务的三维命令范数判定；阈值边界属于运动。
+    """
+    command = env.command_manager.get_command("base_velocity")
+    if yaw_command_threshold is None:
+        return torch.norm(command, dim=1) >= command_threshold
+    return (torch.norm(command[:, :2], dim=1) >= command_threshold) | (
+        command[:, 2].abs() >= yaw_command_threshold
+    )
 
 
 def gait_motion_weight(
     env: ManagerBasedRLEnv, command_threshold: float = 0.1, stop_transition_time: float = 0.0,
+    yaw_command_threshold: float | None = None,
     *, update_state: bool = False,
 ) -> torch.Tensor:
     """Fade walking objectives after the last moving command; never override actions.
@@ -25,7 +37,7 @@ def gait_motion_weight(
     """
     if not math.isfinite(stop_transition_time) or stop_transition_time < 0.0:
         raise ValueError("stop_transition_time must be finite and non-negative")
-    moving = command_is_moving(env, command_threshold)
+    moving = command_is_moving(env, command_threshold, yaw_command_threshold)
     if stop_transition_time == 0.0:
         return moving.float()
     steps = env.episode_length_buf

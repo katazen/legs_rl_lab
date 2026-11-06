@@ -30,13 +30,15 @@ def joint_pos_rel_biased(
 
 def gait_phase_obs(
     env: ManagerBasedRLEnv, gate_by_cmd: bool = False, command_threshold: float = 0.1,
-    stop_transition_time: float = 0.0,
+    stop_transition_time: float = 0.0, yaw_command_threshold: float | None = None,
 ) -> torch.Tensor:
     phase_linear = get_phase(env)
     phase_obs = torch.zeros(env.num_envs, 2, device=env.device)
     phase_obs[:, 0] = torch.sin(phase_linear.squeeze(1) * 2 * torch.pi)
     phase_obs[:, 1] = torch.cos(phase_linear.squeeze(1) * 2 * torch.pi)
     if gate_by_cmd:
-        weight = gait_motion_weight(env, command_threshold, stop_transition_time, update_state=True)
+        weight = gait_motion_weight(
+            env, command_threshold, stop_transition_time, yaw_command_threshold, update_state=True,
+        )
         phase_obs = phase_obs * weight.unsqueeze(1)
     return phase_obs

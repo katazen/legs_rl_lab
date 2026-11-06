@@ -39,23 +39,9 @@ docker/.container.cfg
 qoder_conversations.md
 
 # 本地测试、诊断与实验工具（不影响正式训练 / sim2sim / 实机部署入口）
-tests/*
-!tests/check_rough_domain_randomization.py
-!tests/check_rough_nogait.py
-!tests/check_rough_nogait_sim2sim.py
-!tests/check_rough_body.py
-!tests/test_body_sway_rewards.py
-!tests/test_feet_clearance_offsets.py
-!tests/check_pi.py
-!tests/test_pi_rewards.py
-!tests/test_pi_deploy.py
-!tests/test_observation_symmetry.py
-!tests/test_body_foot_twist_rewards.py
-!tests/test_body_yaw_reward.py
-!tests/test_gait_stop_transition.py
-!tests/test_standing_transition_runtime.py
-!tests/check_rough_body_static.py
+tests/
 test/
+test_*.py
 debug/
 diagnostics/
 /scripts/check_*.py
@@ -92,44 +78,7 @@ _build
 
 # RL-Games
 **/runs/*
-# 仅同步已在机器人上的策略 params/exported；新增本地策略、检查点和实机数据仍忽略。
-/logs/*
-!/logs/rsl_rl/
-/logs/rsl_rl/*
-!/logs/rsl_rl/*/
-/logs/rsl_rl/*/*
-!/logs/rsl_rl/nlegs_flat/2026-08-26_13-57-34/
-!/logs/rsl_rl/nlegs_flat/2026-08-27_10-14-28/
-!/logs/rsl_rl/nlegs_flat_crouch/2026-09-09_18-13-14/
-!/logs/rsl_rl/nlegs_flat_crouch/2026-09-09_20-27-00/
-!/logs/rsl_rl/nlegs_flat_static/2026-09-16_11-41-05/
-!/logs/rsl_rl/nlegs_mimic_crouch/2026-09-14_20-26-06/
-!/logs/rsl_rl/nlegs_mimic_crouch/2026-09-15_15-36-16/
-!/logs/rsl_rl/nlegs_mimic_crouch/2026-09-17_16-42-11/
-!/logs/rsl_rl/nlegs_mimic_stand/2026-09-15_18-50-29/
-!/logs/rsl_rl/nlegs_mimic_stand/2026-09-17_12-30-38/
-!/logs/rsl_rl/nlegs_mimic_stand/2026-09-17_15-40-44/
-!/logs/rsl_rl/nlegs_rough/2026-08-26_20-37-55/
-!/logs/rsl_rl/nlegs_rough/2026-09-18_10-10-59/
-!/logs/rsl_rl/nlegs_rough/2026-09-19_16-53-50/
-!/logs/rsl_rl/nlegs_rough/2026-09-20_19-15-58/
-!/logs/rsl_rl/nlegs_rough/2026-09-21_14-27-47/
-!/logs/rsl_rl/nlegs_rough/2026-09-23_23-45-47/
-!/logs/rsl_rl/nlegs_rough/2026-09-29_22-10-03/
-!/logs/rsl_rl/nlegs_rough/2026-09-30_14-05-25/
-!/logs/rsl_rl/nlegs_rough/2026-09-30_17-45-24/
-!/logs/rsl_rl/nlegs_rough/2026-10-07_18-37-35/
-!/logs/rsl_rl/nlegs_body_rough/2026-10-16_16-19-05/
-!/logs/rsl_rl/nlegs_body_rough/2026-10-19_11-44-04/
-!/logs/rsl_rl/nlegs_body_rough/2026-10-20_14-14-13/
-!/logs/rsl_rl/nlegs_body_rough/2026-10-21_18-08-22/
-!/logs/rsl_rl/nlegs_body_rough/2026-10-22_12-24-19/
-!/logs/rsl_rl/nlegs_body_rough/2026-10-22_17-38-36/
-!/logs/rsl_rl/nlegs_body_rough/2026-10-26_10-56-59/
-!/logs/rsl_rl/nlegs_body_rough/2026-10-27_11-01-10/
-/logs/rsl_rl/*/*/*
-!/logs/rsl_rl/*/*/exported/
-!/logs/rsl_rl/*/*/params/
+logs/
 **/recordings/*
 
 # 实机姿态工具的逐帧记录 (每次运行一个 CSV)
@@ -164,17 +113,24 @@ deploy/pose_logs/
 **/tactile_record/*
 **/gelsight_r15_data/*
 
-# ===== 只同步 nlegs 主线: assets 保留 nlegs 与 nlegs_body 的训练资产;
+# ===== 同步 nlegs、Mimic、G1 任务及所需机器人配置与资产;
 # amp/amp_engineai/sysid 及其脚本不再入库 (本地文件保留) =====
 source/legs_rl_lab/legs_rl_lab/tasks/*
 !source/legs_rl_lab/legs_rl_lab/tasks/__init__.py
 !source/legs_rl_lab/legs_rl_lab/tasks/nlegs_task/
 !source/legs_rl_lab/legs_rl_lab/tasks/mimic_task/
+!source/legs_rl_lab/legs_rl_lab/tasks/g1_task/
+source/legs_rl_lab/legs_rl_lab/tasks/g1_task/**/plot_gravity_y.py
+source/legs_rl_lab/legs_rl_lab/tasks/g1_task/**/gravity_y_plot*.png
 source/legs_rl_lab/legs_rl_lab/assets/*
 !source/legs_rl_lab/legs_rl_lab/assets/__init__.py
 !source/legs_rl_lab/legs_rl_lab/assets/nlegs/
 !source/legs_rl_lab/legs_rl_lab/assets/nlegs_body/
 !source/legs_rl_lab/legs_rl_lab/assets/nlegs_v2/
+!source/legs_rl_lab/legs_rl_lab/assets/robots/
+source/legs_rl_lab/legs_rl_lab/assets/robots/*
+!source/legs_rl_lab/legs_rl_lab/assets/robots/__init__.py
+!source/legs_rl_lab/legs_rl_lab/assets/robots/g123.py
 source/legs_rl_lab/legs_rl_lab/assets/nlegs_v2/*
 !source/legs_rl_lab/legs_rl_lab/assets/nlegs_v2/__init__.py
 !source/legs_rl_lab/legs_rl_lab/assets/nlegs_v2/nlegs_v2.py
