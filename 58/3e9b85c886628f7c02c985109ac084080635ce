@@ -1,0 +1,73 @@
+.gitignore
+  s_691089d81bb0a2::t_45d4c977b4a963 42,44,81,116,122-124,130-133
+README.md
+  s_691089d81bb0a2::t_87aac4419f3869 3,10,21-23,52,127
+deploy/control_ws/src/armcontrol/CMakeLists.txt
+  s_691089d81bb0a2::t_0a5eba6999dee1 40
+deploy/rl_real_py/rl_real_py/rl_real_common.py
+  s_691089d81bb0a2::t_879e9d0414fb6d 111-115,186,188,190-196,213
+source/legs_rl_lab/legs_rl_lab/assets/robots/g123.py
+  s_691089d81bb0a2::t_c2aad8be67971c 1,4-5,9-15,18-20,26-27,45-65,67,70,72-77,81,83-93,95-101,103-109,111-121,124-154,157-168
+source/legs_rl_lab/legs_rl_lab/tasks/g1_task/__init__.py
+  s_691089d81bb0a2::t_8015ac702870c9 1
+source/legs_rl_lab/legs_rl_lab/tasks/g1_task/agents/rsl_rl_ppo_cfg.py
+  s_691089d81bb0a2::t_6f805cc6283e34 1-4,7,11,21,29,33-34,39,49,56
+source/legs_rl_lab/legs_rl_lab/tasks/g1_task/mdp/__init__.py
+  s_691089d81bb0a2::t_d5c2fba4d39da3 1-5
+source/legs_rl_lab/legs_rl_lab/tasks/g1_task/mdp/commands.py
+  s_691089d81bb0a2::t_8c5dbb43d586c8 1,3,5,10-11
+source/legs_rl_lab/legs_rl_lab/tasks/g1_task/mdp/curriculums.py
+  s_691089d81bb0a2::t_2a9045fdd27b12 1-61
+source/legs_rl_lab/legs_rl_lab/tasks/g1_task/mdp/observations.py
+  s_691089d81bb0a2::t_97131c40ac1506 1-16
+source/legs_rl_lab/legs_rl_lab/tasks/g1_task/mdp/rewards.py
+  s_691089d81bb0a2::t_65adf4437a61e2 1-258
+source/legs_rl_lab/legs_rl_lab/tasks/g1_task/task/qie/__init__.py
+  s_691089d81bb0a2::t_c2e6b0dfc8ba71 1-12
+source/legs_rl_lab/legs_rl_lab/tasks/g1_task/task/qie/qie_env.py
+  s_691089d81bb0a2::t_757bae38028dc6 2-4,7-12,15-19,21-27
+source/legs_rl_lab/legs_rl_lab/tasks/g1_task/task/qie/qie_env_cfg.py
+  s_691089d81bb0a2::t_6a86672e7a0cff 1,4,21-38,42-43,48-50,65-66,70,77,90,98-99,109-110,132,135,157,161,164,174-178,193,219-223,233,237,239,242,245,249,251-261,263-273,275-278,282-283,288-289,291-294,300-301,308,314,320,326,330-336,346,357-358,361,381,388-396,399,403
+source/legs_rl_lab/legs_rl_lab/tasks/g1_task/task/qie/sim2sim.py
+  s_691089d81bb0a2::t_6e994051c4fd65 1-326
+source/legs_rl_lab/legs_rl_lab/tasks/nlegs_task/mdp/commands.py
+  s_691089d81bb0a2::t_30769ab80dc50f 5-7,14-38
+source/legs_rl_lab/legs_rl_lab/tasks/nlegs_task/mdp/gait.py
+  s_691089d81bb0a2::t_8ceaa1f767d56d 11-24,29,40
+source/legs_rl_lab/legs_rl_lab/tasks/nlegs_task/mdp/observations.py
+  s_691089d81bb0a2::t_766c4efc295a21 33,40-42
+source/legs_rl_lab/legs_rl_lab/tasks/nlegs_task/mdp/rewards.py
+  s_691089d81bb0a2::t_894ab5ef60cfff 138-142,149-153,157-160,167,194,203,216,237
+source/legs_rl_lab/legs_rl_lab/tasks/nlegs_task/mdp/symmetry.py
+  s_691089d81bb0a2::t_2fb8b6dfdd7d49 33-34,134,137-138
+source/legs_rl_lab/legs_rl_lab/tasks/nlegs_task/task/flat/README_body.md
+  s_691089d81bb0a2::t_fdc61600aced5d 1-61
+source/legs_rl_lab/legs_rl_lab/tasks/nlegs_task/task/flat/__init__.py
+  s_691089d81bb0a2::t_bbad393df57d9f 3-13
+source/legs_rl_lab/legs_rl_lab/tasks/nlegs_task/task/flat/body_env_cfg.py
+  s_691089d81bb0a2::t_cfcc06fa8b5e93 1-5,18-19,23,26-31,35,39,42,44,48-49,54-55,70-71,86-87,95-96,108-109,160,163,172,175,181,186,191,205,226,236-237,244,246,253,258-263,266,279,285,291,297-301,308-309,316-321,323-326,333,338-339,345,349,354,357,362-363,369-370,373,375-377,379-382,384,403,410,420,428-429,439-440,447,453
+source/legs_rl_lab/legs_rl_lab/tasks/nlegs_task/task/flat/sim2sim.py
+  s_691089d81bb0a2::t_bbad91550951da 340-344,473,475-482,498
+source/legs_rl_lab/legs_rl_lab/tasks/nlegs_task/task/flat/sim2sim_body.py
+  s_691089d81bb0a2::t_1aa54899dac42c 1,3-9,12-13,15-79,83
+source/legs_rl_lab/legs_rl_lab/tasks/nlegs_task/task/rough/body_rewards.py
+  s_691089d81bb0a2::t_3b53076ccb0466 18,20,27
+source/legs_rl_lab/legs_rl_lab/tasks/nlegs_task/task/rough/body_static_rewards.py
+  s_691089d81bb0a2::t_ac1a76016f6ccc 10,12,16-19,23-26,32,34
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.7.5",
+  "base_commit_sha": "583e9b85c886628f7c02c985109ac084080635ce",
+  "prompts": {},
+  "sessions": {
+    "s_691089d81bb0a2": {
+      "agent_id": {
+        "tool": "codex",
+        "id": "01a0af4e-2f0a-72e2-9e87-220a91b434ac",
+        "model": "gpt-6-astra"
+      },
+      "human_author": "woan <377801872@qq.com>"
+    }
+  }
+}
