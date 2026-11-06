@@ -1,0 +1,37 @@
+README.md
+  s_baccaab2e2e97f::t_0bf5b597f150b1 5-7,11,13-22,31,35,51,57,73-77,79,81,97,99
+deploy/control_ws/src/armcontrol/config/arm_control_node.yaml
+  s_baccaab2e2e97f::t_e0e1236034a7f6 3-5
+deploy/rl_real_py/configs/common.yaml
+  s_baccaab2e2e97f::t_53841c3f99f1c7 5,10,20-21
+deploy/rl_real_py/rl_real_py/multi_task.py
+  s_baccaab2e2e97f::t_216a3f2cb849c9 14-26,33-35,88,93,310-323,327,342-347
+deploy/rl_real_py/rl_real_py/rl_real_common.py
+  s_baccaab2e2e97f::t_0cd4d165468b19 111-118,141-143,186,188-209,213,386
+deploy/start_real.sh
+  s_baccaab2e2e97f::t_c8c3303701b9c2 2,48-51,53-64,70-78,104
+deploy/stop_real.sh
+  s_baccaab2e2e97f::t_962221c928b71b 2,9,18-22,37-38
+logs/rsl_rl/nlegs_body_rough/2026-11-03_11-24-26_w1196/params/agent.yaml
+  s_baccaab2e2e97f::t_63a3e1d283e01e 6-10,14-15,19
+logs/rsl_rl/nlegs_body_rough/2026-11-03_11-24-26_w1196/params/deploy.yaml
+  s_baccaab2e2e97f::t_1134b0101d634e 9,11-13,17-19,23,25-28,30,34,36-37,39,41,47,56-61,67,72,77,82,87,92,97
+logs/rsl_rl/nlegs_body_rough/2026-11-03_11-24-26_w1196/params/policy_snapshot.json
+  s_baccaab2e2e97f::t_b7b7321edb2472 1-235
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.7.5",
+  "base_commit_sha": "456166db68e926786b6b3cc03bfc80dc312054f3",
+  "prompts": {},
+  "sessions": {
+    "s_baccaab2e2e97f": {
+      "agent_id": {
+        "tool": "codex",
+        "id": "01a1aa83-ce86-7763-a9a1-a7beb79a2eff",
+        "model": "gpt-6-astra"
+      },
+      "human_author": "woan <377801872@qq.com>"
+    }
+  }
+}
